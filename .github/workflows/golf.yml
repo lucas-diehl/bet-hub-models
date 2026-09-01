@@ -1,11 +1,16 @@
 name: golf
 
-# Live 72-hole matchup + top-10 picks (and grading) for the Bet Hub feed.
+# Live 72-hole matchup + top-10 picks, and grading, for the Bet Hub feed.
 # Cron is best-effort (GitHub may run it 5-20 min late); that's fine for daily picks.
+#
+# The card is CUMULATIVE per slate (each run merges into picks_<date>.json), so the
+# golf feed dir is persisted across runs via cache — otherwise the ephemeral runner
+# would start every card over and grading would only see one run's picks.
 on:
   schedule:
-    - cron: "0 13 * * *"   # ~09:00 ET daily — live pull + price + merge picks
-    - cron: "0 22 * * *"   # ~18:00 ET daily — refresh with closing-er lines
+    - cron: "0 13 * * *"     # ~09:00 ET daily — live pull + price + merge picks
+    - cron: "0 22 * * *"     # ~18:00 ET daily — refresh with closing-er lines
+    - cron: "0 12 * * 1,2"   # Mon+Tue ~08:00 ET — grade the weekend/Monday-finish slate
   workflow_dispatch:
     inputs:
       results_date:
@@ -38,18 +43,28 @@ jobs:
           key: rlib-golf-${{ runner.os }}-${{ hashFiles('.github/workflows/golf.yml') }}
           restore-keys: rlib-golf-${{ runner.os }}-
 
+      - name: Restore cumulative golf feed
+        uses: actions/cache/restore@v4
+        with:
+          path: _feed/golf-modeling
+          key: golf-feed-${{ github.run_id }}
+          restore-keys: golf-feed-
+
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","nnet"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
-      - name: Run golf model
+      - name: Run golf model (post live, or grade on the Mon/Tue cron & manual date)
         working-directory: golf-modeling
         run: |
-          if [ -n "${{ github.event.inputs.results_date }}" ]; then
-            Rscript engine/bet_hub.R --results "${{ github.event.inputs.results_date }}"
+          DATE="${{ github.event.inputs.results_date }}"
+          if [ "${{ github.event.schedule }}" = "0 12 * * 1,2" ] && [ -z "$DATE" ]; then
+            Rscript engine/bet_hub.R --results          # auto: grade the newest slate
+          elif [ -n "$DATE" ]; then
+            Rscript engine/bet_hub.R --results "$DATE"   # manual: grade a specific slate
           else
-            Rscript engine/bet_hub.R
+            Rscript engine/bet_hub.R                     # live: pull, price, merge picks
             Rscript emit_elo.R || echo "emit_elo skipped"
           fi
 
@@ -58,3 +73,10 @@ jobs:
         with:
           database-url: ${{ secrets.DATABASE_URL }}
           feed-dir: ${{ github.workspace }}/_feed
+
+      - name: Save cumulative golf feed
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: _feed/golf-modeling
+          key: golf-feed-${{ github.run_id }}
