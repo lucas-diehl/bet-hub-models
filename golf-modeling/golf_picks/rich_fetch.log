@@ -1,0 +1,21 @@
+[12:08:55]=== FETCH RICH ROUNDS (2021-2026) ===
+[12:08:55]Year 2021: 47 events
+[12:09:25]  progress: new=20 skipped=0
+[12:09:56]  progress: new=40 skipped=0
+[12:10:07]Year 2022: 46 events
+[12:10:27]  progress: new=60 skipped=0
+[12:10:57]  progress: new=80 skipped=0
+[12:11:16]Year 2023: 46 events
+[12:11:27]  progress: new=100 skipped=0
+[12:11:57]  progress: new=120 skipped=0
+[12:12:26]Year 2024: 49 events
+[12:12:27]  progress: new=140 skipped=0
+[12:12:57]  progress: new=160 skipped=0
+[12:13:27]  progress: new=180 skipped=0
+[12:13:39]Year 2025: 48 events
+[12:13:57]  progress: new=200 skipped=0
+[12:14:27]  progress: new=220 skipped=0
+[12:14:52]Year 2026: 25 events
+[12:14:58]  progress: new=240 skipped=0
+[12:15:28]  progress: new=260 skipped=0
+[12:15:30]DONE: 102006 player-rounds | 261 events | 2021-01-10..2026-06-21 -> golf_picks/rich_rounds_long.rds

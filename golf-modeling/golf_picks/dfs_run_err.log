@@ -1,0 +1,4 @@
+Error in setorderv(x, cols, order, na.last) : 
+  some columns are not in the data.table: [get, obj_col]
+Calls: main ... setorder -> setorderv -> stopf -> raise_condition -> signal
+Execution halted

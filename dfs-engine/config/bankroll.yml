@@ -1,0 +1,8 @@
+# DFS ENGINE — bankroll & staking settings (edit these to your situation)
+bankroll: 200          # your total DFS bankroll, in dollars
+daily_max_frac: 0.15   # max fraction of bankroll to risk in one day
+cash_frac: 0.60        # split of the daily budget toward cash games
+gpp_frac: 0.40         # ...toward tournaments (GPP)
+cash_fee: 5            # typical per-entry fee you play in cash
+gpp_fee: 3             # typical per-entry fee you play in GPP
+min_fee: 1

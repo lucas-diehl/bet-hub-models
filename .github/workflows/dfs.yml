@@ -1,0 +1,60 @@
+name: dfs
+
+# DFS ENGINE daily run — scrapes DK slates, builds projections, and publishes the
+# optimizer pool feed (pool_*.json) + value plays the Bet Hub /dfs page reads.
+# Also refreshes the golf H2H picks via the sibling golf-modeling checkout.
+on:
+  schedule:
+    - cron: "0 12 * * *"   # ~08:00 ET
+    - cron: "0 16 * * *"   # ~12:00 ET
+    - cron: "0 20 * * *"   # ~16:00 ET
+  workflow_dispatch:
+    inputs:
+      sports:
+        description: "Comma list (default: wnba,tennis,golf,nfl)"
+        required: false
+
+concurrency:
+  group: dfs
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      FEED_DIR: ${{ github.workspace }}/_feed
+      R_LIBS_USER: ${{ github.workspace }}/.rlib
+      DATAGOLF_API_KEY: ${{ secrets.DATAGOLF_API_KEY }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.4"
+          use-public-rspm: true
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: rlib-dfs-${{ runner.os }}-${{ hashFiles('.github/workflows/dfs.yml') }}
+          restore-keys: rlib-dfs-${{ runner.os }}-
+
+      - name: Install R packages
+        run: |
+          mkdir -p "$R_LIBS_USER"
+          Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+
+      - name: Run DFS engine (writes pool + value feeds)
+        working-directory: dfs-engine
+        run: |
+          SPORTS="${{ github.event.inputs.sports }}"
+          if [ -z "$SPORTS" ]; then SPORTS="wnba,tennis,golf,nfl"; fi
+          Rscript jobs/run_all.R --sports "$SPORTS"
+
+      - name: Ingest to Supabase
+        uses: ./.github/actions/ingest
+        with:
+          database-url: ${{ secrets.DATABASE_URL }}
+          feed-dir: ${{ github.workspace }}/_feed

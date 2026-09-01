@@ -1,0 +1,27 @@
+data/raw/*
+data/processed/*
+outputs/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!outputs/.gitkeep
+
+# These reports live under outputs/ but are hand-written source documents, not
+# build artifacts. No script regenerates them, so they must be tracked or the
+# frozen 2026 rules and their rationale would exist only on one disk.
+!outputs/analysis_report.md
+!outputs/2026_betting_plan.md
+!outputs/touchdown_model_report.md
+!outputs/touchdown_prop_model_plan.md
+!outputs/td_2026_operating_plan.md
+!outputs/fantasy_prop_model_report.md
+!outputs/percentage_interaction_report.md
+!outputs/player_prop_backtest_report.md
+!outputs/model_upgrade_report.md
+!outputs/preseason_draft_analysis.md
+.Rhistory
+.RData
+.Rproj.user/
+.Rlib/
+config/secrets.yml
+.env
+!outputs/draft_model_report.md

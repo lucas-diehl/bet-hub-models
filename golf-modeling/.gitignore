@@ -1,0 +1,21 @@
+# --- Secrets: NEVER commit (repo goes public) ---
+.Renviron
+.env
+config/secrets.yml
+config/*_session.txt
+*.key
+
+# --- claude/ scratch folder: DataGolf key is hardcoded across ~18 files here.
+#     Excluded so it can't leak on a public push. If you want any of these
+#     scripts public, ask me to scrub the key out first, then un-ignore it. ---
+claude/
+
+# --- R session junk ---
+.Rhistory
+.RData
+.Rproj.user/
+.Ruserdata
+
+# --- OS junk ---
+Thumbs.db
+.DS_Store

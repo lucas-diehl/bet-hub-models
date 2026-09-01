@@ -1,0 +1,7 @@
+{
+  "service": "telegram",
+  "telegram_bot_token": "PASTE_BOT_TOKEN_HERE",
+  "telegram_chat_id": "PASTE_CHAT_ID_HERE",
+  "pushover_token": "",
+  "pushover_user": ""
+}

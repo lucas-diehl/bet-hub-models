@@ -1,0 +1,5 @@
+{
+  "_comment": "Manual OUT list for sports with no auto injury feed (tennis/golf). Any player named here is DROPPED from that sport's pool so they can't be rostered — use for DK-posted withdrawals/WDs. Name match is normalized. Clear an entry once the slate has passed.",
+  "tennis": ["Marin Cilic"],
+  "golf": []
+}

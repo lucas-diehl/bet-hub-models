@@ -1,0 +1,14 @@
+historical:
+  source: "rotoguru"
+  start_season: 2011
+  end_season: 2021
+  weeks: [1, 18]
+  sites: ["dk", "fd"]
+  request_delay_seconds: 0.10
+
+current:
+  primary_site: "dk"
+  sport: "NFL"
+  manual_drop_directory: "data/raw/dfs_salary_uploads"
+  archive_directory: "data/raw/dfs_salaries"
+

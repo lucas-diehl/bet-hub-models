@@ -1,0 +1,61 @@
+name: nfl
+
+# NFL weekly picks feed. Best-effort cron (Tue morning ET, refresh Thu/Sun).
+on:
+  schedule:
+    - cron: "0 14 * * 2"   # Tue ~09:00 ET — weekly board
+    - cron: "0 14 * * 5"   # Fri ~09:00 ET — refresh with the week's lines
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "NFL_SEASON (blank = auto)"
+        required: false
+
+concurrency:
+  group: nfl
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      FEED_DIR: ${{ github.workspace }}/_feed
+      R_LIBS_USER: ${{ github.workspace }}/.rlib
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+      NFL_FEED_MODE: LIVE
+      NFL_SEASON: ${{ github.event.inputs.season }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.4"
+          use-public-rspm: true
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: rlib-nfl-${{ runner.os }}-${{ hashFiles('.github/workflows/nfl.yml') }}
+          restore-keys: rlib-nfl-${{ runner.os }}-
+
+      - name: Cache nflverse data (heavy, rebuildable)
+        uses: actions/cache@v4
+        with:
+          path: NFL/data
+          key: nfl-data-${{ runner.os }}
+
+      - name: Install R packages
+        run: |
+          mkdir -p "$R_LIBS_USER"
+          Rscript -e 'p<-c("nflfastR","nflreadr","dplyr","tidyr","purrr","slider","readr","stringr","lubridate","yaml","jsonlite","httr2","ranger","xgboost","nnet"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+
+      - name: Run nfl model + write feed
+        working-directory: NFL
+        run: Rscript weekly_feed.R
+
+      - name: Ingest to Supabase
+        uses: ./.github/actions/ingest
+        with:
+          database-url: ${{ secrets.DATABASE_URL }}
+          feed-dir: ${{ github.workspace }}/_feed

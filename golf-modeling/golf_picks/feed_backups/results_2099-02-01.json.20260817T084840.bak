@@ -1,0 +1,54 @@
+{
+  "contract_version": "1.0",
+  "source": "golf-modeling",
+  "sport": "pga",
+  "slate_date": "2099-02-01",
+  "graded_at": "2026-08-17T13:48:40Z",
+  "results": [
+    {
+      "bet_id": "b4",
+      "result": "win",
+      "actual": {
+        "selection_finish": 2,
+        "opponent_finish": 20
+      }
+    },
+    {
+      "bet_id": "b1",
+      "result": "win",
+      "actual": {
+        "selection_finish": 1,
+        "opponent_finish": 5
+      }
+    },
+    {
+      "bet_id": "b5",
+      "result": "loss",
+      "actual": {
+        "selection_finish": 11
+      }
+    },
+    {
+      "bet_id": "b2",
+      "result": "win",
+      "actual": {
+        "selection_finish": 3,
+        "opponent_finish": 34
+      }
+    },
+    {
+      "bet_id": "b3",
+      "result": "loss",
+      "actual": {
+        "selection_finish": 14
+      }
+    },
+    {
+      "bet_id": "b-ancient",
+      "result": "win",
+      "actual": {
+        "selection_finish": 4
+      }
+    }
+  ]
+}

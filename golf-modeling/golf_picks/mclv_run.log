@@ -1,0 +1,49 @@
+[10:39:25] === ALL-MARKET CLV BACKTEST (engine vs market) === 
+[10:39:25] walk-forward events:  130  ( 2023-2026 ) 
+[10:43:08] simulated  130  events 
+[10:43:35]   fetched  25  outright market-events 
+[10:48:05]   fetched  50  outright market-events 
+[10:49:27]   fetched  75  outright market-events 
+[10:53:06]   fetched  100  outright market-events 
+[10:55:15]   fetched  125  outright market-events 
+[10:55:39]   fetched  150  outright market-events 
+[11:01:03]   fetched  175  outright market-events 
+[11:01:27]   fetched  200  outright market-events 
+[11:06:51]   fetched  225  outright market-events 
+[11:07:14]   fetched  250  outright market-events 
+[11:08:27]   fetched  275  outright market-events 
+[11:13:02]   fetched  300  outright market-events 
+[11:13:25]   fetched  325  outright market-events 
+[11:18:49]   fetched  350  outright market-events 
+[11:19:12]   fetched  375  outright market-events 
+[11:20:25]   fetched  400  outright market-events 
+[11:24:59]   fetched  425  outright market-events 
+[11:25:23]   fetched  450  outright market-events 
+[11:30:47]   fetched  475  outright market-events 
+[11:31:10]   fetched  500  outright market-events 
+[11:31:34]   fetched  525  outright market-events 
+[11:36:57]   fetched  550  outright market-events 
+[11:37:23]   fetched  575  outright market-events 
+[11:42:47]   fetched  600  outright market-events 
+[11:43:10]   fetched  625  outright market-events 
+[11:43:34]   fetched  650  outright market-events 
+
+================ MARKET CLV RANKING (engine, edge>=3%) ================
+CLV>0 at t-stat>2 = real edge. ROI is secondary/noisy.
+   market     n hit_rate roi_open mean_clv clv_tstat beat_close
+   <char> <int>    <num>    <num>    <num>     <num>      <num>
+    top_5  1934      5.8     20.0     3.64      7.97       40.8
+   top_10  3130      9.1     -6.8     3.01      7.87       40.8
+   top_20  4314     15.6    -18.5     2.35      7.95       41.3
+      win   230      2.2      3.1     1.70      1.38       36.5
+  matchup   460     49.3     -4.5     0.56      2.10       37.8
+ make_cut  2052     51.8    -17.1     0.22      2.80       17.9
+
+---- by odds bucket (de-vigged fair prob; pooled across markets) ----
+         bucket     n mean_clv clv_tstat beat_close
+         <fctr> <int>    <num>     <num>      <num>
+ longshot(<10%)  6424     3.56     12.11       39.9
+    mid(10-25%)  2699     1.28      6.03       41.6
+    fav(25-45%)  1079     0.91      5.46       38.1
+    chalk(>45%)  1279     0.31      2.74       29.2
+[11:43:37] saved market_clv_bets.csv | DONE 

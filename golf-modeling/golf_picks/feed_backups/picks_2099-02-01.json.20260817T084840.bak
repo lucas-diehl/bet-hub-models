@@ -1,0 +1,106 @@
+{
+  "contract_version": "1.0",
+  "source": "golf-modeling",
+  "sport": "pga",
+  "slate_date": "2099-02-01",
+  "generated_at": "2026-08-17T13:48:40Z",
+  "model_version": "v2-2026.08",
+  "mode": "PAPER",
+  "event_context": "Test Open",
+  "notes": "72-hole matchups from the v2 sim. PAPER until CLV proves positive.",
+  "bets": [
+    {
+      "bet_id": "b4",
+      "event": "Test Open",
+      "market": "matchup",
+      "market_label": "72-Hole Matchup",
+      "selection": "Si Woo Kim",
+      "odds_american": -120,
+      "ev_pct": 0.11,
+      "stake_units": 1,
+      "tags": [
+        "matchup"
+      ],
+      "details": {
+        "opponent": "Sam Burns",
+        "matchup_type": "72_hole",
+        "first_seen": "2026-08-17",
+        "last_seen": "2026-08-17"
+      }
+    },
+    {
+      "bet_id": "b1",
+      "event": "Test Open",
+      "market": "matchup",
+      "market_label": "72-Hole Matchup",
+      "selection": "Scottie Scheffler",
+      "odds_american": -120,
+      "ev_pct": 0.09,
+      "stake_units": 1,
+      "tags": [
+        "matchup"
+      ],
+      "details": {
+        "opponent": "Rory McIlroy",
+        "matchup_type": "72_hole",
+        "first_seen": "2026-08-17",
+        "last_seen": "2026-08-17"
+      }
+    },
+    {
+      "bet_id": "b5",
+      "event": "Test Open",
+      "market": "top_10",
+      "market_label": "72-Hole Matchup",
+      "selection": "Sungjae Im",
+      "odds_american": 350,
+      "ev_pct": 0.08,
+      "stake_units": 1,
+      "tags": [
+        "matchup"
+      ],
+      "details": {
+        "matchup_type": "top_10",
+        "first_seen": "2026-08-17",
+        "last_seen": "2026-08-17"
+      }
+    },
+    {
+      "bet_id": "b2",
+      "event": "Test Open",
+      "market": "matchup",
+      "market_label": "72-Hole Matchup",
+      "selection": "Alex Noren",
+      "odds_american": -120,
+      "ev_pct": 0.07,
+      "stake_units": 1,
+      "tags": [
+        "matchup"
+      ],
+      "details": {
+        "opponent": "Rickie Fowler",
+        "matchup_type": "72_hole",
+        "first_seen": "2026-08-17",
+        "last_seen": "2026-08-17"
+      }
+    },
+    {
+      "bet_id": "b3",
+      "event": "Test Open",
+      "market": "top_10",
+      "market_label": "72-Hole Matchup",
+      "selection": "Sam Stevens",
+      "odds_american": 400,
+      "ev_pct": 0.06,
+      "stake_units": 1,
+      "tags": [
+        "matchup"
+      ],
+      "details": {
+        "matchup_type": "top_10",
+        "first_seen": "2026-08-17",
+        "last_seen": "2026-08-17"
+      }
+    }
+  ]
+}

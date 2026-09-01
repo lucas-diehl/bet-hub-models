@@ -1,0 +1,10 @@
+event_id,event_name,player_id,player_name,model_prob,sg_last_24,finish,outcome,stake,odds,odds_source,payout,profit
+554,Unknown,25908,Player_25908,0.306,,,LOSS,1,+300,placeholder,0,-1
+6,Unknown,23504,Player_23504,0.305,,,LOSS,1,+300,placeholder,0,-1
+6,Unknown,25908,Player_25908,0.297,,,LOSS,1,+300,placeholder,0,-1
+6,Unknown,29767,Player_29767,0.244,,,LOSS,1,+300,placeholder,0,-1
+6,Unknown,21756,Player_21756,0.225,,,WIN,1,+300,placeholder,4,3
+7,Unknown,24968,Player_24968,0.308,,,LOSS,1,+300,placeholder,0,-1
+7,Unknown,21756,Player_21756,0.212,,,LOSS,1,+300,placeholder,0,-1
+9,Unknown,24968,Player_24968,0.302,,,LOSS,1,+300,placeholder,0,-1
+9,Unknown,21756,Player_21756,0.22,,,LOSS,1,+300,placeholder,0,-1

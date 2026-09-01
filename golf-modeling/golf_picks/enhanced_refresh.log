@@ -1,0 +1,144 @@
+[14:25:53] === ULTIMATE GOLF BETTING MODEL === 
+[14:25:53] All fixes + agent improvements applied: 
+[14:25:53]   ✓ 2021-2026 data 
+[14:25:53]   ✓ Dead features removed (putting_pct, approach_pct, ott_pct, _100 SG components, driving_acc) 
+[14:25:53]   ✓ New features: sg_ewma, sg_shrunk, sg_p75_24, great_round_rate 
+[14:25:53]   ✓ Recency-weighted training observations (recent years weighted higher) 
+[14:25:53]   ✓ Bayesian shrinkage for small sample players 
+[14:25:53]   ✓ Half-Kelly criterion unit sizing 
+[14:25:53]   ✓ Correct field size + probability calibration 
+[14:25:53]   ✓ step_zv before step_normalize 
+[14:25:53]   ✓ XGBoost replacing glmnet for all three models 
+[14:25:53]   ✓ Course fit score (SG profile x course demand) 
+[14:25:53]   ✓ hist_market_prob removed as model feature (leakage) 
+[14:25:53]   ✓ DataGolf pre-tournament rankings endpoint 
+[14:25:53] 
+Fetching historical data (2021-2026)... 
+[14:25:53] Fetching historical data... 
+[14:25:53]   Fetching  2021  data... 
+[14:25:58] API error:  HTTP 400 Bad Request. 
+[14:26:08] API error:  HTTP 400 Bad Request. 
+[14:26:11] API error:  HTTP 400 Bad Request. 
+[14:26:13] API error:  HTTP 400 Bad Request. 
+[14:26:16] API error:  HTTP 400 Bad Request. 
+[14:26:41] API error:  HTTP 400 Bad Request. 
+[14:26:49] API error:  HTTP 400 Bad Request. 
+[14:27:08]   Fetching  2022  data... 
+[14:27:18] API error:  HTTP 400 Bad Request. 
+[14:27:21] API error:  HTTP 400 Bad Request. 
+[14:27:23] API error:  HTTP 400 Bad Request. 
+[14:27:51] API error:  HTTP 400 Bad Request. 
+[14:28:00] API error:  HTTP 400 Bad Request. 
+[14:28:18]   Fetching  2023  data... 
+[14:28:27] API error:  HTTP 400 Bad Request. 
+[14:28:30] API error:  HTTP 400 Bad Request. 
+[14:28:39] API error:  HTTP 400 Bad Request. 
+[14:29:01] API error:  HTTP 400 Bad Request. 
+[14:29:02] API error:  HTTP 400 Bad Request. 
+[14:29:04] API error:  HTTP 400 Bad Request. 
+[14:29:06] API error:  HTTP 400 Bad Request. 
+[14:29:07] API error:  HTTP 400 Bad Request. 
+[14:29:09] API error:  HTTP 400 Bad Request. 
+[14:29:10] API error:  HTTP 400 Bad Request. 
+[14:29:12] API error:  HTTP 400 Bad Request. 
+[14:29:25]   Fetching  2024  data... 
+[14:29:37] API error:  HTTP 400 Bad Request. 
+[14:29:39] API error:  HTTP 400 Bad Request. 
+[14:30:33]   Fetching  2025  data... 
+[14:30:46] API error:  HTTP 400 Bad Request. 
+[14:31:42]   Fetching  2026  data... 
+[14:32:23] API error:  HTTP 400 Bad Request. 
+[14:32:25] API error:  HTTP 400 Bad Request. 
+[14:32:27] API error:  HTTP 400 Bad Request. 
+[14:32:28] API error:  HTTP 400 Bad Request. 
+[14:32:30] API error:  HTTP 400 Bad Request. 
+[14:32:32] API error:  HTTP 400 Bad Request. 
+[14:32:33] API error:  HTTP 400 Bad Request. 
+[14:32:35] API error:  HTTP 400 Bad Request. 
+[14:32:37] API error:  HTTP 400 Bad Request. 
+[14:32:38] API error:  HTTP 400 Bad Request. 
+[14:32:40] API error:  HTTP 400 Bad Request. 
+[14:32:41] API error:  HTTP 400 Bad Request. 
+[14:32:43] API error:  HTTP 400 Bad Request. 
+[14:32:45] API error:  HTTP 400 Bad Request. 
+[14:32:46] API error:  HTTP 400 Bad Request. 
+[14:32:48] API error:  HTTP 400 Bad Request. 
+[14:32:50] Combining data... 
+[14:32:50] Got  24804  player-rounds from  198  events 
+[14:32:50] Computing features... 
+[14:32:50] Computing comprehensive features... 
+[14:32:50]   Computing features per player... 
+[14:36:57]   Features computed for  1026  players 
+[14:36:57] Building training data... 
+[14:36:57] Building training dataset... 
+[14:36:57]   Fetching historical DraftKings top_20 odds... 
+[14:36:57]   Year range:  2021  -  2026 
+[14:36:57]   Events to fetch:  38 
+[14:36:58]     First successful response - names:  book, event_completed, event_id, event_name, market, odds 
+[14:37:00] API error:  HTTP 400 Bad Request. 
+[14:37:16] API error:  HTTP 400 Bad Request. 
+[14:37:17]   Matched historical odds for  3612  /  8151  player-events 
+[14:37:17] Training data:  8151  player-events 
+[14:37:17]   Top20 rate:  19.3% 
+[14:37:17] Computing course profiles... 
+[14:37:17] Training top-20 model... 
+[14:37:17] Training enhanced model... 
+[14:37:17]   Using  41  features on  7577  observations 
+[14:37:17]   Obs weight range:  0.237  -  1.000 
+[14:37:33] Model trained successfully 
+[14:37:33] Training winner model... 
+[14:37:33] Training winner model (top-5 finish target)... 
+[14:37:33]   top5 rate:  4.9%  on  7577  observations 
+[14:37:46]   Winner model trained 
+[14:37:46] Training R1 leader model... 
+[14:37:47] Training R1 leader model (top-5 round-1 score target)... 
+[14:37:47]   r1_top5 rate:  3.1%  on  7577  observations 
+[14:38:00]   R1 leader model trained 
+[14:38:00] Caching models... 
+[14:38:05] 
+Getting current picks... 
+[14:38:05] Getting current tournament... 
+[14:38:05] Current event:  U.S. Open 
+[14:38:06] Tournament field:  156  players 
+[14:38:06]   Getting DataGolf pre-tournament predictions... 
+[14:38:06]   Got DG predictions for  156  players ( U.S. Open ) 
+[14:38:06]   Fetching DG skill rankings for full-field coverage... 
+[14:38:06]   DG skill rankings:  500  players 
+[14:38:06] Filtered to  152  players IN FIELD 
+[14:38:06]   Total features available:  436  players 
+[14:38:06]   Merged DG predictions for  152  players 
+[14:38:06]   Historical features matched:  112  /  152  players 
+[14:38:06]   DG rankings filled features for  40  players 
+[14:38:06]   Predicting for all  152  field players 
+[14:38:06]   Predicting for all  152  field players 
+[14:38:06]   CALIBRATION: Modeling  152 / 156  players ( 97% %,  4  missing) 
+[14:38:06]   Expected spots taken by missing:  0.3 
+[14:38:06]   Applied  0.987 x scaling factor 
+[14:38:06]   ENSEMBLE: Combining with DataGolf predictions... 
+[14:38:06]   Using ensemble ( 70%  model +  30%  DG) for  152  players 
+[14:38:06]   Applying winner model... 
+[14:38:06]   Applying R1 leader model... 
+[14:38:06]   Fetching DraftKings DFS salaries... 
+[14:38:06]   DFS slate:  U.S. Open  |  146  players 
+[14:38:06]   DFS salaries matched for  143  /  152  players 
+[14:38:07]   Optimized DFS lineup:  Kim, Si Woo, Lee, Min Woo, Burns, Sam, Fitzpatrick, Matt, Aberg, Ludvig, Schauffele, Xander 
+[14:38:07] 
+=== RECOMMENDATIONS === 
+[14:38:07] Top  5  picks: 
+[14:38:07]   1. Norgaard, Niklas (+2600) - 23.6% prob, 19.9% edge, 5.17 EV [2.1 units] 
+[14:38:07]   2. Herbert, Lucas (+640) - 49.2% prob, 35.7% edge, 2.28 EV [4.0 units] 
+[14:38:07]   3. Horschel, Billy (+1100) - 25.7% prob, 17.4% edge, 1.91 EV [1.9 units] 
+[14:38:07]   4. Bradley, Keegan (+420) - 44.2% prob, 25.0% edge, 1.05 EV [3.1 units] 
+[14:38:07]   5. Coody, Pierceson (+520) - 34.0% prob, 17.9% edge, 0.93 EV [2.1 units] 
+[14:38:07] Creating Excel output... 
+[14:38:07]   Adding model picks... 
+[14:38:07]   Adding full field... 
+[14:38:07]   Adding outright winner picks... 
+[14:38:08]   Adding first round leader picks... 
+[14:38:08]   Adding DFS lineup... 
+[14:38:08]   Adding tournament summary... 
+[14:38:08]   Adding player history... 
+[14:38:08] Saved:  golf_picks/golf_analysis_2026-06-15.xlsx 
+[14:38:08] 
+✓ Analysis complete! 
+[14:38:08] ✓ Excel file:  golf_picks/golf_analysis_2026-06-15.xlsx 

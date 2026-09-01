@@ -1,0 +1,16 @@
+Rank,Team,Player1,Player2,Odds,Model Prob,Market Prob,Edge,EV,Units,P1 Prob,P2 Prob,P1 SG,P2 SG,Team Avg SG
+1,"Clark, Wyndham / Moore, Taylor","Clark, Wyndham","Moore, Taylor",345,57.2%,22.5%,34.8%,1.20,2.5,46.6%,19.9%,1.12,0.05,0.58
+2,"Hoge, Tom / Horschel, Billy","Hoge, Tom","Horschel, Billy",,51.3%,NA%,NA%,NA,2.5,34.8%,25.4%,0.81,0.36,0.58
+3,"Duncan, Tyler / Schenk, Adam","Duncan, Tyler","Schenk, Adam",,45.3%,NA%,NA%,NA,2,37.8%,12.0%,0.49,-0.66,-0.09
+4,"Griffin, Ben / Novak, Andrew","Griffin, Ben","Novak, Andrew",-480,40.6%,82.8%,-42.2%,-0.09,2,30.4%,14.6%,0.56,-0.18,0.19
+5,"Rai, Aaron / Theegala, Sahith","Rai, Aaron","Theegala, Sahith",1250,40.2%,7.4%,32.7%,4.09,2,11.9%,32.1%,-0.17,0.61,0.22
+6,"Smalley, Alex / Fitzpatrick, Matt","Smalley, Alex","Fitzpatrick, Matt",-20000,38.2%,99.5%,-61.3%,-0.00,2,8.9%,32.1%,-1.15,0.12,-0.52
+7,"Fitzpatrick, Matt / Smalley, Alex","Fitzpatrick, Matt","Smalley, Alex",-20000,38.2%,99.5%,-61.3%,-0.00,2,32.1%,8.9%,0.12,-1.15,-0.52
+8,"Putnam, Andrew / Smotherman, Austin","Putnam, Andrew","Smotherman, Austin",1850,35.1%,5.1%,30.0%,5.55,2,15.5%,23.2%,0.12,-0.32,-0.1
+9,"Hughes, Mackenzie / Pendrith, Taylor","Hughes, Mackenzie","Pendrith, Taylor",,34.1%,NA%,NA%,NA,1.5,13.0%,24.3%,-0.2,0.4,0.1
+10,"Higgo, Garrick / Kuchar, Matt","Higgo, Garrick","Kuchar, Matt",,30.0%,NA%,NA%,NA,1.5,10.5%,21.7%,-0.27,0.53,0.13
+11,"Finau, Tony / Greyserman, Max","Finau, Tony","Greyserman, Max",,NA%,NA%,NA%,NA,1,43.3%,NA%,0.61,1.67,1.14
+12,"Hoey, Rico / Lipsky, David","Hoey, Rico","Lipsky, David",,NA%,NA%,NA%,NA,1,NA%,18.7%,0.28,-0.28,0
+13,"Koepka, Brooks / Lowry, Shane","Koepka, Brooks","Lowry, Shane",270,NA%,27.0%,NA%,NA,1,NA%,43.0%,1.71,1.23,1.47
+14,"Kuchar, Matt / Meissner, Mac","Kuchar, Matt","Meissner, Mac",395,NA%,20.2%,NA%,NA,1,21.7%,NA%,0.53,0.6,0.56
+15,"Meissner, Mac / Kuchar, Matt","Meissner, Mac","Kuchar, Matt",395,NA%,20.2%,NA%,NA,1,NA%,21.7%,0.6,0.53,0.56

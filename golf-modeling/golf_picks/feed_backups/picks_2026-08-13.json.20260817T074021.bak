@@ -1,0 +1,37 @@
+{
+  "contract_version": "1.0",
+  "source": "golf-modeling",
+  "sport": "pga",
+  "slate_date": "2026-08-13",
+  "generated_at": "2026-08-17T12:26:17Z",
+  "model_version": "v2-2026.08",
+  "mode": "PAPER",
+  "event_context": "FedEx St. Jude Championship",
+  "notes": "72-hole matchups + top-10 finishes (favourites/mid band, walk-forward +EV) from the v2 sim. PAPER until CLV proves positive.",
+  "bets": [
+    {
+      "bet_id": "golf-modeling-2026-08-13-fedexst-top10-mattfitzpatrick",
+      "event": "FedEx St. Jude Championship",
+      "event_start": null,
+      "market": "top_10",
+      "market_label": "Top 10 Finish",
+      "selection": "Matt Fitzpatrick",
+      "odds_american": 430,
+      "model_prob": 0.2688,
+      "market_prob": 0.1887,
+      "edge": 0.0801,
+      "ev_pct": 0.4244,
+      "stake_units": 2.47,
+      "confidence": "high",
+      "tags": [
+        "outright",
+        "top_10"
+      ],
+      "details": {
+        "matchup_type": "top_10",
+        "last_seen": "2026-08-17"
+      },
+      "book": "FanDuel"
+    }
+  ]
+}

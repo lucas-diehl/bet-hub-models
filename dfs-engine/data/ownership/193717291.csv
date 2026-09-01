@@ -1,0 +1,326 @@
+player_name,pct_drafted,dk_position,fpts,norm,sport,slate_id,contest_id,captured_ts
+Jackson Meeks,35.84,TE,2.7,jackson meeks,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Luke Altmyer,35.52,QB,8.3,luke altmyer,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Noah Whittington,27.63,RB,4.6,noah whittington,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Efton Chism III,24.1,WR,5,efton chism,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Texans,22.97,DST,6,texans,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Dominic Lovett,20.19,WR,5.8,dominic lovett,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Reggie Virgil,19.24,WR,6.3,reggie virgil,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kyle Williams,17.85,WR,11.7,kyle williams,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Lan Larison,16.66,RB,9.9,lan larison,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jacob Saylors,16.03,RB,11.3,jacob saylors,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Brenen Thompson,15.46,WR,5,brenen thompson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Seth McGowan,14.45,RB,0.7,seth mcgowan,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jam Miller,14.45,RB,5.5,jam miller,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Malik Benson,14.13,WR,4.6,malik benson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Graham Mertz,13.06,QB,2.42,graham mertz,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tom Kennedy,13,WR,1.5,tom kennedy,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Deion Burks,12.81,WR,1.9,deion burks,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Bengals,11.55,DST,9,bengals,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Titans,10.03,DST,6,titans,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Eli Raridon,9.53,TE,1.8,eli raridon,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Ja'Marr Chase,9.21,WR,2.6,jamarr chase,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Anthony Richardson Sr.,8.71,QB,15.1,anthony richardson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Colbie Young,8.26,WR,4.8,colbie young,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Fernando Mendoza,8.14,QB,8.48,fernando mendoza,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Trey Lance,8.01,QB,8.26,trey lance,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Colts,8.01,DST,6,colts,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Sincere McCormick,7.7,RB,3.8,sincere mccormick,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Marlin Klein,7.63,TE,4.1,marlin klein,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tanner Hudson,6.94,TE,4,tanner hudson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+KeAndre Lambert-Smith,6.75,WR,9.8,keandre lambertsmith,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+49ers,6.75,DST,4,ers,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tahj Brooks,6.69,RB,2.9,tahj brooks,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Savion Williams,6.62,WR,4.8,savion williams,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Lewis Bond,6.62,WR,3.6,lewis bond,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Packers,6.56,DST,2,packers,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Lions,6.56,DST,5,lions,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Joshua Pitsenberger,6.5,RB,3.3,joshua pitsenberger,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Raiders,6.44,DST,2,raiders,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Patriots,5.93,DST,13,patriots,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mike Washington Jr.,5.93,RB,6.3,mike washington,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Nick Singleton,5.87,RB,3.1,nick singleton,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Germie Bernard,5.74,WR,9.1,germie bernard,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Chargers,5.68,DST,8,chargers,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+MarShawn Lloyd,5.68,RB,1.9,marshawn lloyd,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Steelers,5.62,DST,9,steelers,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Patrick Taylor Jr.,5.62,FLEX,8.8,patrick taylor,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Carnell Tate,4.79,WR,0,carnell tate,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Greg Dortch,4.48,WR,0,greg dortch,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Raheem Blackshear,4.42,RB,3.3,raheem blackshear,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Pierre Strong Jr.,3.97,RB,0.9,pierre strong,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Coleman Owen,3.91,WR,3.7,coleman owen,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+De'Zhaun Stribling,3.85,WR,13.3,dezhaun stribling,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Cardinals,3.85,DST,3,cardinals,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kaleb Johnson,3.72,RB,0.3,kaleb johnson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jordan Watkins,3.66,WR,11.9,jordan watkins,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Michael Mayer,3.66,TE,9.9,michael mayer,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Corey Kiner,3.6,RB,9.2,corey kiner,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+J. Michael Sturdivant,3.41,WR,4.2,j michael sturdivant,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Malik Turner,3.15,WR,4.3,malik turner,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Khalil Herbert,3.09,RB,7.3,khalil herbert,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jeremiyah Love,3.09,RB,10.2,jeremiyah love,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Xavier Hutchinson,3.03,FLEX,0.8,xavier hutchinson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Cedrick Wilson Jr.,2.84,WR,3.3,cedrick wilson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kye Robichaux,2.78,RB,3.1,kye robichaux,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Will Pauling,2.78,WR,3.8,will pauling,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Ulysses Bentley IV,2.71,RB,1.9,ulysses bentley,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Max Hurleman,2.71,WR,7.6,max hurleman,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Damien Martinez,2.52,RB,2,damien martinez,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Derius Davis,2.52,WR,0,derius davis,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Riley Leonard,2.52,QB,3.76,riley leonard,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tee Higgins,2.33,WR,0,tee higgins,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Joe Burrow,2.33,QB,1.56,joe burrow,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Ashton Jeanty,2.27,RB,1.6,ashton jeanty,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jack Endries,2.21,TE,11.5,jack endries,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Xavier Weaver,2.21,WR,0,xavier weaver,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tommy DeVito,2.21,QB,9.52,tommy devito,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Matthew Golden,2.21,WR,0,matthew golden,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Isaac TeSlaa,2.15,WR,0,isaac teslaa,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Dylan Laube,2.15,RB,3.5,dylan laube,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jack Bech,2.15,WR,11.5,jack bech,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Behren Morton,2.02,QB,2.74,behren morton,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Demarcus Robinson,2.02,WR,0,demarcus robinson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Trey Benson,2.02,RB,0,trey benson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Andrei Iosivas,2.02,WR,4,andrei iosivas,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Cade Stover,1.96,TE,0,cade stover,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Lew Nichols,1.96,RB,10.5,lew nichols,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Robert Tonyan,1.89,TE,10.1,robert tonyan,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Roman Wilson,1.89,WR,1.7,roman wilson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Will Mallory,1.83,TE,14,will mallory,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Chimere Dike,1.83,WR,2.7,chimere dike,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Keaton Mitchell,1.83,RB,0,keaton mitchell,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mitch Tinsley,1.77,WR,0,mitch tinsley,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Simi Fehoko,1.77,WR,11.3,simi fehoko,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Eli Heidenreich,1.7,RB,2.1,eli heidenreich,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tay Martin,1.7,WR,2.4,tay martin,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Xavier Restrepo,1.64,WR,3.6,xavier restrepo,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jared Wayne,1.64,WR,10.7,jared wayne,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Rico Dowdle,1.58,RB,0,rico dowdle,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Gardner Minshew II,1.58,QB,12.04,gardner minshew,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Zonovan Knight,1.51,RB,1.5,zonovan knight,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Elic Ayomanor,1.51,WR,0,elic ayomanor,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Will Howard,1.51,QB,3.64,will howard,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tyler Warren,1.51,TE,0,tyler warren,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Luke Grimm,1.45,WR,1.7,luke grimm,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Josh Kelly,1.45,WR,5.8,josh kelly,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Ladd McConkey,1.45,WR,0,ladd mcconkey,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tre Tucker,1.45,WR,4.1,tre tucker,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Chris Brooks,1.45,RB,0,chris brooks,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Daniel Sobkowicz,1.45,WR,0,daniel sobkowicz,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Daniel Bellinger,1.45,TE,0,daniel bellinger,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jalen Brooks,1.39,WR,17.2,jalen brooks,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+DJ Uiagalelei,1.39,QB,8.8,dj uiagalelei,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Cam Ward,1.39,QB,2.48,cam ward,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Woody Marks,1.39,RB,0,woody marks,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jaret Patterson,1.32,RB,5,jaret patterson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jake Tonges,1.32,TE,0,jake tonges,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kimani Vidal,1.32,RB,0.8,kimani vidal,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kayshon Boutte,1.32,WR,0,kayshon boutte,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+A.J. Brown,1.32,WR,0,aj brown,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kedon Slovis,1.26,QB,2.7,kedon slovis,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jerand Bradley,1.26,TE,0,jerand bradley,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Charlie Kolar,1.26,TE,0,charlie kolar,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Rivaldo Fairweather,1.26,TE,1.3,rivaldo fairweather,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kobe Prentice,1.26,WR,7,kobe prentice,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Chase Brown,1.26,RB,1.6,chase brown,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Anthony Gould,1.26,WR,0,anthony gould,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Brock Bowers,1.2,TE,0,brock bowers,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Amon-Ra St. Brown,1.2,WR,0,amonra st brown,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Roman Hemby,1.14,RB,0.7,roman hemby,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Michael Wilson,1.14,WR,4.3,michael wilson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jalen Nailor,1.14,WR,0,jalen nailor,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Wan'Dale Robinson,1.14,WR,3.9,wandale robinson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Drew Allar,1.14,QB,20.32,drew allar,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jaylin Noel,1.07,WR,0,jaylin noel,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Gunnar Helm,1.07,TE,2.6,gunnar helm,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kaden Wetjen,1.07,WR,15.9,kaden wetjen,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Skyy Moore,1.07,WR,2.7,skyy moore,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Christian Watson,1.07,WR,0,christian watson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Drake Dabney,1.07,TE,1.4,drake dabney,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jayden Higgins,1.07,WR,0,jayden higgins,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jonathan Taylor,1.01,RB,0,jonathan taylor,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tyrod Taylor,1.01,QB,1.24,tyrod taylor,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Brandon Smith,1.01,WR,3.3,brandon smith,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Nick DeGennaro,0.95,WR,0,nick degennaro,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jabari Small,0.95,RB,0,jabari small,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Ihmir Smith-Marsette,0.95,WR,1.7,ihmir smithmarsette,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Michael Carter,0.95,RB,3.3,michael carter,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Albert Okwuegbunam Jr.,0.95,TE,1.6,albert okwuegbunam,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Davis Mills,0.95,QB,6.28,davis mills,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Ashton Dulin,0.95,WR,0,ashton dulin,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tony Pollard,0.95,RB,8.2,tony pollard,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Sean Clifford,0.95,QB,-0.02,sean clifford,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Romeo Doubs,0.88,WR,0,romeo doubs,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Brock Wright,0.88,TE,0,brock wright,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+David Montgomery,0.88,RB,0,david montgomery,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jaylen Warren,0.88,RB,0,jaylen warren,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Marvin Harrison Jr.,0.82,WR,7.7,marvin harrison,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Darnell Washington,0.82,TE,0,darnell washington,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Erick All Jr.,0.82,TE,0,erick all,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tre' Harris,0.82,WR,0,tre harris,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Elijah Higgins,0.76,TE,0,elijah higgins,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Justin Watson,0.76,WR,3.1,justin watson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mack Hollins,0.76,WR,4.4,mack hollins,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Deebo Samuel Sr.,0.76,WR,0,deebo samuel,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Treyvhon Saunders,0.69,WR,2.5,treyvhon saunders,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tyler Allgeier,0.69,RB,1.9,tyler allgeier,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Gary Brightwell,0.63,RB,2.2,gary brightwell,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jaren Kanak,0.63,TE,0,jaren kanak,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+TreVeyon Henderson,0.63,RB,0,treveyon henderson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Ben Skowronek,0.63,WR,5.6,ben skowronek,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Isaiah Neyor,0.63,WR,7.4,isaiah neyor,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kylen Granson,0.63,TE,0,kylen granson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Trey McBride,0.63,TE,0,trey mcbride,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Hunter Henry,0.63,TE,0,hunter henry,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mac Jones,0.63,QB,0,mac jones,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Owen Wright,0.57,RB,0.6,owen wright,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Josh Johnson,0.57,QB,3.96,josh johnson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Josh Whyle,0.57,TE,1.3,josh whyle,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Phillip Dorsett II,0.57,WR,2.3,phillip dorsett,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Dalevon Campbell,0.57,WR,3.2,dalevon campbell,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Nico Collins,0.57,WR,0,nico collins,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Cameron Dorner,0.57,WR,2.8,cameron dorner,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Devonte Ross,0.5,WR,9.4,devonte ross,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Drew Ogletree,0.5,TE,2.7,drew ogletree,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+CJ Dippre,0.5,TE,0,cj dippre,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+KhaDarel Hodge,0.5,WR,2.5,khadarel hodge,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jordan Love,0.5,QB,0.72,jordan love,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Zamir White,0.5,RB,0.1,zamir white,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+DeMario Douglas,0.5,WR,0,demario douglas,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Devin Duvernay,0.5,WR,0,devin duvernay,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jacoby Brissett,0.5,QB,5.76,jacoby brissett,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Oronde Gadsden II,0.5,TE,4.1,oronde gadsden,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Quentin Johnston,0.5,WR,0,quentin johnston,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jayden Reed,0.5,WR,2.9,jayden reed,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Samaje Perine,0.5,RB,3.9,samaje perine,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Calvin Ridley,0.5,WR,2.8,calvin ridley,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Amar Johnson,0.5,RB,24.5,amar johnson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Brayden Willis,0.5,TE,0,brayden willis,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Drew Sample,0.44,TE,1.2,drew sample,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Travis Homer,0.44,RB,3.8,travis homer,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Nick Westbrook-Ikhine,0.44,WR,2.9,nick westbrookikhine,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Julius Chestnut,0.44,RB,4.7,julius chestnut,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Christian McCaffrey,0.44,RB,0,christian mccaffrey,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Lucky Jackson,0.44,WR,0,lucky jackson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Layne Pryor,0.44,TE,0,layne pryor,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Will Levis,0.38,QB,3.88,will levis,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Bo Melton,0.38,WR,1.7,bo melton,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Zach Horton,0.38,TE,2.5,zach horton,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Luke Farrell,0.38,TE,0,luke farrell,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Will Sheppard,0.38,WR,1.8,will sheppard,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Teagan Quitoriano,0.38,TE,1.4,teagan quitoriano,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mason Kinsey,0.38,WR,0,mason kinsey,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jahmyr Gibbs,0.38,RB,0,jahmyr gibbs,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Sam LaPorta,0.38,TE,0,sam laporta,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jaheim Bell,0.38,TE,0,jaheim bell,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kirk Cousins,0.38,QB,6,kirk cousins,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Dalton Schultz,0.38,TE,0,dalton schultz,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Wesley Grimes,0.38,WR,1.7,wesley grimes,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Dareke Young,0.38,WR,2,dareke young,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Adrian Martinez,0.38,QB,8.16,adrian martinez,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Pat Freiermuth,0.38,TE,1.2,pat freiermuth,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Charlie Jones,0.32,WR,0,charlie jones,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Shedrick Jackson,0.32,WR,2.9,shedrick jackson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Sincere Brown,0.32,WR,0,sincere brown,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+E.J. Williams Jr.,0.32,WR,5.1,ej williams,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Trenton Irwin,0.32,WR,4.5,trenton irwin,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Levi Wentz,0.32,WR,1.9,levi wentz,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Ian Thomas,0.32,TE,1.6,ian thomas,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jameson Williams,0.32,WR,0,jameson williams,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Harrison Wallace III,0.32,WR,1.9,harrison wallace,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Omarion Hampton,0.32,RB,0,omarion hampton,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kendrick Bourne,0.32,WR,2.2,kendrick bourne,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Aidan O'Connell,0.32,QB,3.4,aidan oconnell,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jameson Geers,0.32,TE,1.6,jameson geers,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mo Alie-Cox,0.32,TE,0,mo aliecox,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Rhamondre Stevenson,0.32,FLEX,0,rhamondre stevenson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tyler Conklin,0.32,TE,2.5,tyler conklin,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tanner Arkin,0.32,TE,0,tanner arkin,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kendric Pryor,0.25,WR,0,kendric pryor,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Bryson Green,0.25,WR,0,bryson green,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Thomas Gordon,0.25,TE,1.5,thomas gordon,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kyron Drones,0.25,QB,0,kyron drones,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Anderson Castle,0.25,RB,4.7,anderson castle,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Noah Thomas,0.25,WR,1.3,noah thomas,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Foster Moreau,0.25,TE,0,foster moreau,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mike Gesicki,0.25,TE,0,mike gesicki,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Joe Flacco,0.25,QB,6.04,joe flacco,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kyle McCord,0.25,QB,5.08,kyle mccord,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Messiah Swinson,0.25,TE,3.3,messiah swinson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Brock Purdy,0.25,QB,0,brock purdy,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Hassan Haskins,0.25,RB,1.5,hassan haskins,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+E.J. Horton Jr.,0.25,WR,1.6,ej horton,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Drake Maye,0.25,QB,0,drake maye,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kyle Dixon,0.25,WR,0,kyle dixon,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mason Rudolph,0.25,QB,3.72,mason rudolph,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Joel Wilson,0.25,TE,0,joel wilson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+David Njoku,0.25,TE,0,david njoku,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kentrel Bullock,0.25,RB,0.6,kentrel bullock,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Gregory Desrosiers,0.19,FLEX,2.7,gregory desrosiers,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mitchell Trubisky,0.19,QB,0.92,mitchell trubisky,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Brandon Johnson,0.19,WR,2.4,brandon johnson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Laquon Treadwell,0.19,WR,0,laquon treadwell,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Eli Pancol,0.19,WR,3.8,eli pancol,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Xavier Johnson,0.19,WR,0,xavier johnson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Dont'e Thornton Jr.,0.19,WR,0,donte thornton,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Dohnte Meyers,0.19,WR,7.2,dohnte meyers,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jaden Nixon,0.19,FLEX,1.7,jaden nixon,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tarik Black,0.13,WR,9.4,tarik black,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+D.J. Montgomery,0.13,WR,2.3,dj montgomery,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Chris Hilton Jr.,0.13,WR,0,chris hilton,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Josh Jacobs,0.13,RB,0,josh jacobs,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kendall Milton,0.13,RB,2.8,kendall milton,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Pharaoh Brown,0.13,TE,0,pharaoh brown,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Thomas Yassmin,0.13,TE,0,thomas yassmin,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Josh Downs,0.13,WR,0,josh downs,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+C.J. Stroud,0.13,QB,0,cj stroud,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Connor Heyward,0.13,RB,0,connor heyward,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+K.J. Osborn,0.13,WR,0,kj osborn,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Joshua Dobbs,0.13,QB,2.18,joshua dobbs,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tyjae Spears,0.13,RB,4.9,tyjae spears,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jha'Quan Jackson,0.13,WR,0,jhaquan jackson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Johnny Pascuzzi,0.13,TE,6.9,johnny pascuzzi,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Lake McRee,0.13,TE,2.9,lake mcree,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Malik Cunningham,0.13,WR,1.8,malik cunningham,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Evan Hull,0.13,RB,2.2,evan hull,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Deven Thompkins,0.13,WR,1.6,deven thompkins,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Reggie Gilliam,0.13,RB,0,reggie gilliam,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Courtney Jackson,0.13,WR,1.7,courtney jackson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kaelon Black,0.13,RB,0,kaelon black,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Chase Roberts,0.13,WR,2.2,chase roberts,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kalel Mullings,0.13,RB,0,kalel mullings,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Kurtis Rourke,0.13,QB,5.44,kurtis rourke,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Ke'Shawn Williams,0.13,WR,0.8,keshawn williams,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Carson Beck,0.13,QB,0,carson beck,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Sione Vaki,0.13,RB,0,sione vaki,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jawhar Jordan,0.13,RB,0,jawhar jordan,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Daniel Jones,0.13,QB,0,daniel jones,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+JJ Galbreath,0.13,TE,0,jj galbreath,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Hank Beatty,0.13,WR,0,hank beatty,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Sahmir Hagans,0.13,WR,2.7,sahmir hagans,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Raylen Sharpe,0.13,FLEX,6.9,raylen sharpe,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mike Evans,0.13,WR,0,mike evans,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Lance McCutcheon,0.13,WR,0,lance mccutcheon,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jared Goff,0.06,QB,0,jared goff,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Isaac Guerendo,0.06,RB,0,isaac guerendo,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+David Martin-Robinson,0.06,TE,2.7,david martinrobinson,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Aaron Rodgers,0.06,QB,0,aaron rodgers,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jacob Clark,0.06,QB,0,jacob clark,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jack Westover,0.06,TE,0,jack westover,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+DJ Giddens,0.06,RB,0,dj giddens,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Cam Grandy,0.06,TE,0,cam grandy,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Joaquin Davis,0.06,WR,1.6,joaquin davis,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jakobie Keeney-James,0.06,WR,0,jakobie keeneyjames,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jordan James,0.06,RB,0,jordan james,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Hendon Hooker,0.06,QB,0.48,hendon hooker,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Alec Ingold,0.06,RB,0,alec ingold,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+British Brooks,0.06,FLEX,0,british brooks,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Carson Towt,0.06,TE,0,carson towt,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Chris Myarick,0.06,TE,0,chris myarick,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Jordan Moore,0.06,WR,0,jordan moore,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Mitch Van Vooren,0.06,TE,1.4,mitch van vooren,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Riley Nowakowski,0.06,RB,7.4,riley nowakowski,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tucker Kraft,0.06,TE,0,tucker kraft,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Tejhaun Palmer,0.06,WR,2.5,tejhaun palmer,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27
+Dare Ogunbowale,0.06,RB,0,dare ogunbowale,nfl,nfl-dk-2026-08-13-main,193717291,2026-08-14 10:00:27

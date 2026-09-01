@@ -1,0 +1,2 @@
+This sentinel file marks the DFS ENGINE project root. Do not delete.
+bootstrap.R walks up from getwd() looking for it (env var DFS_ENGINE_ROOT overrides).

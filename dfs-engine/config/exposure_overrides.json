@@ -1,0 +1,6 @@
+{
+  "_comment": "Per-player MAX-exposure overrides for the 20-entry GPP build (gpp20). Value = max fraction of the lineup set a player may appear in (0-1). Overrides the global cap only DOWNWARD for that player; others keep the global cap. Name matching is order-insensitive (First Last or Last, First both work). Edit weekly for injuries/news; delete an entry to remove the cap.",
+  "golf": {
+    "Scottie Scheffler": 0.40
+  }
+}

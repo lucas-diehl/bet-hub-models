@@ -1,0 +1,6 @@
+# Optional fallback if auto-discovery (dk_my_contests) misses a contest.
+# Copy to  config/contest_watchlist.txt  (gitignored). One contest URL or id per line.
+# The sync job downloads standings for these (once you've entered + they've settled).
+#
+# https://www.draftkings.com/draft/contest/191610408
+# 191610411

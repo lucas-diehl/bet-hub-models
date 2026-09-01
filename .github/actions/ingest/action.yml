@@ -1,0 +1,36 @@
+name: Ingest feed to Supabase
+description: >
+  Upsert every JSON the model just wrote under FEED_DIR into Supabase, using the
+  bet-dashboard ingest package (validates against the contract, then upserts).
+inputs:
+  database-url:
+    description: Supabase Postgres connection string
+    required: true
+  feed-dir:
+    description: Absolute path the model wrote its feed JSON to
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Checkout bet-dashboard (ingest lives here)
+      uses: actions/checkout@v4
+      with:
+        repository: lucas-diehl/bet-dashboard
+        path: _site
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 9
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: pnpm
+        cache-dependency-path: _site/pnpm-lock.yaml
+    - name: Install + ingest
+      shell: bash
+      working-directory: _site
+      env:
+        DATABASE_URL: ${{ inputs.database-url }}
+        FEED_DIR: ${{ inputs.feed-dir }}
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm --filter @bet/ingest start

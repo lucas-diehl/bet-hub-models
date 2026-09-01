@@ -1,0 +1,53 @@
+# DFS ENGINE — contest payout structures & roster templates (per sport / site)
+# Used by payouts.R (when wired to load from here) and as the documented source of
+# truth for roster rules. Roster rules currently live in each sport's roster.R;
+# this file mirrors them for reference and future config-driven loading.
+#
+# !!! Roster templates marked VERIFY must be checked against a live DK slate. !!!
+
+payout_curves:
+  cash_double_up:
+    type: cash
+    cash_frac: 0.44      # ~top 44% double their money
+    payout: 1.8          # net-of-rake multiple to cashers
+  gpp_large:
+    type: gpp
+    paid_frac: 0.20      # ~top 20% cash
+    alpha: 1.0           # top-heaviness (higher = spikier 1st)
+    rake: 0.15
+    min_cash: 1.5
+
+roster_templates:
+  golf:                  # DK PGA Classic
+    n: 6
+    cap: 50000
+    floor: 49400
+    slots: flat
+  wnba:                  # DK WNBA Classic — VERIFY
+    n: 6
+    cap: 50000
+    slots: { G: 2, F: 2 }
+    flex: { count: 2, positions: [G, F] }   # UTIL
+  tennis:                # DK Tennis Classic — VERIFY
+    n: 6
+    cap: 50000
+    floor: 47000
+    slots: flat
+    both_sides_rosterable: true
+  nfl:                   # DK NFL Classic (deferred — Sept) — VERIFY
+    n: 9
+    cap: 50000
+    slots: { QB: 1, RB: 2, WR: 3, TE: 1, DST: 1 }
+    flex: { count: 1, positions: [RB, WR, TE] }
+  ncaaf:                 # DK CFB Classic (deferred — Sept) — VERIFY
+    n: 9
+    cap: 50000
+    slots: { QB: 1, RB: 2, WR: 3, FLEX: 1, S-FLEX: 1 }
+  nba:                   # DK NBA Classic (deferred — Oct) — VERIFY
+    n: 8
+    cap: 50000
+    slots: { PG: 1, SG: 1, SF: 1, PF: 1, C: 1 }
+    flex: { count: 3, positions: [PG, SG, SF, PF, C] }  # G / F / UTIL
+
+# Never modeled — by project rule.
+excluded_sports: [mlb, baseball, softball]

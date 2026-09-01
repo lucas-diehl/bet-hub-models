@@ -1,0 +1,1392 @@
+date,event,tour,player_id,player_name,dg_own
+2026-08-12,FedEx St. Jude Championship,pga,18417,"Scheffler, Scottie",30.51
+2026-08-12,FedEx St. Jude Championship,pga,10091,"McIlroy, Rory",16.52
+2026-08-12,FedEx St. Jude Championship,pga,12294,"Fleetwood, Tommy",16.63
+2026-08-12,FedEx St. Jude Championship,pga,19895,"Schauffele, Xander",16.42
+2026-08-12,FedEx St. Jude Championship,pga,17646,"Fitzpatrick, Matt",14.75
+2026-08-12,FedEx St. Jude Championship,pga,26651,"Young, Cameron",15.31
+2026-08-12,FedEx St. Jude Championship,pga,19483,"Burns, Sam",21.73
+2026-08-12,FedEx St. Jude Championship,pga,22085,"Morikawa, Collin",19.2
+2026-08-12,FedEx St. Jude Championship,pga,23950,"Aberg, Ludvig",14.55
+2026-08-12,FedEx St. Jude Championship,pga,13562,"Matsuyama, Hideki",18.83
+2026-08-12,FedEx St. Jude Championship,pga,27774,"Gotterup, Chris",7.52
+2026-08-12,FedEx St. Jude Championship,pga,15466,"Cantlay, Patrick",14.02
+2026-08-12,FedEx St. Jude Championship,pga,14609,"Kim, Si Woo",12.96
+2026-08-12,FedEx St. Jude Championship,pga,14578,"Henley, Russell",13.47
+2026-08-12,FedEx St. Jude Championship,pga,23604,"Clark, Wyndham",7.27
+2026-08-12,FedEx St. Jude Championship,pga,18841,"Hovland, Viktor",18.5
+2026-08-12,FedEx St. Jude Championship,pga,23323,"MacIntyre, Robert",8.53
+2026-08-12,FedEx St. Jude Championship,pga,32319,"Koivun, Jackson",10.77
+2026-08-12,FedEx St. Jude Championship,pga,14139,"Thomas, Justin",17.73
+2026-08-12,FedEx St. Jude Championship,pga,6093,"Rose, Justin",10.34
+2026-08-12,FedEx St. Jude Championship,pga,24766,"Kim, Tom",13.28
+2026-08-12,FedEx St. Jude Championship,pga,17536,"Spaun, J.J.",12.52
+2026-08-12,FedEx St. Jude Championship,pga,24968,"Griffin, Ben",5.88
+2026-08-12,FedEx St. Jude Championship,pga,16841,"Lee, Min Woo",6.02
+2026-08-12,FedEx St. Jude Championship,pga,21891,"Kitayama, Kurt",7.05
+2026-08-12,FedEx St. Jude Championship,pga,18634,"McNealy, Maverick",6.76
+2026-08-12,FedEx St. Jude Championship,pga,26649,"Thorbjornsen, Michael",7.55
+2026-08-12,FedEx St. Jude Championship,pga,12965,"Fowler, Rickie",10.88
+2026-08-12,FedEx St. Jude Championship,pga,29197,"Brennan, Michael",9.22
+2026-08-12,FedEx St. Jude Championship,pga,29767,"Gerard, Ryan",8.53
+2026-08-12,FedEx St. Jude Championship,pga,26096,"Bhatia, Akshay",11.02
+2026-08-12,FedEx St. Jude Championship,pga,13900,"Lowry, Shane",6.8
+2026-08-12,FedEx St. Jude Championship,pga,29433,"Bridgeman, Jacob",7.9
+2026-08-12,FedEx St. Jude Championship,pga,23602,"Hojgaard, Nicolai",3.35
+2026-08-12,FedEx St. Jude Championship,pga,10419,"Noren, Alex",7.56
+2026-08-12,FedEx St. Jude Championship,pga,21407,"Reitan, Kristoffer",4.67
+2026-08-12,FedEx St. Jude Championship,pga,6430,"Scott, Adam",5.83
+2026-08-12,FedEx St. Jude Championship,pga,18474,"Smalley, Alex",7.57
+2026-08-12,FedEx St. Jude Championship,pga,19396,"Knapp, Jake",4.91
+2026-08-12,FedEx St. Jude Championship,pga,14577,"English, Harris",4.71
+2026-08-12,FedEx St. Jude Championship,pga,14636,"Spieth, Jordan",7.42
+2026-08-12,FedEx St. Jude Championship,pga,17365,"Mitchell, Keith",4.03
+2026-08-12,FedEx St. Jude Championship,pga,18554,"Rai, Aaron",9.84
+2026-08-12,FedEx St. Jude Championship,pga,11889,"Fox, Ryan",4.21
+2026-08-12,FedEx St. Jude Championship,pga,25362,"Fitzpatrick, Alex",8.18
+2026-08-12,FedEx St. Jude Championship,pga,17488,"Im, Sungjae",9.06
+2026-08-12,FedEx St. Jude Championship,pga,17576,"Conners, Corey",7.59
+2026-08-12,FedEx St. Jude Championship,pga,12577,"Woodland, Gary",4.89
+2026-08-12,FedEx St. Jude Championship,pga,18586,"Smith, Jordan",6.03
+2026-08-12,FedEx St. Jude Championship,pga,21756,"Cole, Eric",4.76
+2026-08-12,FedEx St. Jude Championship,pga,23014,"Theegala, Sahith",4.86
+2026-08-12,FedEx St. Jude Championship,pga,8825,"Harman, Brian",5.82
+2026-08-12,FedEx St. Jude Championship,pga,14502,"Cauley, Bud",5.48
+2026-08-12,FedEx St. Jude Championship,pga,17543,"Kim, Michael",4.77
+2026-08-12,FedEx St. Jude Championship,pga,13126,"Taylor, Nick",3.42
+2026-08-12,FedEx St. Jude Championship,pga,17538,"Homa, Max",4.74
+2026-08-12,FedEx St. Jude Championship,pga,27194,"Hall, Harry",5.03
+2026-08-12,FedEx St. Jude Championship,pga,22833,"Echavarria, Nico",5.1
+2026-08-12,FedEx St. Jude Championship,pga,22760,"Hisatsune, Ryo",4.02
+2026-08-12,FedEx St. Jude Championship,pga,21554,"Poston, J.T.",6.03
+2026-08-12,FedEx St. Jude Championship,pga,29925,"Yellamaraju, Sudarshan",2.73
+2026-08-12,FedEx St. Jude Championship,pga,17511,"Straka, Sepp",5.89
+2026-08-12,FedEx St. Jude Championship,pga,27819,"Castillo, Ricky",2.85
+2026-08-12,FedEx St. Jude Championship,pga,28635,"McCarty, Matt",3.57
+2026-08-12,FedEx St. Jude Championship,pga,27900,"Potgieter, Aldrich",1.92
+2026-08-12,FedEx St. Jude Championship,pga,25569,"Stevens, Sam",2.65
+2026-08-12,FedEx St. Jude Championship,pga,28309,"Coody, Pierceson",2.71
+2026-08-12,FedEx St. Jude Championship,pga,16283,"Rodgers, Patrick",2.53
+2026-08-12,FedEx St. Jude Championship,pga,20722,"Schmid, Matti",2.31
+2026-08-12,FedEx St. Jude Championship,pga,18417,"Scheffler, Scottie",30.51
+2026-08-12,FedEx St. Jude Championship,pga,10091,"McIlroy, Rory",16.52
+2026-08-12,FedEx St. Jude Championship,pga,12294,"Fleetwood, Tommy",16.63
+2026-08-12,FedEx St. Jude Championship,pga,19895,"Schauffele, Xander",16.42
+2026-08-12,FedEx St. Jude Championship,pga,17646,"Fitzpatrick, Matt",14.75
+2026-08-12,FedEx St. Jude Championship,pga,26651,"Young, Cameron",15.31
+2026-08-12,FedEx St. Jude Championship,pga,19483,"Burns, Sam",21.73
+2026-08-12,FedEx St. Jude Championship,pga,22085,"Morikawa, Collin",19.2
+2026-08-12,FedEx St. Jude Championship,pga,23950,"Aberg, Ludvig",14.55
+2026-08-12,FedEx St. Jude Championship,pga,13562,"Matsuyama, Hideki",18.83
+2026-08-12,FedEx St. Jude Championship,pga,27774,"Gotterup, Chris",7.52
+2026-08-12,FedEx St. Jude Championship,pga,15466,"Cantlay, Patrick",14.02
+2026-08-12,FedEx St. Jude Championship,pga,14609,"Kim, Si Woo",12.96
+2026-08-12,FedEx St. Jude Championship,pga,14578,"Henley, Russell",13.47
+2026-08-12,FedEx St. Jude Championship,pga,23604,"Clark, Wyndham",7.27
+2026-08-12,FedEx St. Jude Championship,pga,18841,"Hovland, Viktor",18.5
+2026-08-12,FedEx St. Jude Championship,pga,23323,"MacIntyre, Robert",8.53
+2026-08-12,FedEx St. Jude Championship,pga,32319,"Koivun, Jackson",10.77
+2026-08-12,FedEx St. Jude Championship,pga,14139,"Thomas, Justin",17.73
+2026-08-12,FedEx St. Jude Championship,pga,6093,"Rose, Justin",10.34
+2026-08-12,FedEx St. Jude Championship,pga,24766,"Kim, Tom",13.28
+2026-08-12,FedEx St. Jude Championship,pga,17536,"Spaun, J.J.",12.52
+2026-08-12,FedEx St. Jude Championship,pga,24968,"Griffin, Ben",5.88
+2026-08-12,FedEx St. Jude Championship,pga,16841,"Lee, Min Woo",6.02
+2026-08-12,FedEx St. Jude Championship,pga,21891,"Kitayama, Kurt",7.05
+2026-08-12,FedEx St. Jude Championship,pga,18634,"McNealy, Maverick",6.76
+2026-08-12,FedEx St. Jude Championship,pga,26649,"Thorbjornsen, Michael",7.55
+2026-08-12,FedEx St. Jude Championship,pga,12965,"Fowler, Rickie",10.88
+2026-08-12,FedEx St. Jude Championship,pga,29197,"Brennan, Michael",9.22
+2026-08-12,FedEx St. Jude Championship,pga,29767,"Gerard, Ryan",8.53
+2026-08-12,FedEx St. Jude Championship,pga,26096,"Bhatia, Akshay",11.02
+2026-08-12,FedEx St. Jude Championship,pga,13900,"Lowry, Shane",6.8
+2026-08-12,FedEx St. Jude Championship,pga,29433,"Bridgeman, Jacob",7.9
+2026-08-12,FedEx St. Jude Championship,pga,23602,"Hojgaard, Nicolai",3.35
+2026-08-12,FedEx St. Jude Championship,pga,10419,"Noren, Alex",7.56
+2026-08-12,FedEx St. Jude Championship,pga,21407,"Reitan, Kristoffer",4.67
+2026-08-12,FedEx St. Jude Championship,pga,6430,"Scott, Adam",5.83
+2026-08-12,FedEx St. Jude Championship,pga,18474,"Smalley, Alex",7.57
+2026-08-12,FedEx St. Jude Championship,pga,19396,"Knapp, Jake",4.91
+2026-08-12,FedEx St. Jude Championship,pga,14577,"English, Harris",4.71
+2026-08-12,FedEx St. Jude Championship,pga,14636,"Spieth, Jordan",7.42
+2026-08-12,FedEx St. Jude Championship,pga,17365,"Mitchell, Keith",4.03
+2026-08-12,FedEx St. Jude Championship,pga,18554,"Rai, Aaron",9.84
+2026-08-12,FedEx St. Jude Championship,pga,11889,"Fox, Ryan",4.21
+2026-08-12,FedEx St. Jude Championship,pga,25362,"Fitzpatrick, Alex",8.18
+2026-08-12,FedEx St. Jude Championship,pga,17488,"Im, Sungjae",9.06
+2026-08-12,FedEx St. Jude Championship,pga,17576,"Conners, Corey",7.59
+2026-08-12,FedEx St. Jude Championship,pga,12577,"Woodland, Gary",4.89
+2026-08-12,FedEx St. Jude Championship,pga,18586,"Smith, Jordan",6.03
+2026-08-12,FedEx St. Jude Championship,pga,21756,"Cole, Eric",4.76
+2026-08-12,FedEx St. Jude Championship,pga,23014,"Theegala, Sahith",4.86
+2026-08-12,FedEx St. Jude Championship,pga,8825,"Harman, Brian",5.82
+2026-08-12,FedEx St. Jude Championship,pga,14502,"Cauley, Bud",5.48
+2026-08-12,FedEx St. Jude Championship,pga,17543,"Kim, Michael",4.77
+2026-08-12,FedEx St. Jude Championship,pga,13126,"Taylor, Nick",3.42
+2026-08-12,FedEx St. Jude Championship,pga,17538,"Homa, Max",4.74
+2026-08-12,FedEx St. Jude Championship,pga,27194,"Hall, Harry",5.03
+2026-08-12,FedEx St. Jude Championship,pga,22833,"Echavarria, Nico",5.1
+2026-08-12,FedEx St. Jude Championship,pga,22760,"Hisatsune, Ryo",4.02
+2026-08-12,FedEx St. Jude Championship,pga,21554,"Poston, J.T.",6.03
+2026-08-12,FedEx St. Jude Championship,pga,29925,"Yellamaraju, Sudarshan",2.73
+2026-08-12,FedEx St. Jude Championship,pga,17511,"Straka, Sepp",5.89
+2026-08-12,FedEx St. Jude Championship,pga,27819,"Castillo, Ricky",2.85
+2026-08-12,FedEx St. Jude Championship,pga,28635,"McCarty, Matt",3.57
+2026-08-12,FedEx St. Jude Championship,pga,27900,"Potgieter, Aldrich",1.92
+2026-08-12,FedEx St. Jude Championship,pga,25569,"Stevens, Sam",2.65
+2026-08-12,FedEx St. Jude Championship,pga,28309,"Coody, Pierceson",2.71
+2026-08-12,FedEx St. Jude Championship,pga,16283,"Rodgers, Patrick",2.53
+2026-08-12,FedEx St. Jude Championship,pga,20722,"Schmid, Matti",2.31
+2026-08-13,FedEx St. Jude Championship,pga,18417,"Scheffler, Scottie",29.61
+2026-08-13,FedEx St. Jude Championship,pga,10091,"McIlroy, Rory",15.74
+2026-08-13,FedEx St. Jude Championship,pga,12294,"Fleetwood, Tommy",16.15
+2026-08-13,FedEx St. Jude Championship,pga,19895,"Schauffele, Xander",15.58
+2026-08-13,FedEx St. Jude Championship,pga,17646,"Fitzpatrick, Matt",14.9
+2026-08-13,FedEx St. Jude Championship,pga,26651,"Young, Cameron",14.84
+2026-08-13,FedEx St. Jude Championship,pga,19483,"Burns, Sam",20.31
+2026-08-13,FedEx St. Jude Championship,pga,22085,"Morikawa, Collin",18.99
+2026-08-13,FedEx St. Jude Championship,pga,23950,"Aberg, Ludvig",14.47
+2026-08-13,FedEx St. Jude Championship,pga,13562,"Matsuyama, Hideki",18.4
+2026-08-13,FedEx St. Jude Championship,pga,27774,"Gotterup, Chris",7.54
+2026-08-13,FedEx St. Jude Championship,pga,15466,"Cantlay, Patrick",13.85
+2026-08-13,FedEx St. Jude Championship,pga,14609,"Kim, Si Woo",12.92
+2026-08-13,FedEx St. Jude Championship,pga,14578,"Henley, Russell",13.51
+2026-08-13,FedEx St. Jude Championship,pga,23604,"Clark, Wyndham",7.26
+2026-08-13,FedEx St. Jude Championship,pga,18841,"Hovland, Viktor",18.53
+2026-08-13,FedEx St. Jude Championship,pga,23323,"MacIntyre, Robert",8.87
+2026-08-13,FedEx St. Jude Championship,pga,32319,"Koivun, Jackson",10.22
+2026-08-13,FedEx St. Jude Championship,pga,14139,"Thomas, Justin",16.69
+2026-08-13,FedEx St. Jude Championship,pga,6093,"Rose, Justin",9.63
+2026-08-13,FedEx St. Jude Championship,pga,24766,"Kim, Tom",14.07
+2026-08-13,FedEx St. Jude Championship,pga,17536,"Spaun, J.J.",12.68
+2026-08-13,FedEx St. Jude Championship,pga,24968,"Griffin, Ben",5.73
+2026-08-13,FedEx St. Jude Championship,pga,16841,"Lee, Min Woo",5.68
+2026-08-13,FedEx St. Jude Championship,pga,21891,"Kitayama, Kurt",6.89
+2026-08-13,FedEx St. Jude Championship,pga,18634,"McNealy, Maverick",7.17
+2026-08-13,FedEx St. Jude Championship,pga,26649,"Thorbjornsen, Michael",8.4
+2026-08-13,FedEx St. Jude Championship,pga,12965,"Fowler, Rickie",11.19
+2026-08-13,FedEx St. Jude Championship,pga,29197,"Brennan, Michael",9
+2026-08-13,FedEx St. Jude Championship,pga,29767,"Gerard, Ryan",9.15
+2026-08-13,FedEx St. Jude Championship,pga,26096,"Bhatia, Akshay",10.87
+2026-08-13,FedEx St. Jude Championship,pga,13900,"Lowry, Shane",6.71
+2026-08-13,FedEx St. Jude Championship,pga,29433,"Bridgeman, Jacob",8.03
+2026-08-13,FedEx St. Jude Championship,pga,23602,"Hojgaard, Nicolai",3.47
+2026-08-13,FedEx St. Jude Championship,pga,10419,"Noren, Alex",7.32
+2026-08-13,FedEx St. Jude Championship,pga,21407,"Reitan, Kristoffer",4.87
+2026-08-13,FedEx St. Jude Championship,pga,6430,"Scott, Adam",6.19
+2026-08-13,FedEx St. Jude Championship,pga,18474,"Smalley, Alex",7.87
+2026-08-13,FedEx St. Jude Championship,pga,19396,"Knapp, Jake",5.2
+2026-08-13,FedEx St. Jude Championship,pga,14577,"English, Harris",4.69
+2026-08-13,FedEx St. Jude Championship,pga,14636,"Spieth, Jordan",7.21
+2026-08-13,FedEx St. Jude Championship,pga,17365,"Mitchell, Keith",4.46
+2026-08-13,FedEx St. Jude Championship,pga,18554,"Rai, Aaron",10.62
+2026-08-13,FedEx St. Jude Championship,pga,11889,"Fox, Ryan",4.63
+2026-08-13,FedEx St. Jude Championship,pga,25362,"Fitzpatrick, Alex",8.09
+2026-08-13,FedEx St. Jude Championship,pga,17488,"Im, Sungjae",9.01
+2026-08-13,FedEx St. Jude Championship,pga,17576,"Conners, Corey",8.69
+2026-08-13,FedEx St. Jude Championship,pga,12577,"Woodland, Gary",4.89
+2026-08-13,FedEx St. Jude Championship,pga,18586,"Smith, Jordan",6.83
+2026-08-13,FedEx St. Jude Championship,pga,21756,"Cole, Eric",5.07
+2026-08-13,FedEx St. Jude Championship,pga,23014,"Theegala, Sahith",5.4
+2026-08-13,FedEx St. Jude Championship,pga,8825,"Harman, Brian",5.88
+2026-08-13,FedEx St. Jude Championship,pga,14502,"Cauley, Bud",6.34
+2026-08-13,FedEx St. Jude Championship,pga,17543,"Kim, Michael",4.87
+2026-08-13,FedEx St. Jude Championship,pga,13126,"Taylor, Nick",3.53
+2026-08-13,FedEx St. Jude Championship,pga,17538,"Homa, Max",4.66
+2026-08-13,FedEx St. Jude Championship,pga,27194,"Hall, Harry",4.9
+2026-08-13,FedEx St. Jude Championship,pga,22833,"Echavarria, Nico",5.39
+2026-08-13,FedEx St. Jude Championship,pga,22760,"Hisatsune, Ryo",4.45
+2026-08-13,FedEx St. Jude Championship,pga,21554,"Poston, J.T.",5.96
+2026-08-13,FedEx St. Jude Championship,pga,29925,"Yellamaraju, Sudarshan",2.61
+2026-08-13,FedEx St. Jude Championship,pga,17511,"Straka, Sepp",5.74
+2026-08-13,FedEx St. Jude Championship,pga,27819,"Castillo, Ricky",2.96
+2026-08-13,FedEx St. Jude Championship,pga,28635,"McCarty, Matt",3.71
+2026-08-13,FedEx St. Jude Championship,pga,27900,"Potgieter, Aldrich",1.6
+2026-08-13,FedEx St. Jude Championship,pga,25569,"Stevens, Sam",2.61
+2026-08-13,FedEx St. Jude Championship,pga,28309,"Coody, Pierceson",2.33
+2026-08-13,FedEx St. Jude Championship,pga,16283,"Rodgers, Patrick",2.12
+2026-08-13,FedEx St. Jude Championship,pga,20722,"Schmid, Matti",2.25
+2026-08-13,FedEx St. Jude Championship,pga,18417,"Scheffler, Scottie",29.61
+2026-08-13,FedEx St. Jude Championship,pga,10091,"McIlroy, Rory",15.74
+2026-08-13,FedEx St. Jude Championship,pga,12294,"Fleetwood, Tommy",16.15
+2026-08-13,FedEx St. Jude Championship,pga,19895,"Schauffele, Xander",15.58
+2026-08-13,FedEx St. Jude Championship,pga,17646,"Fitzpatrick, Matt",14.9
+2026-08-13,FedEx St. Jude Championship,pga,26651,"Young, Cameron",14.84
+2026-08-13,FedEx St. Jude Championship,pga,19483,"Burns, Sam",20.31
+2026-08-13,FedEx St. Jude Championship,pga,22085,"Morikawa, Collin",18.99
+2026-08-13,FedEx St. Jude Championship,pga,23950,"Aberg, Ludvig",14.47
+2026-08-13,FedEx St. Jude Championship,pga,13562,"Matsuyama, Hideki",18.4
+2026-08-13,FedEx St. Jude Championship,pga,27774,"Gotterup, Chris",7.54
+2026-08-13,FedEx St. Jude Championship,pga,15466,"Cantlay, Patrick",13.85
+2026-08-13,FedEx St. Jude Championship,pga,14609,"Kim, Si Woo",12.92
+2026-08-13,FedEx St. Jude Championship,pga,14578,"Henley, Russell",13.51
+2026-08-13,FedEx St. Jude Championship,pga,23604,"Clark, Wyndham",7.26
+2026-08-13,FedEx St. Jude Championship,pga,18841,"Hovland, Viktor",18.53
+2026-08-13,FedEx St. Jude Championship,pga,23323,"MacIntyre, Robert",8.87
+2026-08-13,FedEx St. Jude Championship,pga,32319,"Koivun, Jackson",10.22
+2026-08-13,FedEx St. Jude Championship,pga,14139,"Thomas, Justin",16.69
+2026-08-13,FedEx St. Jude Championship,pga,6093,"Rose, Justin",9.63
+2026-08-13,FedEx St. Jude Championship,pga,24766,"Kim, Tom",14.07
+2026-08-13,FedEx St. Jude Championship,pga,17536,"Spaun, J.J.",12.68
+2026-08-13,FedEx St. Jude Championship,pga,24968,"Griffin, Ben",5.73
+2026-08-13,FedEx St. Jude Championship,pga,16841,"Lee, Min Woo",5.68
+2026-08-13,FedEx St. Jude Championship,pga,21891,"Kitayama, Kurt",6.89
+2026-08-13,FedEx St. Jude Championship,pga,18634,"McNealy, Maverick",7.17
+2026-08-13,FedEx St. Jude Championship,pga,26649,"Thorbjornsen, Michael",8.4
+2026-08-13,FedEx St. Jude Championship,pga,12965,"Fowler, Rickie",11.19
+2026-08-13,FedEx St. Jude Championship,pga,29197,"Brennan, Michael",9
+2026-08-13,FedEx St. Jude Championship,pga,29767,"Gerard, Ryan",9.15
+2026-08-13,FedEx St. Jude Championship,pga,26096,"Bhatia, Akshay",10.87
+2026-08-13,FedEx St. Jude Championship,pga,13900,"Lowry, Shane",6.71
+2026-08-13,FedEx St. Jude Championship,pga,29433,"Bridgeman, Jacob",8.03
+2026-08-13,FedEx St. Jude Championship,pga,23602,"Hojgaard, Nicolai",3.47
+2026-08-13,FedEx St. Jude Championship,pga,10419,"Noren, Alex",7.32
+2026-08-13,FedEx St. Jude Championship,pga,21407,"Reitan, Kristoffer",4.87
+2026-08-13,FedEx St. Jude Championship,pga,6430,"Scott, Adam",6.19
+2026-08-13,FedEx St. Jude Championship,pga,18474,"Smalley, Alex",7.87
+2026-08-13,FedEx St. Jude Championship,pga,19396,"Knapp, Jake",5.2
+2026-08-13,FedEx St. Jude Championship,pga,14577,"English, Harris",4.69
+2026-08-13,FedEx St. Jude Championship,pga,14636,"Spieth, Jordan",7.21
+2026-08-13,FedEx St. Jude Championship,pga,17365,"Mitchell, Keith",4.46
+2026-08-13,FedEx St. Jude Championship,pga,18554,"Rai, Aaron",10.62
+2026-08-13,FedEx St. Jude Championship,pga,11889,"Fox, Ryan",4.63
+2026-08-13,FedEx St. Jude Championship,pga,25362,"Fitzpatrick, Alex",8.09
+2026-08-13,FedEx St. Jude Championship,pga,17488,"Im, Sungjae",9.01
+2026-08-13,FedEx St. Jude Championship,pga,17576,"Conners, Corey",8.69
+2026-08-13,FedEx St. Jude Championship,pga,12577,"Woodland, Gary",4.89
+2026-08-13,FedEx St. Jude Championship,pga,18586,"Smith, Jordan",6.83
+2026-08-13,FedEx St. Jude Championship,pga,21756,"Cole, Eric",5.07
+2026-08-13,FedEx St. Jude Championship,pga,23014,"Theegala, Sahith",5.4
+2026-08-13,FedEx St. Jude Championship,pga,8825,"Harman, Brian",5.88
+2026-08-13,FedEx St. Jude Championship,pga,14502,"Cauley, Bud",6.34
+2026-08-13,FedEx St. Jude Championship,pga,17543,"Kim, Michael",4.87
+2026-08-13,FedEx St. Jude Championship,pga,13126,"Taylor, Nick",3.53
+2026-08-13,FedEx St. Jude Championship,pga,17538,"Homa, Max",4.66
+2026-08-13,FedEx St. Jude Championship,pga,27194,"Hall, Harry",4.9
+2026-08-13,FedEx St. Jude Championship,pga,22833,"Echavarria, Nico",5.39
+2026-08-13,FedEx St. Jude Championship,pga,22760,"Hisatsune, Ryo",4.45
+2026-08-13,FedEx St. Jude Championship,pga,21554,"Poston, J.T.",5.96
+2026-08-13,FedEx St. Jude Championship,pga,29925,"Yellamaraju, Sudarshan",2.61
+2026-08-13,FedEx St. Jude Championship,pga,17511,"Straka, Sepp",5.74
+2026-08-13,FedEx St. Jude Championship,pga,27819,"Castillo, Ricky",2.96
+2026-08-13,FedEx St. Jude Championship,pga,28635,"McCarty, Matt",3.71
+2026-08-13,FedEx St. Jude Championship,pga,27900,"Potgieter, Aldrich",1.6
+2026-08-13,FedEx St. Jude Championship,pga,25569,"Stevens, Sam",2.61
+2026-08-13,FedEx St. Jude Championship,pga,28309,"Coody, Pierceson",2.33
+2026-08-13,FedEx St. Jude Championship,pga,16283,"Rodgers, Patrick",2.12
+2026-08-13,FedEx St. Jude Championship,pga,20722,"Schmid, Matti",2.25
+2026-08-14,FedEx St. Jude Championship,pga,18417,"Scheffler, Scottie",29.61
+2026-08-14,FedEx St. Jude Championship,pga,10091,"McIlroy, Rory",15.74
+2026-08-14,FedEx St. Jude Championship,pga,12294,"Fleetwood, Tommy",16.15
+2026-08-14,FedEx St. Jude Championship,pga,19895,"Schauffele, Xander",15.58
+2026-08-14,FedEx St. Jude Championship,pga,17646,"Fitzpatrick, Matt",14.9
+2026-08-14,FedEx St. Jude Championship,pga,26651,"Young, Cameron",14.84
+2026-08-14,FedEx St. Jude Championship,pga,19483,"Burns, Sam",20.31
+2026-08-14,FedEx St. Jude Championship,pga,22085,"Morikawa, Collin",18.99
+2026-08-14,FedEx St. Jude Championship,pga,23950,"Aberg, Ludvig",14.47
+2026-08-14,FedEx St. Jude Championship,pga,13562,"Matsuyama, Hideki",18.4
+2026-08-14,FedEx St. Jude Championship,pga,27774,"Gotterup, Chris",7.54
+2026-08-14,FedEx St. Jude Championship,pga,15466,"Cantlay, Patrick",13.85
+2026-08-14,FedEx St. Jude Championship,pga,14609,"Kim, Si Woo",12.92
+2026-08-14,FedEx St. Jude Championship,pga,14578,"Henley, Russell",13.51
+2026-08-14,FedEx St. Jude Championship,pga,23604,"Clark, Wyndham",7.26
+2026-08-14,FedEx St. Jude Championship,pga,18841,"Hovland, Viktor",18.53
+2026-08-14,FedEx St. Jude Championship,pga,23323,"MacIntyre, Robert",8.87
+2026-08-14,FedEx St. Jude Championship,pga,32319,"Koivun, Jackson",10.22
+2026-08-14,FedEx St. Jude Championship,pga,14139,"Thomas, Justin",16.69
+2026-08-14,FedEx St. Jude Championship,pga,6093,"Rose, Justin",9.63
+2026-08-14,FedEx St. Jude Championship,pga,24766,"Kim, Tom",14.07
+2026-08-14,FedEx St. Jude Championship,pga,17536,"Spaun, J.J.",12.68
+2026-08-14,FedEx St. Jude Championship,pga,24968,"Griffin, Ben",5.73
+2026-08-14,FedEx St. Jude Championship,pga,16841,"Lee, Min Woo",5.68
+2026-08-14,FedEx St. Jude Championship,pga,21891,"Kitayama, Kurt",6.89
+2026-08-14,FedEx St. Jude Championship,pga,18634,"McNealy, Maverick",7.17
+2026-08-14,FedEx St. Jude Championship,pga,26649,"Thorbjornsen, Michael",8.4
+2026-08-14,FedEx St. Jude Championship,pga,12965,"Fowler, Rickie",11.19
+2026-08-14,FedEx St. Jude Championship,pga,29197,"Brennan, Michael",9
+2026-08-14,FedEx St. Jude Championship,pga,29767,"Gerard, Ryan",9.15
+2026-08-14,FedEx St. Jude Championship,pga,26096,"Bhatia, Akshay",10.87
+2026-08-14,FedEx St. Jude Championship,pga,13900,"Lowry, Shane",6.71
+2026-08-14,FedEx St. Jude Championship,pga,29433,"Bridgeman, Jacob",8.03
+2026-08-14,FedEx St. Jude Championship,pga,23602,"Hojgaard, Nicolai",3.47
+2026-08-14,FedEx St. Jude Championship,pga,10419,"Noren, Alex",7.32
+2026-08-14,FedEx St. Jude Championship,pga,21407,"Reitan, Kristoffer",4.87
+2026-08-14,FedEx St. Jude Championship,pga,6430,"Scott, Adam",6.19
+2026-08-14,FedEx St. Jude Championship,pga,18474,"Smalley, Alex",7.87
+2026-08-14,FedEx St. Jude Championship,pga,19396,"Knapp, Jake",5.2
+2026-08-14,FedEx St. Jude Championship,pga,14577,"English, Harris",4.69
+2026-08-14,FedEx St. Jude Championship,pga,14636,"Spieth, Jordan",7.21
+2026-08-14,FedEx St. Jude Championship,pga,17365,"Mitchell, Keith",4.46
+2026-08-14,FedEx St. Jude Championship,pga,18554,"Rai, Aaron",10.62
+2026-08-14,FedEx St. Jude Championship,pga,11889,"Fox, Ryan",4.63
+2026-08-14,FedEx St. Jude Championship,pga,25362,"Fitzpatrick, Alex",8.09
+2026-08-14,FedEx St. Jude Championship,pga,17488,"Im, Sungjae",9.01
+2026-08-14,FedEx St. Jude Championship,pga,17576,"Conners, Corey",8.69
+2026-08-14,FedEx St. Jude Championship,pga,12577,"Woodland, Gary",4.89
+2026-08-14,FedEx St. Jude Championship,pga,18586,"Smith, Jordan",6.83
+2026-08-14,FedEx St. Jude Championship,pga,21756,"Cole, Eric",5.07
+2026-08-14,FedEx St. Jude Championship,pga,23014,"Theegala, Sahith",5.4
+2026-08-14,FedEx St. Jude Championship,pga,8825,"Harman, Brian",5.88
+2026-08-14,FedEx St. Jude Championship,pga,14502,"Cauley, Bud",6.34
+2026-08-14,FedEx St. Jude Championship,pga,17543,"Kim, Michael",4.87
+2026-08-14,FedEx St. Jude Championship,pga,13126,"Taylor, Nick",3.53
+2026-08-14,FedEx St. Jude Championship,pga,17538,"Homa, Max",4.66
+2026-08-14,FedEx St. Jude Championship,pga,27194,"Hall, Harry",4.9
+2026-08-14,FedEx St. Jude Championship,pga,22833,"Echavarria, Nico",5.39
+2026-08-14,FedEx St. Jude Championship,pga,22760,"Hisatsune, Ryo",4.45
+2026-08-14,FedEx St. Jude Championship,pga,21554,"Poston, J.T.",5.96
+2026-08-14,FedEx St. Jude Championship,pga,29925,"Yellamaraju, Sudarshan",2.61
+2026-08-14,FedEx St. Jude Championship,pga,17511,"Straka, Sepp",5.74
+2026-08-14,FedEx St. Jude Championship,pga,27819,"Castillo, Ricky",2.96
+2026-08-14,FedEx St. Jude Championship,pga,28635,"McCarty, Matt",3.71
+2026-08-14,FedEx St. Jude Championship,pga,27900,"Potgieter, Aldrich",1.6
+2026-08-14,FedEx St. Jude Championship,pga,25569,"Stevens, Sam",2.61
+2026-08-14,FedEx St. Jude Championship,pga,28309,"Coody, Pierceson",2.33
+2026-08-14,FedEx St. Jude Championship,pga,16283,"Rodgers, Patrick",2.12
+2026-08-14,FedEx St. Jude Championship,pga,20722,"Schmid, Matti",2.25
+2026-08-15,FedEx St. Jude Championship,pga,18417,"Scheffler, Scottie",29.61
+2026-08-15,FedEx St. Jude Championship,pga,10091,"McIlroy, Rory",15.74
+2026-08-15,FedEx St. Jude Championship,pga,12294,"Fleetwood, Tommy",16.15
+2026-08-15,FedEx St. Jude Championship,pga,19895,"Schauffele, Xander",15.58
+2026-08-15,FedEx St. Jude Championship,pga,17646,"Fitzpatrick, Matt",14.9
+2026-08-15,FedEx St. Jude Championship,pga,26651,"Young, Cameron",14.84
+2026-08-15,FedEx St. Jude Championship,pga,19483,"Burns, Sam",20.31
+2026-08-15,FedEx St. Jude Championship,pga,22085,"Morikawa, Collin",18.99
+2026-08-15,FedEx St. Jude Championship,pga,23950,"Aberg, Ludvig",14.47
+2026-08-15,FedEx St. Jude Championship,pga,13562,"Matsuyama, Hideki",18.4
+2026-08-15,FedEx St. Jude Championship,pga,27774,"Gotterup, Chris",7.54
+2026-08-15,FedEx St. Jude Championship,pga,15466,"Cantlay, Patrick",13.85
+2026-08-15,FedEx St. Jude Championship,pga,14609,"Kim, Si Woo",12.92
+2026-08-15,FedEx St. Jude Championship,pga,14578,"Henley, Russell",13.51
+2026-08-15,FedEx St. Jude Championship,pga,23604,"Clark, Wyndham",7.26
+2026-08-15,FedEx St. Jude Championship,pga,18841,"Hovland, Viktor",18.53
+2026-08-15,FedEx St. Jude Championship,pga,23323,"MacIntyre, Robert",8.87
+2026-08-15,FedEx St. Jude Championship,pga,32319,"Koivun, Jackson",10.22
+2026-08-15,FedEx St. Jude Championship,pga,14139,"Thomas, Justin",16.69
+2026-08-15,FedEx St. Jude Championship,pga,6093,"Rose, Justin",9.63
+2026-08-15,FedEx St. Jude Championship,pga,24766,"Kim, Tom",14.07
+2026-08-15,FedEx St. Jude Championship,pga,17536,"Spaun, J.J.",12.68
+2026-08-15,FedEx St. Jude Championship,pga,24968,"Griffin, Ben",5.73
+2026-08-15,FedEx St. Jude Championship,pga,16841,"Lee, Min Woo",5.68
+2026-08-15,FedEx St. Jude Championship,pga,21891,"Kitayama, Kurt",6.89
+2026-08-15,FedEx St. Jude Championship,pga,18634,"McNealy, Maverick",7.17
+2026-08-15,FedEx St. Jude Championship,pga,26649,"Thorbjornsen, Michael",8.4
+2026-08-15,FedEx St. Jude Championship,pga,12965,"Fowler, Rickie",11.19
+2026-08-15,FedEx St. Jude Championship,pga,29197,"Brennan, Michael",9
+2026-08-15,FedEx St. Jude Championship,pga,29767,"Gerard, Ryan",9.15
+2026-08-15,FedEx St. Jude Championship,pga,26096,"Bhatia, Akshay",10.87
+2026-08-15,FedEx St. Jude Championship,pga,13900,"Lowry, Shane",6.71
+2026-08-15,FedEx St. Jude Championship,pga,29433,"Bridgeman, Jacob",8.03
+2026-08-15,FedEx St. Jude Championship,pga,23602,"Hojgaard, Nicolai",3.47
+2026-08-15,FedEx St. Jude Championship,pga,10419,"Noren, Alex",7.32
+2026-08-15,FedEx St. Jude Championship,pga,21407,"Reitan, Kristoffer",4.87
+2026-08-15,FedEx St. Jude Championship,pga,6430,"Scott, Adam",6.19
+2026-08-15,FedEx St. Jude Championship,pga,18474,"Smalley, Alex",7.87
+2026-08-15,FedEx St. Jude Championship,pga,19396,"Knapp, Jake",5.2
+2026-08-15,FedEx St. Jude Championship,pga,14577,"English, Harris",4.69
+2026-08-15,FedEx St. Jude Championship,pga,14636,"Spieth, Jordan",7.21
+2026-08-15,FedEx St. Jude Championship,pga,17365,"Mitchell, Keith",4.46
+2026-08-15,FedEx St. Jude Championship,pga,18554,"Rai, Aaron",10.62
+2026-08-15,FedEx St. Jude Championship,pga,11889,"Fox, Ryan",4.63
+2026-08-15,FedEx St. Jude Championship,pga,25362,"Fitzpatrick, Alex",8.09
+2026-08-15,FedEx St. Jude Championship,pga,17488,"Im, Sungjae",9.01
+2026-08-15,FedEx St. Jude Championship,pga,17576,"Conners, Corey",8.69
+2026-08-15,FedEx St. Jude Championship,pga,12577,"Woodland, Gary",4.89
+2026-08-15,FedEx St. Jude Championship,pga,18586,"Smith, Jordan",6.83
+2026-08-15,FedEx St. Jude Championship,pga,21756,"Cole, Eric",5.07
+2026-08-15,FedEx St. Jude Championship,pga,23014,"Theegala, Sahith",5.4
+2026-08-15,FedEx St. Jude Championship,pga,8825,"Harman, Brian",5.88
+2026-08-15,FedEx St. Jude Championship,pga,14502,"Cauley, Bud",6.34
+2026-08-15,FedEx St. Jude Championship,pga,17543,"Kim, Michael",4.87
+2026-08-15,FedEx St. Jude Championship,pga,13126,"Taylor, Nick",3.53
+2026-08-15,FedEx St. Jude Championship,pga,17538,"Homa, Max",4.66
+2026-08-15,FedEx St. Jude Championship,pga,27194,"Hall, Harry",4.9
+2026-08-15,FedEx St. Jude Championship,pga,22833,"Echavarria, Nico",5.39
+2026-08-15,FedEx St. Jude Championship,pga,22760,"Hisatsune, Ryo",4.45
+2026-08-15,FedEx St. Jude Championship,pga,21554,"Poston, J.T.",5.96
+2026-08-15,FedEx St. Jude Championship,pga,29925,"Yellamaraju, Sudarshan",2.61
+2026-08-15,FedEx St. Jude Championship,pga,17511,"Straka, Sepp",5.74
+2026-08-15,FedEx St. Jude Championship,pga,27819,"Castillo, Ricky",2.96
+2026-08-15,FedEx St. Jude Championship,pga,28635,"McCarty, Matt",3.71
+2026-08-15,FedEx St. Jude Championship,pga,27900,"Potgieter, Aldrich",1.6
+2026-08-15,FedEx St. Jude Championship,pga,25569,"Stevens, Sam",2.61
+2026-08-15,FedEx St. Jude Championship,pga,28309,"Coody, Pierceson",2.33
+2026-08-15,FedEx St. Jude Championship,pga,16283,"Rodgers, Patrick",2.12
+2026-08-15,FedEx St. Jude Championship,pga,20722,"Schmid, Matti",2.25
+2026-08-16,FedEx St. Jude Championship,pga,18417,"Scheffler, Scottie",29.61
+2026-08-16,FedEx St. Jude Championship,pga,10091,"McIlroy, Rory",15.74
+2026-08-16,FedEx St. Jude Championship,pga,12294,"Fleetwood, Tommy",16.15
+2026-08-16,FedEx St. Jude Championship,pga,19895,"Schauffele, Xander",15.58
+2026-08-16,FedEx St. Jude Championship,pga,17646,"Fitzpatrick, Matt",14.9
+2026-08-16,FedEx St. Jude Championship,pga,26651,"Young, Cameron",14.84
+2026-08-16,FedEx St. Jude Championship,pga,19483,"Burns, Sam",20.31
+2026-08-16,FedEx St. Jude Championship,pga,22085,"Morikawa, Collin",18.99
+2026-08-16,FedEx St. Jude Championship,pga,23950,"Aberg, Ludvig",14.47
+2026-08-16,FedEx St. Jude Championship,pga,13562,"Matsuyama, Hideki",18.4
+2026-08-16,FedEx St. Jude Championship,pga,27774,"Gotterup, Chris",7.54
+2026-08-16,FedEx St. Jude Championship,pga,15466,"Cantlay, Patrick",13.85
+2026-08-16,FedEx St. Jude Championship,pga,14609,"Kim, Si Woo",12.92
+2026-08-16,FedEx St. Jude Championship,pga,14578,"Henley, Russell",13.51
+2026-08-16,FedEx St. Jude Championship,pga,23604,"Clark, Wyndham",7.26
+2026-08-16,FedEx St. Jude Championship,pga,18841,"Hovland, Viktor",18.53
+2026-08-16,FedEx St. Jude Championship,pga,23323,"MacIntyre, Robert",8.87
+2026-08-16,FedEx St. Jude Championship,pga,32319,"Koivun, Jackson",10.22
+2026-08-16,FedEx St. Jude Championship,pga,14139,"Thomas, Justin",16.69
+2026-08-16,FedEx St. Jude Championship,pga,6093,"Rose, Justin",9.63
+2026-08-16,FedEx St. Jude Championship,pga,24766,"Kim, Tom",14.07
+2026-08-16,FedEx St. Jude Championship,pga,17536,"Spaun, J.J.",12.68
+2026-08-16,FedEx St. Jude Championship,pga,24968,"Griffin, Ben",5.73
+2026-08-16,FedEx St. Jude Championship,pga,16841,"Lee, Min Woo",5.68
+2026-08-16,FedEx St. Jude Championship,pga,21891,"Kitayama, Kurt",6.89
+2026-08-16,FedEx St. Jude Championship,pga,18634,"McNealy, Maverick",7.17
+2026-08-16,FedEx St. Jude Championship,pga,26649,"Thorbjornsen, Michael",8.4
+2026-08-16,FedEx St. Jude Championship,pga,12965,"Fowler, Rickie",11.19
+2026-08-16,FedEx St. Jude Championship,pga,29197,"Brennan, Michael",9
+2026-08-16,FedEx St. Jude Championship,pga,29767,"Gerard, Ryan",9.15
+2026-08-16,FedEx St. Jude Championship,pga,26096,"Bhatia, Akshay",10.87
+2026-08-16,FedEx St. Jude Championship,pga,13900,"Lowry, Shane",6.71
+2026-08-16,FedEx St. Jude Championship,pga,29433,"Bridgeman, Jacob",8.03
+2026-08-16,FedEx St. Jude Championship,pga,23602,"Hojgaard, Nicolai",3.47
+2026-08-16,FedEx St. Jude Championship,pga,10419,"Noren, Alex",7.32
+2026-08-16,FedEx St. Jude Championship,pga,21407,"Reitan, Kristoffer",4.87
+2026-08-16,FedEx St. Jude Championship,pga,6430,"Scott, Adam",6.19
+2026-08-16,FedEx St. Jude Championship,pga,18474,"Smalley, Alex",7.87
+2026-08-16,FedEx St. Jude Championship,pga,19396,"Knapp, Jake",5.2
+2026-08-16,FedEx St. Jude Championship,pga,14577,"English, Harris",4.69
+2026-08-16,FedEx St. Jude Championship,pga,14636,"Spieth, Jordan",7.21
+2026-08-16,FedEx St. Jude Championship,pga,17365,"Mitchell, Keith",4.46
+2026-08-16,FedEx St. Jude Championship,pga,18554,"Rai, Aaron",10.62
+2026-08-16,FedEx St. Jude Championship,pga,11889,"Fox, Ryan",4.63
+2026-08-16,FedEx St. Jude Championship,pga,25362,"Fitzpatrick, Alex",8.09
+2026-08-16,FedEx St. Jude Championship,pga,17488,"Im, Sungjae",9.01
+2026-08-16,FedEx St. Jude Championship,pga,17576,"Conners, Corey",8.69
+2026-08-16,FedEx St. Jude Championship,pga,12577,"Woodland, Gary",4.89
+2026-08-16,FedEx St. Jude Championship,pga,18586,"Smith, Jordan",6.83
+2026-08-16,FedEx St. Jude Championship,pga,21756,"Cole, Eric",5.07
+2026-08-16,FedEx St. Jude Championship,pga,23014,"Theegala, Sahith",5.4
+2026-08-16,FedEx St. Jude Championship,pga,8825,"Harman, Brian",5.88
+2026-08-16,FedEx St. Jude Championship,pga,14502,"Cauley, Bud",6.34
+2026-08-16,FedEx St. Jude Championship,pga,17543,"Kim, Michael",4.87
+2026-08-16,FedEx St. Jude Championship,pga,13126,"Taylor, Nick",3.53
+2026-08-16,FedEx St. Jude Championship,pga,17538,"Homa, Max",4.66
+2026-08-16,FedEx St. Jude Championship,pga,27194,"Hall, Harry",4.9
+2026-08-16,FedEx St. Jude Championship,pga,22833,"Echavarria, Nico",5.39
+2026-08-16,FedEx St. Jude Championship,pga,22760,"Hisatsune, Ryo",4.45
+2026-08-16,FedEx St. Jude Championship,pga,21554,"Poston, J.T.",5.96
+2026-08-16,FedEx St. Jude Championship,pga,29925,"Yellamaraju, Sudarshan",2.61
+2026-08-16,FedEx St. Jude Championship,pga,17511,"Straka, Sepp",5.74
+2026-08-16,FedEx St. Jude Championship,pga,27819,"Castillo, Ricky",2.96
+2026-08-16,FedEx St. Jude Championship,pga,28635,"McCarty, Matt",3.71
+2026-08-16,FedEx St. Jude Championship,pga,27900,"Potgieter, Aldrich",1.6
+2026-08-16,FedEx St. Jude Championship,pga,25569,"Stevens, Sam",2.61
+2026-08-16,FedEx St. Jude Championship,pga,28309,"Coody, Pierceson",2.33
+2026-08-16,FedEx St. Jude Championship,pga,16283,"Rodgers, Patrick",2.12
+2026-08-16,FedEx St. Jude Championship,pga,20722,"Schmid, Matti",2.25
+2026-08-16,FedEx St. Jude Championship,pga,18417,"Scheffler, Scottie",29.61
+2026-08-16,FedEx St. Jude Championship,pga,10091,"McIlroy, Rory",15.74
+2026-08-16,FedEx St. Jude Championship,pga,12294,"Fleetwood, Tommy",16.15
+2026-08-16,FedEx St. Jude Championship,pga,19895,"Schauffele, Xander",15.58
+2026-08-16,FedEx St. Jude Championship,pga,17646,"Fitzpatrick, Matt",14.9
+2026-08-16,FedEx St. Jude Championship,pga,26651,"Young, Cameron",14.84
+2026-08-16,FedEx St. Jude Championship,pga,19483,"Burns, Sam",20.31
+2026-08-16,FedEx St. Jude Championship,pga,22085,"Morikawa, Collin",18.99
+2026-08-16,FedEx St. Jude Championship,pga,23950,"Aberg, Ludvig",14.47
+2026-08-16,FedEx St. Jude Championship,pga,13562,"Matsuyama, Hideki",18.4
+2026-08-16,FedEx St. Jude Championship,pga,27774,"Gotterup, Chris",7.54
+2026-08-16,FedEx St. Jude Championship,pga,15466,"Cantlay, Patrick",13.85
+2026-08-16,FedEx St. Jude Championship,pga,14609,"Kim, Si Woo",12.92
+2026-08-16,FedEx St. Jude Championship,pga,14578,"Henley, Russell",13.51
+2026-08-16,FedEx St. Jude Championship,pga,23604,"Clark, Wyndham",7.26
+2026-08-16,FedEx St. Jude Championship,pga,18841,"Hovland, Viktor",18.53
+2026-08-16,FedEx St. Jude Championship,pga,23323,"MacIntyre, Robert",8.87
+2026-08-16,FedEx St. Jude Championship,pga,32319,"Koivun, Jackson",10.22
+2026-08-16,FedEx St. Jude Championship,pga,14139,"Thomas, Justin",16.69
+2026-08-16,FedEx St. Jude Championship,pga,6093,"Rose, Justin",9.63
+2026-08-16,FedEx St. Jude Championship,pga,24766,"Kim, Tom",14.07
+2026-08-16,FedEx St. Jude Championship,pga,17536,"Spaun, J.J.",12.68
+2026-08-16,FedEx St. Jude Championship,pga,24968,"Griffin, Ben",5.73
+2026-08-16,FedEx St. Jude Championship,pga,16841,"Lee, Min Woo",5.68
+2026-08-16,FedEx St. Jude Championship,pga,21891,"Kitayama, Kurt",6.89
+2026-08-16,FedEx St. Jude Championship,pga,18634,"McNealy, Maverick",7.17
+2026-08-16,FedEx St. Jude Championship,pga,26649,"Thorbjornsen, Michael",8.4
+2026-08-16,FedEx St. Jude Championship,pga,12965,"Fowler, Rickie",11.19
+2026-08-16,FedEx St. Jude Championship,pga,29197,"Brennan, Michael",9
+2026-08-16,FedEx St. Jude Championship,pga,29767,"Gerard, Ryan",9.15
+2026-08-16,FedEx St. Jude Championship,pga,26096,"Bhatia, Akshay",10.87
+2026-08-16,FedEx St. Jude Championship,pga,13900,"Lowry, Shane",6.71
+2026-08-16,FedEx St. Jude Championship,pga,29433,"Bridgeman, Jacob",8.03
+2026-08-16,FedEx St. Jude Championship,pga,23602,"Hojgaard, Nicolai",3.47
+2026-08-16,FedEx St. Jude Championship,pga,10419,"Noren, Alex",7.32
+2026-08-16,FedEx St. Jude Championship,pga,21407,"Reitan, Kristoffer",4.87
+2026-08-16,FedEx St. Jude Championship,pga,6430,"Scott, Adam",6.19
+2026-08-16,FedEx St. Jude Championship,pga,18474,"Smalley, Alex",7.87
+2026-08-16,FedEx St. Jude Championship,pga,19396,"Knapp, Jake",5.2
+2026-08-16,FedEx St. Jude Championship,pga,14577,"English, Harris",4.69
+2026-08-16,FedEx St. Jude Championship,pga,14636,"Spieth, Jordan",7.21
+2026-08-16,FedEx St. Jude Championship,pga,17365,"Mitchell, Keith",4.46
+2026-08-16,FedEx St. Jude Championship,pga,18554,"Rai, Aaron",10.62
+2026-08-16,FedEx St. Jude Championship,pga,11889,"Fox, Ryan",4.63
+2026-08-16,FedEx St. Jude Championship,pga,25362,"Fitzpatrick, Alex",8.09
+2026-08-16,FedEx St. Jude Championship,pga,17488,"Im, Sungjae",9.01
+2026-08-16,FedEx St. Jude Championship,pga,17576,"Conners, Corey",8.69
+2026-08-16,FedEx St. Jude Championship,pga,12577,"Woodland, Gary",4.89
+2026-08-16,FedEx St. Jude Championship,pga,18586,"Smith, Jordan",6.83
+2026-08-16,FedEx St. Jude Championship,pga,21756,"Cole, Eric",5.07
+2026-08-16,FedEx St. Jude Championship,pga,23014,"Theegala, Sahith",5.4
+2026-08-16,FedEx St. Jude Championship,pga,8825,"Harman, Brian",5.88
+2026-08-16,FedEx St. Jude Championship,pga,14502,"Cauley, Bud",6.34
+2026-08-16,FedEx St. Jude Championship,pga,17543,"Kim, Michael",4.87
+2026-08-16,FedEx St. Jude Championship,pga,13126,"Taylor, Nick",3.53
+2026-08-16,FedEx St. Jude Championship,pga,17538,"Homa, Max",4.66
+2026-08-16,FedEx St. Jude Championship,pga,27194,"Hall, Harry",4.9
+2026-08-16,FedEx St. Jude Championship,pga,22833,"Echavarria, Nico",5.39
+2026-08-16,FedEx St. Jude Championship,pga,22760,"Hisatsune, Ryo",4.45
+2026-08-16,FedEx St. Jude Championship,pga,21554,"Poston, J.T.",5.96
+2026-08-16,FedEx St. Jude Championship,pga,29925,"Yellamaraju, Sudarshan",2.61
+2026-08-16,FedEx St. Jude Championship,pga,17511,"Straka, Sepp",5.74
+2026-08-16,FedEx St. Jude Championship,pga,27819,"Castillo, Ricky",2.96
+2026-08-16,FedEx St. Jude Championship,pga,28635,"McCarty, Matt",3.71
+2026-08-16,FedEx St. Jude Championship,pga,27900,"Potgieter, Aldrich",1.6
+2026-08-16,FedEx St. Jude Championship,pga,25569,"Stevens, Sam",2.61
+2026-08-16,FedEx St. Jude Championship,pga,28309,"Coody, Pierceson",2.33
+2026-08-16,FedEx St. Jude Championship,pga,16283,"Rodgers, Patrick",2.12
+2026-08-16,FedEx St. Jude Championship,pga,20722,"Schmid, Matti",2.25
+2026-08-16,FedEx St. Jude Championship,pga,18417,"Scheffler, Scottie",29.61
+2026-08-16,FedEx St. Jude Championship,pga,10091,"McIlroy, Rory",15.74
+2026-08-16,FedEx St. Jude Championship,pga,12294,"Fleetwood, Tommy",16.15
+2026-08-16,FedEx St. Jude Championship,pga,19895,"Schauffele, Xander",15.58
+2026-08-16,FedEx St. Jude Championship,pga,17646,"Fitzpatrick, Matt",14.9
+2026-08-16,FedEx St. Jude Championship,pga,26651,"Young, Cameron",14.84
+2026-08-16,FedEx St. Jude Championship,pga,19483,"Burns, Sam",20.31
+2026-08-16,FedEx St. Jude Championship,pga,22085,"Morikawa, Collin",18.99
+2026-08-16,FedEx St. Jude Championship,pga,23950,"Aberg, Ludvig",14.47
+2026-08-16,FedEx St. Jude Championship,pga,13562,"Matsuyama, Hideki",18.4
+2026-08-16,FedEx St. Jude Championship,pga,27774,"Gotterup, Chris",7.54
+2026-08-16,FedEx St. Jude Championship,pga,15466,"Cantlay, Patrick",13.85
+2026-08-16,FedEx St. Jude Championship,pga,14609,"Kim, Si Woo",12.92
+2026-08-16,FedEx St. Jude Championship,pga,14578,"Henley, Russell",13.51
+2026-08-16,FedEx St. Jude Championship,pga,23604,"Clark, Wyndham",7.26
+2026-08-16,FedEx St. Jude Championship,pga,18841,"Hovland, Viktor",18.53
+2026-08-16,FedEx St. Jude Championship,pga,23323,"MacIntyre, Robert",8.87
+2026-08-16,FedEx St. Jude Championship,pga,32319,"Koivun, Jackson",10.22
+2026-08-16,FedEx St. Jude Championship,pga,14139,"Thomas, Justin",16.69
+2026-08-16,FedEx St. Jude Championship,pga,6093,"Rose, Justin",9.63
+2026-08-16,FedEx St. Jude Championship,pga,24766,"Kim, Tom",14.07
+2026-08-16,FedEx St. Jude Championship,pga,17536,"Spaun, J.J.",12.68
+2026-08-16,FedEx St. Jude Championship,pga,24968,"Griffin, Ben",5.73
+2026-08-16,FedEx St. Jude Championship,pga,16841,"Lee, Min Woo",5.68
+2026-08-16,FedEx St. Jude Championship,pga,21891,"Kitayama, Kurt",6.89
+2026-08-16,FedEx St. Jude Championship,pga,18634,"McNealy, Maverick",7.17
+2026-08-16,FedEx St. Jude Championship,pga,26649,"Thorbjornsen, Michael",8.4
+2026-08-16,FedEx St. Jude Championship,pga,12965,"Fowler, Rickie",11.19
+2026-08-16,FedEx St. Jude Championship,pga,29197,"Brennan, Michael",9
+2026-08-16,FedEx St. Jude Championship,pga,29767,"Gerard, Ryan",9.15
+2026-08-16,FedEx St. Jude Championship,pga,26096,"Bhatia, Akshay",10.87
+2026-08-16,FedEx St. Jude Championship,pga,13900,"Lowry, Shane",6.71
+2026-08-16,FedEx St. Jude Championship,pga,29433,"Bridgeman, Jacob",8.03
+2026-08-16,FedEx St. Jude Championship,pga,23602,"Hojgaard, Nicolai",3.47
+2026-08-16,FedEx St. Jude Championship,pga,10419,"Noren, Alex",7.32
+2026-08-16,FedEx St. Jude Championship,pga,21407,"Reitan, Kristoffer",4.87
+2026-08-16,FedEx St. Jude Championship,pga,6430,"Scott, Adam",6.19
+2026-08-16,FedEx St. Jude Championship,pga,18474,"Smalley, Alex",7.87
+2026-08-16,FedEx St. Jude Championship,pga,19396,"Knapp, Jake",5.2
+2026-08-16,FedEx St. Jude Championship,pga,14577,"English, Harris",4.69
+2026-08-16,FedEx St. Jude Championship,pga,14636,"Spieth, Jordan",7.21
+2026-08-16,FedEx St. Jude Championship,pga,17365,"Mitchell, Keith",4.46
+2026-08-16,FedEx St. Jude Championship,pga,18554,"Rai, Aaron",10.62
+2026-08-16,FedEx St. Jude Championship,pga,11889,"Fox, Ryan",4.63
+2026-08-16,FedEx St. Jude Championship,pga,25362,"Fitzpatrick, Alex",8.09
+2026-08-16,FedEx St. Jude Championship,pga,17488,"Im, Sungjae",9.01
+2026-08-16,FedEx St. Jude Championship,pga,17576,"Conners, Corey",8.69
+2026-08-16,FedEx St. Jude Championship,pga,12577,"Woodland, Gary",4.89
+2026-08-16,FedEx St. Jude Championship,pga,18586,"Smith, Jordan",6.83
+2026-08-16,FedEx St. Jude Championship,pga,21756,"Cole, Eric",5.07
+2026-08-16,FedEx St. Jude Championship,pga,23014,"Theegala, Sahith",5.4
+2026-08-16,FedEx St. Jude Championship,pga,8825,"Harman, Brian",5.88
+2026-08-16,FedEx St. Jude Championship,pga,14502,"Cauley, Bud",6.34
+2026-08-16,FedEx St. Jude Championship,pga,17543,"Kim, Michael",4.87
+2026-08-16,FedEx St. Jude Championship,pga,13126,"Taylor, Nick",3.53
+2026-08-16,FedEx St. Jude Championship,pga,17538,"Homa, Max",4.66
+2026-08-16,FedEx St. Jude Championship,pga,27194,"Hall, Harry",4.9
+2026-08-16,FedEx St. Jude Championship,pga,22833,"Echavarria, Nico",5.39
+2026-08-16,FedEx St. Jude Championship,pga,22760,"Hisatsune, Ryo",4.45
+2026-08-16,FedEx St. Jude Championship,pga,21554,"Poston, J.T.",5.96
+2026-08-16,FedEx St. Jude Championship,pga,29925,"Yellamaraju, Sudarshan",2.61
+2026-08-16,FedEx St. Jude Championship,pga,17511,"Straka, Sepp",5.74
+2026-08-16,FedEx St. Jude Championship,pga,27819,"Castillo, Ricky",2.96
+2026-08-16,FedEx St. Jude Championship,pga,28635,"McCarty, Matt",3.71
+2026-08-16,FedEx St. Jude Championship,pga,27900,"Potgieter, Aldrich",1.6
+2026-08-16,FedEx St. Jude Championship,pga,25569,"Stevens, Sam",2.61
+2026-08-16,FedEx St. Jude Championship,pga,28309,"Coody, Pierceson",2.33
+2026-08-16,FedEx St. Jude Championship,pga,16283,"Rodgers, Patrick",2.12
+2026-08-16,FedEx St. Jude Championship,pga,20722,"Schmid, Matti",2.25
+2026-08-18,BMW Championship,pga,18417,"Scheffler, Scottie",26.94
+2026-08-18,BMW Championship,pga,10091,"McIlroy, Rory",19.24
+2026-08-18,BMW Championship,pga,12294,"Fleetwood, Tommy",14.09
+2026-08-18,BMW Championship,pga,19483,"Burns, Sam",20.02
+2026-08-18,BMW Championship,pga,19895,"Schauffele, Xander",23.03
+2026-08-18,BMW Championship,pga,23950,"Aberg, Ludvig",23.6
+2026-08-18,BMW Championship,pga,26651,"Young, Cameron",20.64
+2026-08-18,BMW Championship,pga,17646,"Fitzpatrick, Matt",15.44
+2026-08-18,BMW Championship,pga,14609,"Kim, Si Woo",14.48
+2026-08-18,BMW Championship,pga,13562,"Matsuyama, Hideki",16.82
+2026-08-18,BMW Championship,pga,27774,"Gotterup, Chris",18.67
+2026-08-18,BMW Championship,pga,18841,"Hovland, Viktor",20.47
+2026-08-18,BMW Championship,pga,23604,"Clark, Wyndham",18.36
+2026-08-18,BMW Championship,pga,22085,"Morikawa, Collin",12.86
+2026-08-18,BMW Championship,pga,15466,"Cantlay, Patrick",16.25
+2026-08-18,BMW Championship,pga,14578,"Henley, Russell",8.07
+2026-08-18,BMW Championship,pga,14139,"Thomas, Justin",12.15
+2026-08-18,BMW Championship,pga,19396,"Knapp, Jake",15.51
+2026-08-18,BMW Championship,pga,24766,"Kim, Tom",9.59
+2026-08-18,BMW Championship,pga,18634,"McNealy, Maverick",6.83
+2026-08-18,BMW Championship,pga,21891,"Kitayama, Kurt",13.41
+2026-08-18,BMW Championship,pga,29767,"Gerard, Ryan",9.45
+2026-08-18,BMW Championship,pga,23323,"MacIntyre, Robert",5.77
+2026-08-18,BMW Championship,pga,17536,"Spaun, J.J.",7.99
+2026-08-18,BMW Championship,pga,26649,"Thorbjornsen, Michael",12.43
+2026-08-18,BMW Championship,pga,12965,"Fowler, Rickie",11.09
+2026-08-18,BMW Championship,pga,29197,"Brennan, Michael",12.97
+2026-08-18,BMW Championship,pga,16841,"Lee, Min Woo",13.39
+2026-08-18,BMW Championship,pga,6430,"Scott, Adam",15.95
+2026-08-18,BMW Championship,pga,17488,"Im, Sungjae",9.26
+2026-08-18,BMW Championship,pga,24968,"Griffin, Ben",6.34
+2026-08-18,BMW Championship,pga,10419,"Noren, Alex",10.73
+2026-08-18,BMW Championship,pga,29433,"Bridgeman, Jacob",6.05
+2026-08-18,BMW Championship,pga,6093,"Rose, Justin",12.34
+2026-08-18,BMW Championship,pga,23602,"Hojgaard, Nicolai",11.05
+2026-08-18,BMW Championship,pga,18474,"Smalley, Alex",8.81
+2026-08-18,BMW Championship,pga,14502,"Cauley, Bud",5.65
+2026-08-18,BMW Championship,pga,12577,"Woodland, Gary",14.91
+2026-08-18,BMW Championship,pga,25362,"Fitzpatrick, Alex",8.05
+2026-08-18,BMW Championship,pga,21407,"Reitan, Kristoffer",10.01
+2026-08-18,BMW Championship,pga,21554,"Poston, J.T.",4.31
+2026-08-18,BMW Championship,pga,18554,"Rai, Aaron",5.4
+2026-08-18,BMW Championship,pga,26096,"Bhatia, Akshay",5.77
+2026-08-18,BMW Championship,pga,21756,"Cole, Eric",3.8
+2026-08-18,BMW Championship,pga,22760,"Hisatsune, Ryo",6.11
+2026-08-18,BMW Championship,pga,11889,"Fox, Ryan",10.2
+2026-08-18,BMW Championship,pga,23014,"Theegala, Sahith",6.83
+2026-08-18,BMW Championship,pga,22833,"Echavarria, Nico",6.73
+2026-08-18,BMW Championship,pga,28635,"McCarty, Matt",4.45
+2026-08-18,BMW Championship,pga,17511,"Straka, Sepp",7.68
+2026-08-18,BMW Championship,pga,18417,"Scheffler, Scottie",26.28
+2026-08-18,BMW Championship,pga,10091,"McIlroy, Rory",19.51
+2026-08-18,BMW Championship,pga,12294,"Fleetwood, Tommy",13.94
+2026-08-18,BMW Championship,pga,19483,"Burns, Sam",19.55
+2026-08-18,BMW Championship,pga,19895,"Schauffele, Xander",22.37
+2026-08-18,BMW Championship,pga,23950,"Aberg, Ludvig",23.1
+2026-08-18,BMW Championship,pga,26651,"Young, Cameron",20.49
+2026-08-18,BMW Championship,pga,17646,"Fitzpatrick, Matt",14.98
+2026-08-18,BMW Championship,pga,14609,"Kim, Si Woo",15.71
+2026-08-18,BMW Championship,pga,13562,"Matsuyama, Hideki",16.54
+2026-08-18,BMW Championship,pga,27774,"Gotterup, Chris",17.82
+2026-08-18,BMW Championship,pga,18841,"Hovland, Viktor",20.11
+2026-08-18,BMW Championship,pga,23604,"Clark, Wyndham",19.08
+2026-08-18,BMW Championship,pga,22085,"Morikawa, Collin",13.32
+2026-08-18,BMW Championship,pga,15466,"Cantlay, Patrick",16.65
+2026-08-18,BMW Championship,pga,14578,"Henley, Russell",8.45
+2026-08-18,BMW Championship,pga,14139,"Thomas, Justin",12.37
+2026-08-18,BMW Championship,pga,19396,"Knapp, Jake",15.08
+2026-08-18,BMW Championship,pga,24766,"Kim, Tom",9.49
+2026-08-18,BMW Championship,pga,18634,"McNealy, Maverick",6.63
+2026-08-18,BMW Championship,pga,21891,"Kitayama, Kurt",12.9
+2026-08-18,BMW Championship,pga,29767,"Gerard, Ryan",9.28
+2026-08-18,BMW Championship,pga,23323,"MacIntyre, Robert",5.7
+2026-08-18,BMW Championship,pga,17536,"Spaun, J.J.",8
+2026-08-18,BMW Championship,pga,26649,"Thorbjornsen, Michael",12.69
+2026-08-18,BMW Championship,pga,12965,"Fowler, Rickie",11.92
+2026-08-18,BMW Championship,pga,29197,"Brennan, Michael",13.81
+2026-08-18,BMW Championship,pga,16841,"Lee, Min Woo",12.96
+2026-08-18,BMW Championship,pga,6430,"Scott, Adam",15.46
+2026-08-18,BMW Championship,pga,17488,"Im, Sungjae",9.41
+2026-08-18,BMW Championship,pga,24968,"Griffin, Ben",6.89
+2026-08-18,BMW Championship,pga,10419,"Noren, Alex",11.24
+2026-08-18,BMW Championship,pga,29433,"Bridgeman, Jacob",6.27
+2026-08-18,BMW Championship,pga,6093,"Rose, Justin",12.25
+2026-08-18,BMW Championship,pga,23602,"Hojgaard, Nicolai",11.45
+2026-08-18,BMW Championship,pga,18474,"Smalley, Alex",8.61
+2026-08-18,BMW Championship,pga,14502,"Cauley, Bud",5.88
+2026-08-18,BMW Championship,pga,12577,"Woodland, Gary",14.93
+2026-08-18,BMW Championship,pga,25362,"Fitzpatrick, Alex",7.93
+2026-08-18,BMW Championship,pga,21407,"Reitan, Kristoffer",10.01
+2026-08-18,BMW Championship,pga,21554,"Poston, J.T.",4.51
+2026-08-18,BMW Championship,pga,18554,"Rai, Aaron",5.43
+2026-08-18,BMW Championship,pga,26096,"Bhatia, Akshay",5.8
+2026-08-18,BMW Championship,pga,21756,"Cole, Eric",3.93
+2026-08-18,BMW Championship,pga,22760,"Hisatsune, Ryo",6.63
+2026-08-18,BMW Championship,pga,11889,"Fox, Ryan",10.21
+2026-08-18,BMW Championship,pga,23014,"Theegala, Sahith",6.55
+2026-08-18,BMW Championship,pga,22833,"Echavarria, Nico",6.05
+2026-08-18,BMW Championship,pga,28635,"McCarty, Matt",4.5
+2026-08-18,BMW Championship,pga,17511,"Straka, Sepp",7.32
+2026-08-19,BMW Championship,pga,18417,"Scheffler, Scottie",24.69
+2026-08-19,BMW Championship,pga,10091,"McIlroy, Rory",19.81
+2026-08-19,BMW Championship,pga,12294,"Fleetwood, Tommy",14.34
+2026-08-19,BMW Championship,pga,19483,"Burns, Sam",19.46
+2026-08-19,BMW Championship,pga,19895,"Schauffele, Xander",24.45
+2026-08-19,BMW Championship,pga,23950,"Aberg, Ludvig",25.72
+2026-08-19,BMW Championship,pga,26651,"Young, Cameron",18.66
+2026-08-19,BMW Championship,pga,17646,"Fitzpatrick, Matt",14.41
+2026-08-19,BMW Championship,pga,14609,"Kim, Si Woo",16.86
+2026-08-19,BMW Championship,pga,13562,"Matsuyama, Hideki",15.14
+2026-08-19,BMW Championship,pga,27774,"Gotterup, Chris",17.01
+2026-08-19,BMW Championship,pga,18841,"Hovland, Viktor",18.93
+2026-08-19,BMW Championship,pga,23604,"Clark, Wyndham",18.27
+2026-08-19,BMW Championship,pga,22085,"Morikawa, Collin",13.79
+2026-08-19,BMW Championship,pga,15466,"Cantlay, Patrick",16.31
+2026-08-19,BMW Championship,pga,14578,"Henley, Russell",8.22
+2026-08-19,BMW Championship,pga,14139,"Thomas, Justin",11.12
+2026-08-19,BMW Championship,pga,19396,"Knapp, Jake",14.88
+2026-08-19,BMW Championship,pga,24766,"Kim, Tom",10.47
+2026-08-19,BMW Championship,pga,18634,"McNealy, Maverick",6.75
+2026-08-19,BMW Championship,pga,21891,"Kitayama, Kurt",13.22
+2026-08-19,BMW Championship,pga,29767,"Gerard, Ryan",10.38
+2026-08-19,BMW Championship,pga,23323,"MacIntyre, Robert",5.94
+2026-08-19,BMW Championship,pga,17536,"Spaun, J.J.",8.16
+2026-08-19,BMW Championship,pga,26649,"Thorbjornsen, Michael",13.9
+2026-08-19,BMW Championship,pga,12965,"Fowler, Rickie",11.72
+2026-08-19,BMW Championship,pga,29197,"Brennan, Michael",12.82
+2026-08-19,BMW Championship,pga,16841,"Lee, Min Woo",12.62
+2026-08-19,BMW Championship,pga,6430,"Scott, Adam",15.49
+2026-08-19,BMW Championship,pga,17488,"Im, Sungjae",10.35
+2026-08-19,BMW Championship,pga,24968,"Griffin, Ben",7.99
+2026-08-19,BMW Championship,pga,10419,"Noren, Alex",10.88
+2026-08-19,BMW Championship,pga,29433,"Bridgeman, Jacob",6.4
+2026-08-19,BMW Championship,pga,6093,"Rose, Justin",14.46
+2026-08-19,BMW Championship,pga,23602,"Hojgaard, Nicolai",11.33
+2026-08-19,BMW Championship,pga,18474,"Smalley, Alex",9.43
+2026-08-19,BMW Championship,pga,14502,"Cauley, Bud",6.18
+2026-08-19,BMW Championship,pga,12577,"Woodland, Gary",14.03
+2026-08-19,BMW Championship,pga,25362,"Fitzpatrick, Alex",8.58
+2026-08-19,BMW Championship,pga,21407,"Reitan, Kristoffer",9.82
+2026-08-19,BMW Championship,pga,21554,"Poston, J.T.",4.27
+2026-08-19,BMW Championship,pga,18554,"Rai, Aaron",5.09
+2026-08-19,BMW Championship,pga,26096,"Bhatia, Akshay",6.09
+2026-08-19,BMW Championship,pga,21756,"Cole, Eric",3.34
+2026-08-19,BMW Championship,pga,22760,"Hisatsune, Ryo",6.24
+2026-08-19,BMW Championship,pga,11889,"Fox, Ryan",10.21
+2026-08-19,BMW Championship,pga,23014,"Theegala, Sahith",5.84
+2026-08-19,BMW Championship,pga,22833,"Echavarria, Nico",5.57
+2026-08-19,BMW Championship,pga,28635,"McCarty, Matt",3.93
+2026-08-19,BMW Championship,pga,17511,"Straka, Sepp",6.47
+2026-08-19,BMW Championship,pga,18417,"Scheffler, Scottie",25.37
+2026-08-19,BMW Championship,pga,10091,"McIlroy, Rory",19
+2026-08-19,BMW Championship,pga,12294,"Fleetwood, Tommy",13.8
+2026-08-19,BMW Championship,pga,19483,"Burns, Sam",19.83
+2026-08-19,BMW Championship,pga,19895,"Schauffele, Xander",23.94
+2026-08-19,BMW Championship,pga,23950,"Aberg, Ludvig",25.01
+2026-08-19,BMW Championship,pga,26651,"Young, Cameron",18.88
+2026-08-19,BMW Championship,pga,17646,"Fitzpatrick, Matt",14.56
+2026-08-19,BMW Championship,pga,14609,"Kim, Si Woo",14.78
+2026-08-19,BMW Championship,pga,13562,"Matsuyama, Hideki",14.98
+2026-08-19,BMW Championship,pga,27774,"Gotterup, Chris",17.3
+2026-08-19,BMW Championship,pga,18841,"Hovland, Viktor",20.49
+2026-08-19,BMW Championship,pga,23604,"Clark, Wyndham",18.67
+2026-08-19,BMW Championship,pga,22085,"Morikawa, Collin",14.12
+2026-08-19,BMW Championship,pga,15466,"Cantlay, Patrick",15.76
+2026-08-19,BMW Championship,pga,14578,"Henley, Russell",8.04
+2026-08-19,BMW Championship,pga,14139,"Thomas, Justin",11.37
+2026-08-19,BMW Championship,pga,19396,"Knapp, Jake",15.25
+2026-08-19,BMW Championship,pga,24766,"Kim, Tom",9.71
+2026-08-19,BMW Championship,pga,18634,"McNealy, Maverick",6.33
+2026-08-19,BMW Championship,pga,21891,"Kitayama, Kurt",13.2
+2026-08-19,BMW Championship,pga,29767,"Gerard, Ryan",10.25
+2026-08-19,BMW Championship,pga,23323,"MacIntyre, Robert",5.46
+2026-08-19,BMW Championship,pga,17536,"Spaun, J.J.",8.13
+2026-08-19,BMW Championship,pga,26649,"Thorbjornsen, Michael",13.8
+2026-08-19,BMW Championship,pga,12965,"Fowler, Rickie",11.77
+2026-08-19,BMW Championship,pga,29197,"Brennan, Michael",14.41
+2026-08-19,BMW Championship,pga,16841,"Lee, Min Woo",13.53
+2026-08-19,BMW Championship,pga,6430,"Scott, Adam",15.21
+2026-08-19,BMW Championship,pga,17488,"Im, Sungjae",10.17
+2026-08-19,BMW Championship,pga,24968,"Griffin, Ben",7.68
+2026-08-19,BMW Championship,pga,10419,"Noren, Alex",11.84
+2026-08-19,BMW Championship,pga,29433,"Bridgeman, Jacob",6.45
+2026-08-19,BMW Championship,pga,6093,"Rose, Justin",13.17
+2026-08-19,BMW Championship,pga,23602,"Hojgaard, Nicolai",11.37
+2026-08-19,BMW Championship,pga,18474,"Smalley, Alex",9.17
+2026-08-19,BMW Championship,pga,14502,"Cauley, Bud",6.59
+2026-08-19,BMW Championship,pga,12577,"Woodland, Gary",14.77
+2026-08-19,BMW Championship,pga,25362,"Fitzpatrick, Alex",8.12
+2026-08-19,BMW Championship,pga,21407,"Reitan, Kristoffer",10.15
+2026-08-19,BMW Championship,pga,21554,"Poston, J.T.",4.27
+2026-08-19,BMW Championship,pga,18554,"Rai, Aaron",4.89
+2026-08-19,BMW Championship,pga,26096,"Bhatia, Akshay",6.02
+2026-08-19,BMW Championship,pga,21756,"Cole, Eric",3.67
+2026-08-19,BMW Championship,pga,22760,"Hisatsune, Ryo",6.1
+2026-08-19,BMW Championship,pga,11889,"Fox, Ryan",10.16
+2026-08-19,BMW Championship,pga,23014,"Theegala, Sahith",5.83
+2026-08-19,BMW Championship,pga,22833,"Echavarria, Nico",5.72
+2026-08-19,BMW Championship,pga,28635,"McCarty, Matt",3.98
+2026-08-19,BMW Championship,pga,17511,"Straka, Sepp",6.94
+2026-08-22,BMW Championship,pga,18417,"Scheffler, Scottie",24.21
+2026-08-22,BMW Championship,pga,10091,"McIlroy, Rory",18.14
+2026-08-22,BMW Championship,pga,12294,"Fleetwood, Tommy",13.77
+2026-08-22,BMW Championship,pga,19483,"Burns, Sam",18.95
+2026-08-22,BMW Championship,pga,19895,"Schauffele, Xander",23.18
+2026-08-22,BMW Championship,pga,23950,"Aberg, Ludvig",23.99
+2026-08-22,BMW Championship,pga,26651,"Young, Cameron",19.3
+2026-08-22,BMW Championship,pga,17646,"Fitzpatrick, Matt",14.59
+2026-08-22,BMW Championship,pga,14609,"Kim, Si Woo",14.82
+2026-08-22,BMW Championship,pga,13562,"Matsuyama, Hideki",15.49
+2026-08-22,BMW Championship,pga,27774,"Gotterup, Chris",17.4
+2026-08-22,BMW Championship,pga,18841,"Hovland, Viktor",20.34
+2026-08-22,BMW Championship,pga,23604,"Clark, Wyndham",18.62
+2026-08-22,BMW Championship,pga,22085,"Morikawa, Collin",13.84
+2026-08-22,BMW Championship,pga,15466,"Cantlay, Patrick",16.29
+2026-08-22,BMW Championship,pga,14578,"Henley, Russell",8.01
+2026-08-22,BMW Championship,pga,14139,"Thomas, Justin",11.88
+2026-08-22,BMW Championship,pga,19396,"Knapp, Jake",15.4
+2026-08-22,BMW Championship,pga,24766,"Kim, Tom",9.9
+2026-08-22,BMW Championship,pga,18634,"McNealy, Maverick",6.79
+2026-08-22,BMW Championship,pga,21891,"Kitayama, Kurt",13.26
+2026-08-22,BMW Championship,pga,29767,"Gerard, Ryan",9.7
+2026-08-22,BMW Championship,pga,23323,"MacIntyre, Robert",5.29
+2026-08-22,BMW Championship,pga,17536,"Spaun, J.J.",8.33
+2026-08-22,BMW Championship,pga,26649,"Thorbjornsen, Michael",13.72
+2026-08-22,BMW Championship,pga,12965,"Fowler, Rickie",12.33
+2026-08-22,BMW Championship,pga,29197,"Brennan, Michael",13.69
+2026-08-22,BMW Championship,pga,16841,"Lee, Min Woo",13.12
+2026-08-22,BMW Championship,pga,6430,"Scott, Adam",15.51
+2026-08-22,BMW Championship,pga,17488,"Im, Sungjae",10.24
+2026-08-22,BMW Championship,pga,24968,"Griffin, Ben",7.65
+2026-08-22,BMW Championship,pga,10419,"Noren, Alex",11.87
+2026-08-22,BMW Championship,pga,29433,"Bridgeman, Jacob",6.21
+2026-08-22,BMW Championship,pga,6093,"Rose, Justin",13.19
+2026-08-22,BMW Championship,pga,23602,"Hojgaard, Nicolai",11.36
+2026-08-22,BMW Championship,pga,18474,"Smalley, Alex",9.94
+2026-08-22,BMW Championship,pga,14502,"Cauley, Bud",6.51
+2026-08-22,BMW Championship,pga,12577,"Woodland, Gary",15.55
+2026-08-22,BMW Championship,pga,25362,"Fitzpatrick, Alex",8.31
+2026-08-22,BMW Championship,pga,21407,"Reitan, Kristoffer",10.38
+2026-08-22,BMW Championship,pga,21554,"Poston, J.T.",4.55
+2026-08-22,BMW Championship,pga,18554,"Rai, Aaron",4.97
+2026-08-22,BMW Championship,pga,26096,"Bhatia, Akshay",6.03
+2026-08-22,BMW Championship,pga,21756,"Cole, Eric",3.5
+2026-08-22,BMW Championship,pga,22760,"Hisatsune, Ryo",6.08
+2026-08-22,BMW Championship,pga,11889,"Fox, Ryan",10.56
+2026-08-22,BMW Championship,pga,23014,"Theegala, Sahith",6.23
+2026-08-22,BMW Championship,pga,22833,"Echavarria, Nico",5.81
+2026-08-22,BMW Championship,pga,28635,"McCarty, Matt",3.94
+2026-08-22,BMW Championship,pga,17511,"Straka, Sepp",7.26
+2026-08-22,BMW Championship,pga,18417,"Scheffler, Scottie",24.21
+2026-08-22,BMW Championship,pga,10091,"McIlroy, Rory",18.14
+2026-08-22,BMW Championship,pga,12294,"Fleetwood, Tommy",13.77
+2026-08-22,BMW Championship,pga,19483,"Burns, Sam",18.95
+2026-08-22,BMW Championship,pga,19895,"Schauffele, Xander",23.18
+2026-08-22,BMW Championship,pga,23950,"Aberg, Ludvig",23.99
+2026-08-22,BMW Championship,pga,26651,"Young, Cameron",19.3
+2026-08-22,BMW Championship,pga,17646,"Fitzpatrick, Matt",14.59
+2026-08-22,BMW Championship,pga,14609,"Kim, Si Woo",14.82
+2026-08-22,BMW Championship,pga,13562,"Matsuyama, Hideki",15.49
+2026-08-22,BMW Championship,pga,27774,"Gotterup, Chris",17.4
+2026-08-22,BMW Championship,pga,18841,"Hovland, Viktor",20.34
+2026-08-22,BMW Championship,pga,23604,"Clark, Wyndham",18.62
+2026-08-22,BMW Championship,pga,22085,"Morikawa, Collin",13.84
+2026-08-22,BMW Championship,pga,15466,"Cantlay, Patrick",16.29
+2026-08-22,BMW Championship,pga,14578,"Henley, Russell",8.01
+2026-08-22,BMW Championship,pga,14139,"Thomas, Justin",11.88
+2026-08-22,BMW Championship,pga,19396,"Knapp, Jake",15.4
+2026-08-22,BMW Championship,pga,24766,"Kim, Tom",9.9
+2026-08-22,BMW Championship,pga,18634,"McNealy, Maverick",6.79
+2026-08-22,BMW Championship,pga,21891,"Kitayama, Kurt",13.26
+2026-08-22,BMW Championship,pga,29767,"Gerard, Ryan",9.7
+2026-08-22,BMW Championship,pga,23323,"MacIntyre, Robert",5.29
+2026-08-22,BMW Championship,pga,17536,"Spaun, J.J.",8.33
+2026-08-22,BMW Championship,pga,26649,"Thorbjornsen, Michael",13.72
+2026-08-22,BMW Championship,pga,12965,"Fowler, Rickie",12.33
+2026-08-22,BMW Championship,pga,29197,"Brennan, Michael",13.69
+2026-08-22,BMW Championship,pga,16841,"Lee, Min Woo",13.12
+2026-08-22,BMW Championship,pga,6430,"Scott, Adam",15.51
+2026-08-22,BMW Championship,pga,17488,"Im, Sungjae",10.24
+2026-08-22,BMW Championship,pga,24968,"Griffin, Ben",7.65
+2026-08-22,BMW Championship,pga,10419,"Noren, Alex",11.87
+2026-08-22,BMW Championship,pga,29433,"Bridgeman, Jacob",6.21
+2026-08-22,BMW Championship,pga,6093,"Rose, Justin",13.19
+2026-08-22,BMW Championship,pga,23602,"Hojgaard, Nicolai",11.36
+2026-08-22,BMW Championship,pga,18474,"Smalley, Alex",9.94
+2026-08-22,BMW Championship,pga,14502,"Cauley, Bud",6.51
+2026-08-22,BMW Championship,pga,12577,"Woodland, Gary",15.55
+2026-08-22,BMW Championship,pga,25362,"Fitzpatrick, Alex",8.31
+2026-08-22,BMW Championship,pga,21407,"Reitan, Kristoffer",10.38
+2026-08-22,BMW Championship,pga,21554,"Poston, J.T.",4.55
+2026-08-22,BMW Championship,pga,18554,"Rai, Aaron",4.97
+2026-08-22,BMW Championship,pga,26096,"Bhatia, Akshay",6.03
+2026-08-22,BMW Championship,pga,21756,"Cole, Eric",3.5
+2026-08-22,BMW Championship,pga,22760,"Hisatsune, Ryo",6.08
+2026-08-22,BMW Championship,pga,11889,"Fox, Ryan",10.56
+2026-08-22,BMW Championship,pga,23014,"Theegala, Sahith",6.23
+2026-08-22,BMW Championship,pga,22833,"Echavarria, Nico",5.81
+2026-08-22,BMW Championship,pga,28635,"McCarty, Matt",3.94
+2026-08-22,BMW Championship,pga,17511,"Straka, Sepp",7.26
+2026-08-24,BMW Championship,pga,18417,"Scheffler, Scottie",24.21
+2026-08-24,BMW Championship,pga,10091,"McIlroy, Rory",18.14
+2026-08-24,BMW Championship,pga,12294,"Fleetwood, Tommy",13.77
+2026-08-24,BMW Championship,pga,19483,"Burns, Sam",18.95
+2026-08-24,BMW Championship,pga,19895,"Schauffele, Xander",23.18
+2026-08-24,BMW Championship,pga,23950,"Aberg, Ludvig",23.99
+2026-08-24,BMW Championship,pga,26651,"Young, Cameron",19.3
+2026-08-24,BMW Championship,pga,17646,"Fitzpatrick, Matt",14.59
+2026-08-24,BMW Championship,pga,14609,"Kim, Si Woo",14.82
+2026-08-24,BMW Championship,pga,13562,"Matsuyama, Hideki",15.49
+2026-08-24,BMW Championship,pga,27774,"Gotterup, Chris",17.4
+2026-08-24,BMW Championship,pga,18841,"Hovland, Viktor",20.34
+2026-08-24,BMW Championship,pga,23604,"Clark, Wyndham",18.62
+2026-08-24,BMW Championship,pga,22085,"Morikawa, Collin",13.84
+2026-08-24,BMW Championship,pga,15466,"Cantlay, Patrick",16.29
+2026-08-24,BMW Championship,pga,14578,"Henley, Russell",8.01
+2026-08-24,BMW Championship,pga,14139,"Thomas, Justin",11.88
+2026-08-24,BMW Championship,pga,19396,"Knapp, Jake",15.4
+2026-08-24,BMW Championship,pga,24766,"Kim, Tom",9.9
+2026-08-24,BMW Championship,pga,18634,"McNealy, Maverick",6.79
+2026-08-24,BMW Championship,pga,21891,"Kitayama, Kurt",13.26
+2026-08-24,BMW Championship,pga,29767,"Gerard, Ryan",9.7
+2026-08-24,BMW Championship,pga,23323,"MacIntyre, Robert",5.29
+2026-08-24,BMW Championship,pga,17536,"Spaun, J.J.",8.33
+2026-08-24,BMW Championship,pga,26649,"Thorbjornsen, Michael",13.72
+2026-08-24,BMW Championship,pga,12965,"Fowler, Rickie",12.33
+2026-08-24,BMW Championship,pga,29197,"Brennan, Michael",13.69
+2026-08-24,BMW Championship,pga,16841,"Lee, Min Woo",13.12
+2026-08-24,BMW Championship,pga,6430,"Scott, Adam",15.51
+2026-08-24,BMW Championship,pga,17488,"Im, Sungjae",10.24
+2026-08-24,BMW Championship,pga,24968,"Griffin, Ben",7.65
+2026-08-24,BMW Championship,pga,10419,"Noren, Alex",11.87
+2026-08-24,BMW Championship,pga,29433,"Bridgeman, Jacob",6.21
+2026-08-24,BMW Championship,pga,6093,"Rose, Justin",13.19
+2026-08-24,BMW Championship,pga,23602,"Hojgaard, Nicolai",11.36
+2026-08-24,BMW Championship,pga,18474,"Smalley, Alex",9.94
+2026-08-24,BMW Championship,pga,14502,"Cauley, Bud",6.51
+2026-08-24,BMW Championship,pga,12577,"Woodland, Gary",15.55
+2026-08-24,BMW Championship,pga,25362,"Fitzpatrick, Alex",8.31
+2026-08-24,BMW Championship,pga,21407,"Reitan, Kristoffer",10.38
+2026-08-24,BMW Championship,pga,21554,"Poston, J.T.",4.55
+2026-08-24,BMW Championship,pga,18554,"Rai, Aaron",4.97
+2026-08-24,BMW Championship,pga,26096,"Bhatia, Akshay",6.03
+2026-08-24,BMW Championship,pga,21756,"Cole, Eric",3.5
+2026-08-24,BMW Championship,pga,22760,"Hisatsune, Ryo",6.08
+2026-08-24,BMW Championship,pga,11889,"Fox, Ryan",10.56
+2026-08-24,BMW Championship,pga,23014,"Theegala, Sahith",6.23
+2026-08-24,BMW Championship,pga,22833,"Echavarria, Nico",5.81
+2026-08-24,BMW Championship,pga,28635,"McCarty, Matt",3.94
+2026-08-24,BMW Championship,pga,17511,"Straka, Sepp",7.26
+2026-08-25,TOUR Championship,pga,18417,"Scheffler, Scottie",33.17
+2026-08-25,TOUR Championship,pga,10091,"McIlroy, Rory",29.14
+2026-08-25,TOUR Championship,pga,19895,"Schauffele, Xander",27.5
+2026-08-25,TOUR Championship,pga,23950,"Aberg, Ludvig",19.5
+2026-08-25,TOUR Championship,pga,23604,"Clark, Wyndham",28.46
+2026-08-25,TOUR Championship,pga,19483,"Burns, Sam",27.45
+2026-08-25,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.93
+2026-08-25,TOUR Championship,pga,15466,"Cantlay, Patrick",32.77
+2026-08-25,TOUR Championship,pga,26651,"Young, Cameron",20.19
+2026-08-25,TOUR Championship,pga,22085,"Morikawa, Collin",30.73
+2026-08-25,TOUR Championship,pga,27774,"Gotterup, Chris",23.08
+2026-08-25,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.46
+2026-08-25,TOUR Championship,pga,14609,"Kim, Si Woo",22.08
+2026-08-25,TOUR Championship,pga,13562,"Matsuyama, Hideki",21.06
+2026-08-25,TOUR Championship,pga,14578,"Henley, Russell",23.97
+2026-08-25,TOUR Championship,pga,29767,"Gerard, Ryan",15.59
+2026-08-25,TOUR Championship,pga,18841,"Hovland, Viktor",23.18
+2026-08-25,TOUR Championship,pga,17536,"Spaun, J.J.",13.01
+2026-08-25,TOUR Championship,pga,23323,"MacIntyre, Robert",13.65
+2026-08-25,TOUR Championship,pga,29433,"Bridgeman, Jacob",16.22
+2026-08-25,TOUR Championship,pga,6093,"Rose, Justin",17.26
+2026-08-25,TOUR Championship,pga,24766,"Kim, Tom",14.76
+2026-08-25,TOUR Championship,pga,16841,"Lee, Min Woo",9.63
+2026-08-25,TOUR Championship,pga,12577,"Woodland, Gary",17.34
+2026-08-25,TOUR Championship,pga,6430,"Scott, Adam",16.05
+2026-08-25,TOUR Championship,pga,21407,"Reitan, Kristoffer",9.56
+2026-08-25,TOUR Championship,pga,18474,"Smalley, Alex",13.75
+2026-08-25,TOUR Championship,pga,25362,"Fitzpatrick, Alex",11.64
+2026-08-25,TOUR Championship,pga,26096,"Bhatia, Akshay",13.85
+2026-08-25,TOUR Championship,pga,11889,"Fox, Ryan",10.03
+2026-08-25,TOUR Championship,pga,18417,"Scheffler, Scottie",31.31
+2026-08-25,TOUR Championship,pga,10091,"McIlroy, Rory",29.38
+2026-08-25,TOUR Championship,pga,19895,"Schauffele, Xander",29.76
+2026-08-25,TOUR Championship,pga,23950,"Aberg, Ludvig",19.19
+2026-08-25,TOUR Championship,pga,23604,"Clark, Wyndham",28.49
+2026-08-25,TOUR Championship,pga,19483,"Burns, Sam",28.64
+2026-08-25,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.05
+2026-08-25,TOUR Championship,pga,15466,"Cantlay, Patrick",34.09
+2026-08-25,TOUR Championship,pga,26651,"Young, Cameron",20.65
+2026-08-25,TOUR Championship,pga,22085,"Morikawa, Collin",31.3
+2026-08-25,TOUR Championship,pga,27774,"Gotterup, Chris",23.52
+2026-08-25,TOUR Championship,pga,17646,"Fitzpatrick, Matt",20.49
+2026-08-25,TOUR Championship,pga,14609,"Kim, Si Woo",22.25
+2026-08-25,TOUR Championship,pga,13562,"Matsuyama, Hideki",20.22
+2026-08-25,TOUR Championship,pga,14578,"Henley, Russell",23.54
+2026-08-25,TOUR Championship,pga,29767,"Gerard, Ryan",15.39
+2026-08-25,TOUR Championship,pga,18841,"Hovland, Viktor",22.95
+2026-08-25,TOUR Championship,pga,17536,"Spaun, J.J.",13
+2026-08-25,TOUR Championship,pga,23323,"MacIntyre, Robert",14.02
+2026-08-25,TOUR Championship,pga,29433,"Bridgeman, Jacob",15.23
+2026-08-25,TOUR Championship,pga,6093,"Rose, Justin",17.11
+2026-08-25,TOUR Championship,pga,24766,"Kim, Tom",15.23
+2026-08-25,TOUR Championship,pga,16841,"Lee, Min Woo",10.01
+2026-08-25,TOUR Championship,pga,12577,"Woodland, Gary",16.12
+2026-08-25,TOUR Championship,pga,6430,"Scott, Adam",17.04
+2026-08-25,TOUR Championship,pga,21407,"Reitan, Kristoffer",9.91
+2026-08-25,TOUR Championship,pga,18474,"Smalley, Alex",13.97
+2026-08-25,TOUR Championship,pga,25362,"Fitzpatrick, Alex",11.35
+2026-08-25,TOUR Championship,pga,26096,"Bhatia, Akshay",13.16
+2026-08-25,TOUR Championship,pga,11889,"Fox, Ryan",9.61
+2026-08-25,TOUR Championship,pga,18417,"Scheffler, Scottie",31.65
+2026-08-25,TOUR Championship,pga,10091,"McIlroy, Rory",29.09
+2026-08-25,TOUR Championship,pga,19895,"Schauffele, Xander",29.7
+2026-08-25,TOUR Championship,pga,23950,"Aberg, Ludvig",19.01
+2026-08-25,TOUR Championship,pga,23604,"Clark, Wyndham",27.57
+2026-08-25,TOUR Championship,pga,19483,"Burns, Sam",28.1
+2026-08-25,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.9
+2026-08-25,TOUR Championship,pga,15466,"Cantlay, Patrick",33.69
+2026-08-25,TOUR Championship,pga,26651,"Young, Cameron",20.57
+2026-08-25,TOUR Championship,pga,22085,"Morikawa, Collin",30.39
+2026-08-25,TOUR Championship,pga,27774,"Gotterup, Chris",24
+2026-08-25,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.25
+2026-08-25,TOUR Championship,pga,14609,"Kim, Si Woo",22.18
+2026-08-25,TOUR Championship,pga,13562,"Matsuyama, Hideki",20.3
+2026-08-25,TOUR Championship,pga,14578,"Henley, Russell",24.29
+2026-08-25,TOUR Championship,pga,29767,"Gerard, Ryan",14.41
+2026-08-25,TOUR Championship,pga,18841,"Hovland, Viktor",23.06
+2026-08-25,TOUR Championship,pga,17536,"Spaun, J.J.",12.72
+2026-08-25,TOUR Championship,pga,23323,"MacIntyre, Robert",13.7
+2026-08-25,TOUR Championship,pga,29433,"Bridgeman, Jacob",14.63
+2026-08-25,TOUR Championship,pga,6093,"Rose, Justin",16.79
+2026-08-25,TOUR Championship,pga,24766,"Kim, Tom",15.8
+2026-08-25,TOUR Championship,pga,16841,"Lee, Min Woo",10.72
+2026-08-25,TOUR Championship,pga,12577,"Woodland, Gary",16.61
+2026-08-25,TOUR Championship,pga,6430,"Scott, Adam",17.16
+2026-08-25,TOUR Championship,pga,21407,"Reitan, Kristoffer",10.05
+2026-08-25,TOUR Championship,pga,18474,"Smalley, Alex",14.16
+2026-08-25,TOUR Championship,pga,25362,"Fitzpatrick, Alex",11.37
+2026-08-25,TOUR Championship,pga,26096,"Bhatia, Akshay",13.65
+2026-08-25,TOUR Championship,pga,11889,"Fox, Ryan",9.48
+2026-08-25,TOUR Championship,pga,18417,"Scheffler, Scottie",31.65
+2026-08-25,TOUR Championship,pga,10091,"McIlroy, Rory",29.09
+2026-08-25,TOUR Championship,pga,19895,"Schauffele, Xander",29.7
+2026-08-25,TOUR Championship,pga,23950,"Aberg, Ludvig",19.01
+2026-08-25,TOUR Championship,pga,23604,"Clark, Wyndham",27.57
+2026-08-25,TOUR Championship,pga,19483,"Burns, Sam",28.1
+2026-08-25,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.9
+2026-08-25,TOUR Championship,pga,15466,"Cantlay, Patrick",33.69
+2026-08-25,TOUR Championship,pga,26651,"Young, Cameron",20.57
+2026-08-25,TOUR Championship,pga,22085,"Morikawa, Collin",30.39
+2026-08-25,TOUR Championship,pga,27774,"Gotterup, Chris",24
+2026-08-25,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.25
+2026-08-25,TOUR Championship,pga,14609,"Kim, Si Woo",22.18
+2026-08-25,TOUR Championship,pga,13562,"Matsuyama, Hideki",20.3
+2026-08-25,TOUR Championship,pga,14578,"Henley, Russell",24.29
+2026-08-25,TOUR Championship,pga,29767,"Gerard, Ryan",14.41
+2026-08-25,TOUR Championship,pga,18841,"Hovland, Viktor",23.06
+2026-08-25,TOUR Championship,pga,17536,"Spaun, J.J.",12.72
+2026-08-25,TOUR Championship,pga,23323,"MacIntyre, Robert",13.7
+2026-08-25,TOUR Championship,pga,29433,"Bridgeman, Jacob",14.63
+2026-08-25,TOUR Championship,pga,6093,"Rose, Justin",16.79
+2026-08-25,TOUR Championship,pga,24766,"Kim, Tom",15.8
+2026-08-25,TOUR Championship,pga,16841,"Lee, Min Woo",10.72
+2026-08-25,TOUR Championship,pga,12577,"Woodland, Gary",16.61
+2026-08-25,TOUR Championship,pga,6430,"Scott, Adam",17.16
+2026-08-25,TOUR Championship,pga,21407,"Reitan, Kristoffer",10.05
+2026-08-25,TOUR Championship,pga,18474,"Smalley, Alex",14.16
+2026-08-25,TOUR Championship,pga,25362,"Fitzpatrick, Alex",11.37
+2026-08-25,TOUR Championship,pga,26096,"Bhatia, Akshay",13.65
+2026-08-25,TOUR Championship,pga,11889,"Fox, Ryan",9.48
+2026-08-26,TOUR Championship,pga,18417,"Scheffler, Scottie",33.24
+2026-08-26,TOUR Championship,pga,10091,"McIlroy, Rory",28.12
+2026-08-26,TOUR Championship,pga,19895,"Schauffele, Xander",30.41
+2026-08-26,TOUR Championship,pga,23950,"Aberg, Ludvig",19.81
+2026-08-26,TOUR Championship,pga,23604,"Clark, Wyndham",26.43
+2026-08-26,TOUR Championship,pga,19483,"Burns, Sam",28.95
+2026-08-26,TOUR Championship,pga,12294,"Fleetwood, Tommy",24.18
+2026-08-26,TOUR Championship,pga,15466,"Cantlay, Patrick",31.28
+2026-08-26,TOUR Championship,pga,26651,"Young, Cameron",21.12
+2026-08-26,TOUR Championship,pga,22085,"Morikawa, Collin",30.34
+2026-08-26,TOUR Championship,pga,27774,"Gotterup, Chris",23.06
+2026-08-26,TOUR Championship,pga,17646,"Fitzpatrick, Matt",20.02
+2026-08-26,TOUR Championship,pga,14609,"Kim, Si Woo",21.17
+2026-08-26,TOUR Championship,pga,13562,"Matsuyama, Hideki",20.5
+2026-08-26,TOUR Championship,pga,14578,"Henley, Russell",26.96
+2026-08-26,TOUR Championship,pga,29767,"Gerard, Ryan",13.22
+2026-08-26,TOUR Championship,pga,18841,"Hovland, Viktor",23.45
+2026-08-26,TOUR Championship,pga,17536,"Spaun, J.J.",12.82
+2026-08-26,TOUR Championship,pga,23323,"MacIntyre, Robert",13.93
+2026-08-26,TOUR Championship,pga,29433,"Bridgeman, Jacob",13.28
+2026-08-26,TOUR Championship,pga,6093,"Rose, Justin",16.35
+2026-08-26,TOUR Championship,pga,24766,"Kim, Tom",17.01
+2026-08-26,TOUR Championship,pga,16841,"Lee, Min Woo",10.66
+2026-08-26,TOUR Championship,pga,12577,"Woodland, Gary",18.02
+2026-08-26,TOUR Championship,pga,6430,"Scott, Adam",19.39
+2026-08-26,TOUR Championship,pga,21407,"Reitan, Kristoffer",9.31
+2026-08-26,TOUR Championship,pga,18474,"Smalley, Alex",13.95
+2026-08-26,TOUR Championship,pga,25362,"Fitzpatrick, Alex",10.85
+2026-08-26,TOUR Championship,pga,26096,"Bhatia, Akshay",12.87
+2026-08-26,TOUR Championship,pga,11889,"Fox, Ryan",9.31
+2026-08-26,TOUR Championship,pga,18417,"Scheffler, Scottie",33.24
+2026-08-26,TOUR Championship,pga,10091,"McIlroy, Rory",28.12
+2026-08-26,TOUR Championship,pga,19895,"Schauffele, Xander",30.41
+2026-08-26,TOUR Championship,pga,23950,"Aberg, Ludvig",19.81
+2026-08-26,TOUR Championship,pga,23604,"Clark, Wyndham",26.43
+2026-08-26,TOUR Championship,pga,19483,"Burns, Sam",28.95
+2026-08-26,TOUR Championship,pga,12294,"Fleetwood, Tommy",24.18
+2026-08-26,TOUR Championship,pga,15466,"Cantlay, Patrick",31.28
+2026-08-26,TOUR Championship,pga,26651,"Young, Cameron",21.12
+2026-08-26,TOUR Championship,pga,22085,"Morikawa, Collin",30.34
+2026-08-26,TOUR Championship,pga,27774,"Gotterup, Chris",23.06
+2026-08-26,TOUR Championship,pga,17646,"Fitzpatrick, Matt",20.02
+2026-08-26,TOUR Championship,pga,14609,"Kim, Si Woo",21.17
+2026-08-26,TOUR Championship,pga,13562,"Matsuyama, Hideki",20.5
+2026-08-26,TOUR Championship,pga,14578,"Henley, Russell",26.96
+2026-08-26,TOUR Championship,pga,29767,"Gerard, Ryan",13.22
+2026-08-26,TOUR Championship,pga,18841,"Hovland, Viktor",23.45
+2026-08-26,TOUR Championship,pga,17536,"Spaun, J.J.",12.82
+2026-08-26,TOUR Championship,pga,23323,"MacIntyre, Robert",13.93
+2026-08-26,TOUR Championship,pga,29433,"Bridgeman, Jacob",13.28
+2026-08-26,TOUR Championship,pga,6093,"Rose, Justin",16.35
+2026-08-26,TOUR Championship,pga,24766,"Kim, Tom",17.01
+2026-08-26,TOUR Championship,pga,16841,"Lee, Min Woo",10.66
+2026-08-26,TOUR Championship,pga,12577,"Woodland, Gary",18.02
+2026-08-26,TOUR Championship,pga,6430,"Scott, Adam",19.39
+2026-08-26,TOUR Championship,pga,21407,"Reitan, Kristoffer",9.31
+2026-08-26,TOUR Championship,pga,18474,"Smalley, Alex",13.95
+2026-08-26,TOUR Championship,pga,25362,"Fitzpatrick, Alex",10.85
+2026-08-26,TOUR Championship,pga,26096,"Bhatia, Akshay",12.87
+2026-08-26,TOUR Championship,pga,11889,"Fox, Ryan",9.31
+2026-08-26,TOUR Championship,pga,18417,"Scheffler, Scottie",32.02
+2026-08-26,TOUR Championship,pga,10091,"McIlroy, Rory",27.47
+2026-08-26,TOUR Championship,pga,19895,"Schauffele, Xander",30.55
+2026-08-26,TOUR Championship,pga,23950,"Aberg, Ludvig",19.95
+2026-08-26,TOUR Championship,pga,23604,"Clark, Wyndham",24.91
+2026-08-26,TOUR Championship,pga,19483,"Burns, Sam",28.35
+2026-08-26,TOUR Championship,pga,12294,"Fleetwood, Tommy",24.09
+2026-08-26,TOUR Championship,pga,15466,"Cantlay, Patrick",30.83
+2026-08-26,TOUR Championship,pga,26651,"Young, Cameron",20.31
+2026-08-26,TOUR Championship,pga,22085,"Morikawa, Collin",30.17
+2026-08-26,TOUR Championship,pga,27774,"Gotterup, Chris",23.02
+2026-08-26,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.13
+2026-08-26,TOUR Championship,pga,14609,"Kim, Si Woo",21.1
+2026-08-26,TOUR Championship,pga,13562,"Matsuyama, Hideki",21.42
+2026-08-26,TOUR Championship,pga,14578,"Henley, Russell",27.16
+2026-08-26,TOUR Championship,pga,29767,"Gerard, Ryan",13.81
+2026-08-26,TOUR Championship,pga,18841,"Hovland, Viktor",24.13
+2026-08-26,TOUR Championship,pga,17536,"Spaun, J.J.",13.01
+2026-08-26,TOUR Championship,pga,23323,"MacIntyre, Robert",14.31
+2026-08-26,TOUR Championship,pga,29433,"Bridgeman, Jacob",14
+2026-08-26,TOUR Championship,pga,6093,"Rose, Justin",16.87
+2026-08-26,TOUR Championship,pga,24766,"Kim, Tom",16.96
+2026-08-26,TOUR Championship,pga,16841,"Lee, Min Woo",10.63
+2026-08-26,TOUR Championship,pga,12577,"Woodland, Gary",17.18
+2026-08-26,TOUR Championship,pga,6430,"Scott, Adam",19.2
+2026-08-26,TOUR Championship,pga,21407,"Reitan, Kristoffer",9.97
+2026-08-26,TOUR Championship,pga,18474,"Smalley, Alex",14.17
+2026-08-26,TOUR Championship,pga,25362,"Fitzpatrick, Alex",10.47
+2026-08-26,TOUR Championship,pga,26096,"Bhatia, Akshay",13.1
+2026-08-26,TOUR Championship,pga,11889,"Fox, Ryan",9.72
+2026-08-27,TOUR Championship,pga,18417,"Scheffler, Scottie",31.45
+2026-08-27,TOUR Championship,pga,10091,"McIlroy, Rory",27.02
+2026-08-27,TOUR Championship,pga,19895,"Schauffele, Xander",30.12
+2026-08-27,TOUR Championship,pga,23950,"Aberg, Ludvig",19.66
+2026-08-27,TOUR Championship,pga,23604,"Clark, Wyndham",24.32
+2026-08-27,TOUR Championship,pga,19483,"Burns, Sam",28.67
+2026-08-27,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.48
+2026-08-27,TOUR Championship,pga,15466,"Cantlay, Patrick",30.73
+2026-08-27,TOUR Championship,pga,26651,"Young, Cameron",20.48
+2026-08-27,TOUR Championship,pga,22085,"Morikawa, Collin",30
+2026-08-27,TOUR Championship,pga,27774,"Gotterup, Chris",23.26
+2026-08-27,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.01
+2026-08-27,TOUR Championship,pga,14609,"Kim, Si Woo",21.57
+2026-08-27,TOUR Championship,pga,13562,"Matsuyama, Hideki",21.43
+2026-08-27,TOUR Championship,pga,14578,"Henley, Russell",27.34
+2026-08-27,TOUR Championship,pga,29767,"Gerard, Ryan",13.76
+2026-08-27,TOUR Championship,pga,18841,"Hovland, Viktor",24.3
+2026-08-27,TOUR Championship,pga,17536,"Spaun, J.J.",13.48
+2026-08-27,TOUR Championship,pga,23323,"MacIntyre, Robert",14.46
+2026-08-27,TOUR Championship,pga,29433,"Bridgeman, Jacob",14.26
+2026-08-27,TOUR Championship,pga,6093,"Rose, Justin",17.02
+2026-08-27,TOUR Championship,pga,24766,"Kim, Tom",17.24
+2026-08-27,TOUR Championship,pga,16841,"Lee, Min Woo",10.7
+2026-08-27,TOUR Championship,pga,12577,"Woodland, Gary",17.06
+2026-08-27,TOUR Championship,pga,6430,"Scott, Adam",18.76
+2026-08-27,TOUR Championship,pga,21407,"Reitan, Kristoffer",10.14
+2026-08-27,TOUR Championship,pga,18474,"Smalley, Alex",14.18
+2026-08-27,TOUR Championship,pga,25362,"Fitzpatrick, Alex",10.66
+2026-08-27,TOUR Championship,pga,26096,"Bhatia, Akshay",13.53
+2026-08-27,TOUR Championship,pga,11889,"Fox, Ryan",9.92
+2026-08-27,TOUR Championship,pga,18417,"Scheffler, Scottie",31.45
+2026-08-27,TOUR Championship,pga,10091,"McIlroy, Rory",27.02
+2026-08-27,TOUR Championship,pga,19895,"Schauffele, Xander",30.12
+2026-08-27,TOUR Championship,pga,23950,"Aberg, Ludvig",19.66
+2026-08-27,TOUR Championship,pga,23604,"Clark, Wyndham",24.32
+2026-08-27,TOUR Championship,pga,19483,"Burns, Sam",28.67
+2026-08-27,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.48
+2026-08-27,TOUR Championship,pga,15466,"Cantlay, Patrick",30.73
+2026-08-27,TOUR Championship,pga,26651,"Young, Cameron",20.48
+2026-08-27,TOUR Championship,pga,22085,"Morikawa, Collin",30
+2026-08-27,TOUR Championship,pga,27774,"Gotterup, Chris",23.26
+2026-08-27,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.01
+2026-08-27,TOUR Championship,pga,14609,"Kim, Si Woo",21.57
+2026-08-27,TOUR Championship,pga,13562,"Matsuyama, Hideki",21.43
+2026-08-27,TOUR Championship,pga,14578,"Henley, Russell",27.34
+2026-08-27,TOUR Championship,pga,29767,"Gerard, Ryan",13.76
+2026-08-27,TOUR Championship,pga,18841,"Hovland, Viktor",24.3
+2026-08-27,TOUR Championship,pga,17536,"Spaun, J.J.",13.48
+2026-08-27,TOUR Championship,pga,23323,"MacIntyre, Robert",14.46
+2026-08-27,TOUR Championship,pga,29433,"Bridgeman, Jacob",14.26
+2026-08-27,TOUR Championship,pga,6093,"Rose, Justin",17.02
+2026-08-27,TOUR Championship,pga,24766,"Kim, Tom",17.24
+2026-08-27,TOUR Championship,pga,16841,"Lee, Min Woo",10.7
+2026-08-27,TOUR Championship,pga,12577,"Woodland, Gary",17.06
+2026-08-27,TOUR Championship,pga,6430,"Scott, Adam",18.76
+2026-08-27,TOUR Championship,pga,21407,"Reitan, Kristoffer",10.14
+2026-08-27,TOUR Championship,pga,18474,"Smalley, Alex",14.18
+2026-08-27,TOUR Championship,pga,25362,"Fitzpatrick, Alex",10.66
+2026-08-27,TOUR Championship,pga,26096,"Bhatia, Akshay",13.53
+2026-08-27,TOUR Championship,pga,11889,"Fox, Ryan",9.92
+2026-08-27,TOUR Championship,pga,18417,"Scheffler, Scottie",31.45
+2026-08-27,TOUR Championship,pga,10091,"McIlroy, Rory",27.02
+2026-08-27,TOUR Championship,pga,19895,"Schauffele, Xander",30.12
+2026-08-27,TOUR Championship,pga,23950,"Aberg, Ludvig",19.66
+2026-08-27,TOUR Championship,pga,23604,"Clark, Wyndham",24.32
+2026-08-27,TOUR Championship,pga,19483,"Burns, Sam",28.67
+2026-08-27,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.48
+2026-08-27,TOUR Championship,pga,15466,"Cantlay, Patrick",30.73
+2026-08-27,TOUR Championship,pga,26651,"Young, Cameron",20.48
+2026-08-27,TOUR Championship,pga,22085,"Morikawa, Collin",30
+2026-08-27,TOUR Championship,pga,27774,"Gotterup, Chris",23.26
+2026-08-27,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.01
+2026-08-27,TOUR Championship,pga,14609,"Kim, Si Woo",21.57
+2026-08-27,TOUR Championship,pga,13562,"Matsuyama, Hideki",21.43
+2026-08-27,TOUR Championship,pga,14578,"Henley, Russell",27.34
+2026-08-27,TOUR Championship,pga,29767,"Gerard, Ryan",13.76
+2026-08-27,TOUR Championship,pga,18841,"Hovland, Viktor",24.3
+2026-08-27,TOUR Championship,pga,17536,"Spaun, J.J.",13.48
+2026-08-27,TOUR Championship,pga,23323,"MacIntyre, Robert",14.46
+2026-08-27,TOUR Championship,pga,29433,"Bridgeman, Jacob",14.26
+2026-08-27,TOUR Championship,pga,6093,"Rose, Justin",17.02
+2026-08-27,TOUR Championship,pga,24766,"Kim, Tom",17.24
+2026-08-27,TOUR Championship,pga,16841,"Lee, Min Woo",10.7
+2026-08-27,TOUR Championship,pga,12577,"Woodland, Gary",17.06
+2026-08-27,TOUR Championship,pga,6430,"Scott, Adam",18.76
+2026-08-27,TOUR Championship,pga,21407,"Reitan, Kristoffer",10.14
+2026-08-27,TOUR Championship,pga,18474,"Smalley, Alex",14.18
+2026-08-27,TOUR Championship,pga,25362,"Fitzpatrick, Alex",10.66
+2026-08-27,TOUR Championship,pga,26096,"Bhatia, Akshay",13.53
+2026-08-27,TOUR Championship,pga,11889,"Fox, Ryan",9.92
+2026-08-28,TOUR Championship,pga,18417,"Scheffler, Scottie",31.45
+2026-08-28,TOUR Championship,pga,10091,"McIlroy, Rory",27.02
+2026-08-28,TOUR Championship,pga,19895,"Schauffele, Xander",30.12
+2026-08-28,TOUR Championship,pga,23950,"Aberg, Ludvig",19.66
+2026-08-28,TOUR Championship,pga,23604,"Clark, Wyndham",24.32
+2026-08-28,TOUR Championship,pga,19483,"Burns, Sam",28.67
+2026-08-28,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.48
+2026-08-28,TOUR Championship,pga,15466,"Cantlay, Patrick",30.73
+2026-08-28,TOUR Championship,pga,26651,"Young, Cameron",20.48
+2026-08-28,TOUR Championship,pga,22085,"Morikawa, Collin",30
+2026-08-28,TOUR Championship,pga,27774,"Gotterup, Chris",23.26
+2026-08-28,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.01
+2026-08-28,TOUR Championship,pga,14609,"Kim, Si Woo",21.57
+2026-08-28,TOUR Championship,pga,13562,"Matsuyama, Hideki",21.43
+2026-08-28,TOUR Championship,pga,14578,"Henley, Russell",27.34
+2026-08-28,TOUR Championship,pga,29767,"Gerard, Ryan",13.76
+2026-08-28,TOUR Championship,pga,18841,"Hovland, Viktor",24.3
+2026-08-28,TOUR Championship,pga,17536,"Spaun, J.J.",13.48
+2026-08-28,TOUR Championship,pga,23323,"MacIntyre, Robert",14.46
+2026-08-28,TOUR Championship,pga,29433,"Bridgeman, Jacob",14.26
+2026-08-28,TOUR Championship,pga,6093,"Rose, Justin",17.02
+2026-08-28,TOUR Championship,pga,24766,"Kim, Tom",17.24
+2026-08-28,TOUR Championship,pga,16841,"Lee, Min Woo",10.7
+2026-08-28,TOUR Championship,pga,12577,"Woodland, Gary",17.06
+2026-08-28,TOUR Championship,pga,6430,"Scott, Adam",18.76
+2026-08-28,TOUR Championship,pga,21407,"Reitan, Kristoffer",10.14
+2026-08-28,TOUR Championship,pga,18474,"Smalley, Alex",14.18
+2026-08-28,TOUR Championship,pga,25362,"Fitzpatrick, Alex",10.66
+2026-08-28,TOUR Championship,pga,26096,"Bhatia, Akshay",13.53
+2026-08-28,TOUR Championship,pga,11889,"Fox, Ryan",9.92
+2026-08-31,TOUR Championship,pga,18417,"Scheffler, Scottie",31.45
+2026-08-31,TOUR Championship,pga,10091,"McIlroy, Rory",27.02
+2026-08-31,TOUR Championship,pga,19895,"Schauffele, Xander",30.12
+2026-08-31,TOUR Championship,pga,23950,"Aberg, Ludvig",19.66
+2026-08-31,TOUR Championship,pga,23604,"Clark, Wyndham",24.32
+2026-08-31,TOUR Championship,pga,19483,"Burns, Sam",28.67
+2026-08-31,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.48
+2026-08-31,TOUR Championship,pga,15466,"Cantlay, Patrick",30.73
+2026-08-31,TOUR Championship,pga,26651,"Young, Cameron",20.48
+2026-08-31,TOUR Championship,pga,22085,"Morikawa, Collin",30
+2026-08-31,TOUR Championship,pga,27774,"Gotterup, Chris",23.26
+2026-08-31,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.01
+2026-08-31,TOUR Championship,pga,14609,"Kim, Si Woo",21.57
+2026-08-31,TOUR Championship,pga,13562,"Matsuyama, Hideki",21.43
+2026-08-31,TOUR Championship,pga,14578,"Henley, Russell",27.34
+2026-08-31,TOUR Championship,pga,29767,"Gerard, Ryan",13.76
+2026-08-31,TOUR Championship,pga,18841,"Hovland, Viktor",24.3
+2026-08-31,TOUR Championship,pga,17536,"Spaun, J.J.",13.48
+2026-08-31,TOUR Championship,pga,23323,"MacIntyre, Robert",14.46
+2026-08-31,TOUR Championship,pga,29433,"Bridgeman, Jacob",14.26
+2026-08-31,TOUR Championship,pga,6093,"Rose, Justin",17.02
+2026-08-31,TOUR Championship,pga,24766,"Kim, Tom",17.24
+2026-08-31,TOUR Championship,pga,16841,"Lee, Min Woo",10.7
+2026-08-31,TOUR Championship,pga,12577,"Woodland, Gary",17.06
+2026-08-31,TOUR Championship,pga,6430,"Scott, Adam",18.76
+2026-08-31,TOUR Championship,pga,21407,"Reitan, Kristoffer",10.14
+2026-08-31,TOUR Championship,pga,18474,"Smalley, Alex",14.18
+2026-08-31,TOUR Championship,pga,25362,"Fitzpatrick, Alex",10.66
+2026-08-31,TOUR Championship,pga,26096,"Bhatia, Akshay",13.53
+2026-08-31,TOUR Championship,pga,11889,"Fox, Ryan",9.92
+2026-08-31,TOUR Championship,pga,18417,"Scheffler, Scottie",31.45
+2026-08-31,TOUR Championship,pga,10091,"McIlroy, Rory",27.02
+2026-08-31,TOUR Championship,pga,19895,"Schauffele, Xander",30.12
+2026-08-31,TOUR Championship,pga,23950,"Aberg, Ludvig",19.66
+2026-08-31,TOUR Championship,pga,23604,"Clark, Wyndham",24.32
+2026-08-31,TOUR Championship,pga,19483,"Burns, Sam",28.67
+2026-08-31,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.48
+2026-08-31,TOUR Championship,pga,15466,"Cantlay, Patrick",30.73
+2026-08-31,TOUR Championship,pga,26651,"Young, Cameron",20.48
+2026-08-31,TOUR Championship,pga,22085,"Morikawa, Collin",30
+2026-08-31,TOUR Championship,pga,27774,"Gotterup, Chris",23.26
+2026-08-31,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.01
+2026-08-31,TOUR Championship,pga,14609,"Kim, Si Woo",21.57
+2026-08-31,TOUR Championship,pga,13562,"Matsuyama, Hideki",21.43
+2026-08-31,TOUR Championship,pga,14578,"Henley, Russell",27.34
+2026-08-31,TOUR Championship,pga,29767,"Gerard, Ryan",13.76
+2026-08-31,TOUR Championship,pga,18841,"Hovland, Viktor",24.3
+2026-08-31,TOUR Championship,pga,17536,"Spaun, J.J.",13.48
+2026-08-31,TOUR Championship,pga,23323,"MacIntyre, Robert",14.46
+2026-08-31,TOUR Championship,pga,29433,"Bridgeman, Jacob",14.26
+2026-08-31,TOUR Championship,pga,6093,"Rose, Justin",17.02
+2026-08-31,TOUR Championship,pga,24766,"Kim, Tom",17.24
+2026-08-31,TOUR Championship,pga,16841,"Lee, Min Woo",10.7
+2026-08-31,TOUR Championship,pga,12577,"Woodland, Gary",17.06
+2026-08-31,TOUR Championship,pga,6430,"Scott, Adam",18.76
+2026-08-31,TOUR Championship,pga,21407,"Reitan, Kristoffer",10.14
+2026-08-31,TOUR Championship,pga,18474,"Smalley, Alex",14.18
+2026-08-31,TOUR Championship,pga,25362,"Fitzpatrick, Alex",10.66
+2026-08-31,TOUR Championship,pga,26096,"Bhatia, Akshay",13.53
+2026-08-31,TOUR Championship,pga,11889,"Fox, Ryan",9.92
+2026-08-31,TOUR Championship,pga,18417,"Scheffler, Scottie",31.45
+2026-08-31,TOUR Championship,pga,10091,"McIlroy, Rory",27.02
+2026-08-31,TOUR Championship,pga,19895,"Schauffele, Xander",30.12
+2026-08-31,TOUR Championship,pga,23950,"Aberg, Ludvig",19.66
+2026-08-31,TOUR Championship,pga,23604,"Clark, Wyndham",24.32
+2026-08-31,TOUR Championship,pga,19483,"Burns, Sam",28.67
+2026-08-31,TOUR Championship,pga,12294,"Fleetwood, Tommy",23.48
+2026-08-31,TOUR Championship,pga,15466,"Cantlay, Patrick",30.73
+2026-08-31,TOUR Championship,pga,26651,"Young, Cameron",20.48
+2026-08-31,TOUR Championship,pga,22085,"Morikawa, Collin",30
+2026-08-31,TOUR Championship,pga,27774,"Gotterup, Chris",23.26
+2026-08-31,TOUR Championship,pga,17646,"Fitzpatrick, Matt",21.01
+2026-08-31,TOUR Championship,pga,14609,"Kim, Si Woo",21.57
+2026-08-31,TOUR Championship,pga,13562,"Matsuyama, Hideki",21.43
+2026-08-31,TOUR Championship,pga,14578,"Henley, Russell",27.34
+2026-08-31,TOUR Championship,pga,29767,"Gerard, Ryan",13.76
+2026-08-31,TOUR Championship,pga,18841,"Hovland, Viktor",24.3
+2026-08-31,TOUR Championship,pga,17536,"Spaun, J.J.",13.48
+2026-08-31,TOUR Championship,pga,23323,"MacIntyre, Robert",14.46
+2026-08-31,TOUR Championship,pga,29433,"Bridgeman, Jacob",14.26
+2026-08-31,TOUR Championship,pga,6093,"Rose, Justin",17.02
+2026-08-31,TOUR Championship,pga,24766,"Kim, Tom",17.24
+2026-08-31,TOUR Championship,pga,16841,"Lee, Min Woo",10.7
+2026-08-31,TOUR Championship,pga,12577,"Woodland, Gary",17.06
+2026-08-31,TOUR Championship,pga,6430,"Scott, Adam",18.76
+2026-08-31,TOUR Championship,pga,21407,"Reitan, Kristoffer",10.14
+2026-08-31,TOUR Championship,pga,18474,"Smalley, Alex",14.18
+2026-08-31,TOUR Championship,pga,25362,"Fitzpatrick, Alex",10.66
+2026-08-31,TOUR Championship,pga,26096,"Bhatia, Akshay",13.53
+2026-08-31,TOUR Championship,pga,11889,"Fox, Ryan",9.92

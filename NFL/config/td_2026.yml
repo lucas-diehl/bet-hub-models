@@ -1,0 +1,30 @@
+season: 2026
+mode: "paper"
+
+market:
+  region: "us"
+  minimum_books: 2
+  minimum_american_odds: -300
+  maximum_american_odds: 700
+  refresh_window_days: 10
+
+strategy:
+  expanded_edge: 0.02
+  core_edge: 0.05
+  low_total_max: 42
+  heavy_favorite_max_spread: -6
+
+bankroll:
+  starting_bankroll: 1000
+  unit_fraction: 0.01
+  minimum_units: 3
+  maximum_units: 10
+  daily_or_weekly_cap: null
+
+execution:
+  require_confirmed_active: true
+  require_verified_weather: true
+  require_current_game_lines: true
+  line_refresh_minutes_before_kickoff: 90
+  closing_snapshot_minutes_before_kickoff: 60
+

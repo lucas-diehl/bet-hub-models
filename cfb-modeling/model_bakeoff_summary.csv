@@ -1,0 +1,6 @@
+"model","sp_bets","sp_win","sp_roi","to_bets","to_win","to_roi","margin_rmse","total_rmse","clv"
+"A_ratings",1816,49.6,-5.4,1854,49.7,-5.1,17.24,16.16,0.23
+"B_ml_blind",1630,50.2,-4.2,2064,50.9,-2.8,20.63,17.46,0.19
+"C_ml_market",1365,48.8,-6.9,1818,48.8,-6.9,15.84,16.2,0.21
+"MARKET",NA,NA,NA,NA,NA,NA,15.3,15.74,NA
+"BENCH_clf",1478,49.1,-6.4,1462,51.4,-1.8,NA,NA,-0.1

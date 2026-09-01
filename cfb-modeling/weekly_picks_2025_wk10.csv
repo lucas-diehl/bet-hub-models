@@ -1,0 +1,53 @@
+"season","week","home_team","away_team","over_under","proj_total","under_edge","pick","strategy","dog_ats","p_under","totals_ev","totals_bet","totals_units","spread","proj_margin","spread_pick_info","actual_margin","total_points","over_hit"
+2025,10,"Kennesaw State","UTEP",53,45.5,7.5,"UNDER","UNDER4+DOG",TRUE,0.676,0.29,TRUE,5,-12.1666666666667,7.7,"UTEP",13,53,0
+2025,10,"Ole Miss","South Carolina",55.8333333333333,49.6,6.2,"UNDER","UNDER4+DOG",TRUE,0.647,0.236,TRUE,5,-13,11.7,"South Carolina",16,44,0
+2025,10,"San Diego State","Wyoming",42,37.1,4.9,"UNDER","UNDER4",FALSE,0.618,0.18,TRUE,4.95,-10,16.6,"San Diego State",17,31,0
+2025,10,"Temple","East Carolina",58.3333333333333,53.4,4.9,"UNDER","UNDER4",FALSE,0.618,0.181,TRUE,4.97,5.33333333333333,-6.4,"East Carolina",-31,59,1
+2025,10,"Louisiana Tech","Sam Houston",48,44,4,"UNDER","UNDER4+DOG",TRUE,0.597,0.14,TRUE,3.86,-16.5,11.4,"Sam Houston",41,69,1
+2025,10,"Tennessee","Oklahoma",55.6666666666667,52,3.7,"","",FALSE,0.588,0.123,FALSE,0,-2.83333333333333,5.4,"Tennessee",-6,60,1
+2025,10,"San José State","Hawai'i",55.6666666666667,52.3,3.3,"","",FALSE,0.58,0.108,FALSE,0,-2.5,4.9,"San José State",7,83,1
+2025,10,"UNLV","New Mexico",61.1666666666667,58.3,2.9,"","",FALSE,0.57,0.088,FALSE,0,-3.83333333333333,4,"UNLV",-5,75,1
+2025,10,"Liberty","Delaware",52.3333333333333,49.7,2.6,"","",TRUE,0.563,0.074,FALSE,0,-3.5,0.4,"Delaware",29,89,1
+2025,10,"Baylor","UCF",58.5,56.4,2.1,"","",TRUE,0.551,0.052,FALSE,0,-3.16666666666667,2.2,"UCF",27,33,0
+2025,10,"Western Kentucky","New Mexico State",53.8333333333333,51.8,2.1,"","",FALSE,0.55,0.051,FALSE,0,-7.5,13.4,"Western Kentucky",19,51,0
+2025,10,"Arkansas","Mississippi State",66.5,64.6,1.9,"","",TRUE,0.547,0.044,FALSE,0,-5.33333333333333,1,"Mississippi State",-3,73,1
+2025,10,"Clemson","Duke",55,53.2,1.8,"","",FALSE,0.544,0.038,FALSE,0,-4.16666666666667,5.7,"Clemson",-1,91,1
+2025,10,"Utah","Cincinnati",57.8333333333333,56,1.8,"","",TRUE,0.544,0.039,FALSE,0,-10.6666666666667,9.8,"Cincinnati",31,59,1
+2025,10,"North Texas","Navy",68.5,66.7,1.8,"","",TRUE,0.543,0.036,FALSE,0,-6.5,6.2,"Navy",14,48,0
+2025,10,"Rice","Memphis",48.3333333333333,47.1,1.3,"","",TRUE,0.531,0.013,FALSE,0,13.8333333333333,-10.1,"Rice",-24,52,1
+2025,10,"Nebraska","USC",59.3333333333333,58.9,0.4,"","",FALSE,0.51,-0.027,FALSE,0,4.5,-4.7,"USC",-4,38,0
+2025,10,"Coastal Carolina","Marshall",55.1666666666667,54.9,0.3,"","",TRUE,0.507,-0.033,FALSE,0,7.16666666666667,-4,"Coastal Carolina",17,71,1
+2025,10,"Illinois","Rutgers",63.5,63.5,0,"","",TRUE,0.499,-0.048,FALSE,0,-13,6.5,"Rutgers",22,48,0
+2025,10,"California","Virginia",52.3333333333333,52.6,-0.2,"","",TRUE,0.494,-0.057,FALSE,0,6.16666666666667,-5.3,"California",-10,52,0
+2025,10,"Florida","Georgia",50.3333333333333,50.6,-0.3,"","",TRUE,0.493,-0.058,FALSE,0,6.83333333333333,-3.9,"Florida",-4,44,0
+2025,10,"NC State","Georgia Tech",58.5,58.8,-0.3,"","",TRUE,0.493,-0.06,FALSE,0,4.33333333333333,-2.5,"NC State",12,84,1
+2025,10,"Kansas","Oklahoma State",54.1666666666667,54.5,-0.4,"","",TRUE,0.491,-0.063,FALSE,0,-24.6666666666667,23.6,"Oklahoma State",17,59,1
+2025,10,"Troy","Arkansas State",52.5,53,-0.5,"","",FALSE,0.487,-0.07,FALSE,0,-7.66666666666667,11.1,"Troy",-13,33,0
+2025,10,"Stanford","Pittsburgh",51.8333333333333,52.5,-0.6,"","",TRUE,0.485,-0.074,FALSE,0,13.5,-5.9,"Stanford",-15,55,1
+2025,10,"UL Monroe","Old Dominion",55.5,56.2,-0.7,"","",TRUE,0.483,-0.077,FALSE,0,16.6666666666667,-12.2,"UL Monroe",-25,37,0
+2025,10,"Boston College","Notre Dame",55.3333333333333,56.2,-0.8,"","",TRUE,0.479,-0.085,FALSE,0,31,-17,"Boston College",-15,35,0
+2025,10,"Houston","West Virginia",48.8333333333333,49.6,-0.8,"","",TRUE,0.482,-0.081,FALSE,0,-13,11.3,"West Virginia",-10,80,1
+2025,10,"Missouri State","Florida International",50,51.1,-1.1,"","",FALSE,0.474,-0.095,FALSE,0,-3.16666666666667,8.6,"Missouri State",7,49,0
+2025,10,"Maryland","Indiana",50.6666666666667,51.8,-1.2,"","",TRUE,0.472,-0.099,FALSE,0,21.1666666666667,-20.8,"Maryland",-45,65,1
+2025,10,"Michigan","Purdue",48.6666666666667,50.4,-1.7,"","",TRUE,0.459,-0.125,FALSE,0,-21.5,19.9,"Purdue",5,37,0
+2025,10,"Virginia Tech","Louisville",52.5,54.3,-1.8,"","",TRUE,0.457,-0.128,FALSE,0,10.5,-9.6,"Virginia Tech",-12,44,0
+2025,10,"Auburn","Kentucky",44.5,46.5,-2,"","",FALSE,0.451,-0.14,FALSE,0,-11.6666666666667,13.8,"Auburn",-7,13,0
+2025,10,"UTSA","Tulane",54.3333333333333,57,-2.6,"","",TRUE,0.437,-0.167,FALSE,0,5.83333333333333,0.5,"UTSA",22,74,1
+2025,10,"Middle Tennessee","Jacksonville State",54,57,-3,"","",FALSE,0.426,-0.186,FALSE,0,4.33333333333333,-12.9,"Jacksonville State",-3,45,0
+2025,10,"Western Michigan","Central Michigan",43.3333333333333,46.4,-3,"","",TRUE,0.427,-0.185,FALSE,0,-5.66666666666667,1.2,"Central Michigan",3,45,1
+2025,10,"Texas State","James Madison",55.3333333333333,58.5,-3.1,"","",TRUE,0.425,-0.189,FALSE,0,7.33333333333333,-3.5,"Texas State",-32,72,1
+2025,10,"Boise State","Fresno State",47.6666666666667,51,-3.3,"","",TRUE,0.421,-0.197,FALSE,0,-17.5,15.6,"Fresno State",-23,37,0
+2025,10,"Colorado","Arizona",52.1666666666667,55.6,-3.5,"","",TRUE,0.416,-0.206,FALSE,0,3.66666666666667,4,"Colorado",-35,69,1
+2025,10,"South Alabama","Louisiana",52.6666666666667,56.4,-3.8,"","",FALSE,0.41,-0.218,FALSE,0,-3.5,4.3,"South Alabama",-9,53,1
+2025,10,"Ohio State","Penn State",45.5,49.6,-4.1,"","",TRUE,0.401,-0.235,FALSE,0,-17.6666666666667,16.4,"Penn State",24,52,1
+2025,10,"Minnesota","Michigan State",44.5,48.8,-4.3,"","",FALSE,0.397,-0.241,FALSE,0,-4.5,12,"Minnesota",3,43,0
+2025,10,"Texas","Vanderbilt",48.5,53,-4.5,"","",FALSE,0.393,-0.25,FALSE,0,-3.5,4.6,"Texas",3,65,1
+2025,10,"UConn","UAB",61.5,66.1,-4.6,"","",FALSE,0.389,-0.257,FALSE,0,-10.3333333333333,16,"UConn",19,57,0
+2025,10,"Iowa State","Arizona State",48.5,53.5,-5,"","",FALSE,0.38,-0.274,FALSE,0,-7.83333333333333,8,"Iowa State",-5,43,0
+2025,10,"Florida State","Wake Forest",50.6666666666667,56.1,-5.4,"","",TRUE,0.371,-0.292,FALSE,0,-12.6666666666667,11.7,"Wake Forest",35,49,0
+2025,10,"Kansas State","Texas Tech",51.6666666666667,57.3,-5.7,"","",TRUE,0.365,-0.303,FALSE,0,7.33333333333333,-3.2,"Kansas State",-23,63,1
+2025,10,"Bowling Green","Buffalo",44.3333333333333,50.4,-6.1,"","",FALSE,0.355,-0.322,FALSE,0,-2.5,4.6,"Bowling Green",-25,31,0
+2025,10,"SMU","Miami",49.1666666666667,55.4,-6.3,"","",TRUE,0.351,-0.33,FALSE,0,7.83333333333333,0.3,"SMU",6,46,0
+2025,10,"Syracuse","North Carolina",45.5,52.3,-6.8,"","",FALSE,0.34,-0.352,FALSE,0,-1.5,8.6,"Syracuse",-17,37,0
+2025,10,"Oregon State","Washington State",47.5,54.7,-7.2,"","",FALSE,0.331,-0.367,FALSE,0,3.33333333333333,-5.1,"Washington State",3,17,0
+2025,10,"Air Force","Army",48.5,60.1,-11.6,"","",FALSE,0.239,-0.543,FALSE,0,1.33333333333333,-1.4,"Army",-3,37,0

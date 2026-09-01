@@ -1,0 +1,36 @@
+# === secrets — NEVER commit (provided via GitHub Secrets in CI, .Renviron locally) ===
+**/.Renviron
+**/.env
+**/.env.local
+**/secrets.yml
+**/config/secrets.yml
+**/dk_session.txt
+**/*.pem
+
+# === heavy, rebuildable data (regenerated in CI or restored from actions/cache) ===
+**/_targets/
+**/data_cache/
+**/node_modules/
+**/.Rlib/
+**/ownership_inbox/
+**/*.duckdb
+NFL/data/processed/
+NFL/data/raw/*
+!NFL/data/raw/odds_api_line_movement/
+NFL/outputs/
+dfs-engine/data/raw/
+dfs-engine/data/reports/
+
+# === R / editor junk ===
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rproj
+.Rapp.history
+.DS_Store
+
+# === CI scratch ===
+.rlib/
+_feed/
+_site/

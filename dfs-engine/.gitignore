@@ -1,0 +1,21 @@
+# secrets
+.env
+.Renviron
+config/secrets.yml
+config/dk_session.txt
+config/contest_watchlist.txt
+*.key
+
+# local store + data (don't commit; but NEVER delete data/ownership — un-backfillable)
+data/dfs.duckdb
+data/raw/
+data/slates/
+data/lineups/
+data/reports/
+data/ownership_inbox/
+data/models/
+
+# R
+.Rhistory
+.RData
+.Rproj.user/

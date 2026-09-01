@@ -1,0 +1,16 @@
+{
+  "contract_version": "1.0",
+  "source": "golf-modeling",
+  "sport": "pga",
+  "slate_date": "2026-08-13",
+  "graded_at": "2026-08-17T12:26:20Z",
+  "results": [
+    {
+      "bet_id": "golf-modeling-2026-08-13-fedexst-top10-mattfitzpatrick",
+      "result": "loss",
+      "actual": {
+        "selection_finish": 12
+      }
+    }
+  ]
+}

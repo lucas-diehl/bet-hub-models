@@ -1,0 +1,93 @@
+[13:41:19] === BACKTEST 2026 — Zero-Leakage Walk-Forward === 
+[13:41:19] Model: trained on 2021-2025 | Features: pre-event only | Odds: historical DK 
+[13:41:19] 
+Loading historical features from main cache... 
+[13:41:20]   Loaded features for  1079  players 
+[13:41:20] 
+Loading cached 2021-2025 backtest model... 
+[13:41:22] 
+Building event date map... 
+[13:41:37]   Date map built for  1071  events 
+[13:41:37] 
+Fetching 2026 event list... 
+[13:41:37]   2026 events to backtest:  22 
+[13:41:37]      6  |  Sony Open in Hawaii  |  20471 
+[13:41:37]      2  |  The American Express  |  20478 
+[13:41:37]      4  |  Farmers Insurance Open  |  20485 
+[13:41:37]      3  |  WM Phoenix Open  |  20492 
+[13:41:37]      5  |  AT&T Pebble Beach Pro-Am  |  20499 
+[13:41:37]      7  |  The Genesis Invitational  |  20506 
+[13:41:37]      10  |  Cognizant Classic in The Palm Beaches  |  20513 
+[13:41:37]      9  |  Arnold Palmer Invitational presented by Mastercard  |  20520 
+[13:41:37]      483  |  Puerto Rico Open  |  20520 
+[13:41:37]      11  |  THE PLAYERS Championship  |  20527 
+[13:41:37]      475  |  Valspar Championship  |  20534 
+[13:41:37]      20  |  Texas Children's Houston Open  |  20541 
+[13:41:37]      41  |  Valero Texas Open  |  20548 
+[13:41:37]      14  |  Masters Tournament  |  20555 
+[13:41:37]      12  |  RBC Heritage  |  20562 
+[13:41:37]      556  |  Cadillac Championship  |  20576 
+[13:41:37]      480  |  Truist Championship  |  20583 
+[13:41:37]      553  |  ONEflight Myrtle Beach Classic  |  20583 
+[13:41:37]      33  |  PGA Championship  |  20590 
+[13:41:37]      19  |  THE CJ CUP Byron Nelson  |  20597 
+[13:41:37]      21  |  Charles Schwab Challenge  |  20604 
+[13:41:37]      23  |  the Memorial Tournament presented by Workday  |  20611 
+[13:41:37] 
+Running backtest... 
+[13:41:37]    Sony Open in Hawaii  ( 20471 ) 
+[13:41:41]      41  bets |  8  wins | P&L:  +4.62  units | ROI:  +8.2% 
+[13:41:41]    The American Express  ( 20478 ) 
+[13:41:45]      72  bets |  9  wins | P&L:  +10.04  units | ROI:  +9.4% 
+[13:41:45]    Farmers Insurance Open  ( 20485 ) 
+[13:41:49]      65  bets |  7  wins | P&L:  -42.01  units | ROI:  -42.2% 
+[13:41:49]    WM Phoenix Open  ( 20492 ) 
+[13:41:53]      45  bets |  5  wins | P&L:  -19.54  units | ROI:  -28.0% 
+[13:41:53]    AT&T Pebble Beach Pro-Am  ( 20499 ) 
+[13:41:57]      11  bets |  4  wins | P&L:  +6.69  units | ROI:  +34.0% 
+[13:41:57]    The Genesis Invitational  ( 20506 ) 
+[13:42:00]      6  bets |  2  wins | P&L:  +3.47  units | ROI:  +32.4% 
+[13:42:01]    Cognizant Classic in The Palm Beaches  ( 20513 ) 
+[13:42:04]      41  bets |  4  wins | P&L:  -12.03  units | ROI:  -19.1% 
+[13:42:05]    Arnold Palmer Invitational presented by Mastercard  ( 20520 ) 
+[13:42:08]      7  bets |  3  wins | P&L:  +22.55  units | ROI:  +161.1% 
+[13:42:08]    Puerto Rico Open  ( 20520 ) 
+[13:42:12]      46  bets |  6  wins | P&L:  -21.56  units | ROI:  -26.5% 
+[13:42:12]    THE PLAYERS Championship  ( 20527 ) 
+[13:42:16]      57  bets |  7  wins | P&L:  -36.03  units | ROI:  -38.3% 
+[13:42:16]    Valspar Championship  ( 20534 ) 
+[13:42:19]      52  bets |  11  wins | P&L:  +78.77  units | ROI:  +92.1% 
+[13:42:20]    Texas Children's Houston Open  ( 20541 ) 
+[13:42:23]      49  bets |  5  wins | P&L:  -27.29  units | ROI:  -35.9% 
+[13:42:24]    Valero Texas Open  ( 20548 ) 
+[13:42:27]      48  bets |  6  wins | P&L:  -32.72  units | ROI:  -44.8% 
+[13:42:27]    Masters Tournament  ( 20555 ) 
+[13:42:31]      20  bets |  2  wins | P&L:  -11.62  units | ROI:  -38.7% 
+[13:42:31]    RBC Heritage  ( 20562 ) 
+[13:42:35]      12  bets |  4  wins | P&L:  +13.08  units | ROI:  +69.2% 
+[13:42:35]    Cadillac Championship  ( 20576 ) 
+[13:42:38]      6  bets |  0  wins | P&L:  -10.60  units | ROI:  -100.0% 
+[13:42:39]    Truist Championship  ( 20583 ) 
+[13:42:42]      8  bets |  3  wins | P&L:  +4.23  units | ROI:  +31.8% 
+[13:42:42]    ONEflight Myrtle Beach Classic  ( 20583 ) 
+[13:42:46]      55  bets |  9  wins | P&L:  -19.44  units | ROI:  -18.4% 
+[13:42:46]    PGA Championship  ( 20590 ) 
+[13:42:50]      81  bets |  8  wins | P&L:  +29.57  units | ROI:  +27.3% 
+[13:42:50]    THE CJ CUP Byron Nelson  ( 20597 ) 
+[13:42:54]      69  bets |  7  wins | P&L:  +8.60  units | ROI:  +7.9% 
+[13:42:54]    Charles Schwab Challenge  ( 20604 ) 
+[13:42:57]      43  bets |  3  wins | P&L:  -29.71  units | ROI:  -41.1% 
+[13:42:58]    the Memorial Tournament presented by Workday  ( 20611 ) 
+[13:43:01]      24  bets |  4  wins | P&L:  -18.68  units | ROI:  -42.6% 
+[13:43:01] 
+ 22  events backtested successfully 
+[13:43:01] 
+=== BACKTEST RESULTS (2026 YTD) === 
+[13:43:01] Events:       22 
+[13:43:01] Total bets:   858 
+[13:43:01] Total wins:   117  ( 13.6%  win rate) 
+[13:43:01] Total staked:  1360.6  units 
+[13:43:01] Total P&L:    -99.59  units 
+[13:43:01] Overall ROI:  -7.3% 
+[13:43:02] Creating backtest Excel... 
+[13:43:05] Saved:  golf_picks/backtest_2026_2026-06-08.xlsx 

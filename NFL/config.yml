@@ -1,0 +1,29 @@
+data:
+  start_season: 2003
+  end_season: 2025
+  regular_season_only: true
+  rotowire_url: "https://www.rotowire.com/betting/nfl/tables/games-archive.php"
+
+features:
+  rolling_windows: [4, 8]
+  minimum_prior_games: 4
+  include_weather: true
+
+backtest:
+  start_season: 2018
+  end_season: 2025
+  validation_seasons: 2
+  edge_thresholds: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8]
+  minimum_bets: 40
+  american_odds: -110
+  starting_bankroll: 100
+  flat_stake_units: 1
+  proportional_stake: 0.01
+  bootstrap_iterations: 1000
+  seed: 20260727
+
+models:
+  enabled: ["linear", "forward_linear", "random_forest", "xgboost", "neural_net"]
+  random_forest_trees: 500
+  xgboost_rounds: 300
+  neural_net_hidden: 16

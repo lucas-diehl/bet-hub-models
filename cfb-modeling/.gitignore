@@ -1,0 +1,15 @@
+# --- Secrets: NEVER commit (repo goes public) ---
+.Renviron
+.env
+config/secrets.yml
+*.key
+
+# --- R session junk ---
+.Rhistory
+.RData
+.Rproj.user/
+.Ruserdata
+
+# --- OS junk ---
+Thumbs.db
+.DS_Store

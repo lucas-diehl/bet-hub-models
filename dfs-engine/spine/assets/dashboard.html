@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DFS Engine — Dashboard</title>
+<style>
+  :root{--bg:#0f1115;--panel:#161922;--line:#242833;--mut:#9aa3ad;--txt:#e6e8eb;--accent:#4f8cff}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--txt)}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px}
+  h1{font-size:20px;margin:0} .date{color:var(--mut);font-size:13px}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
+  .live{background:#10391f;color:#54e08a}.paper{background:#3a2a10;color:#f0b54a}
+  .soon{background:#1e2740;color:#7da2ff}.off{background:#2a2d35;color:#9aa3ad}
+  .avoid{background:#3a1414;color:#e08a8a}.caution{background:#3a2a10;color:#f0b54a}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0}
+  .tab{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:8px 14px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600}
+  .tab.active{border-color:var(--accent);color:#cfe0ff}
+  .tab .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .sub{display:flex;gap:6px;margin:6px 0 14px}
+  .sbtn{background:transparent;border:1px solid var(--line);color:var(--mut);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px}
+  .sbtn.active{background:var(--panel);color:var(--txt);border-color:var(--accent)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px;margin:12px 0}
+  .row{display:flex;flex-wrap:wrap;gap:18px;align-items:center}
+  .kpi{font-size:13px;color:var(--mut)} .kpi b{color:var(--txt);font-size:15px}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--mut);font-weight:600;cursor:pointer;user-select:none}
+  th.sortable:hover{color:var(--txt)} th .ar{font-size:10px;color:var(--accent)}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr:hover td{background:#1b1f2a}
+  .lu{border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin:9px 0;background:#12151d}
+  .lu h4{margin:0 0 4px;font-size:14px} .lu .meta{color:var(--mut);font-size:12px;margin-bottom:6px}
+  .lu .pl{font-size:12.5px;line-height:1.7} .lu .why{color:#aab2bd;font-size:11.5px;font-style:italic;margin-top:6px}
+  .pos{font-variant-numeric:tabular-nums} .lev{font-weight:600}
+  .msg{color:var(--mut);text-align:center;padding:40px 10px;font-size:14px}
+  .search{background:#0f1115;border:1px solid var(--line);color:var(--txt);padding:6px 10px;border-radius:8px;font-size:12px;width:180px}
+  .foot{color:#7a828c;font-size:11px;border-top:1px solid var(--line);margin-top:26px;padding-top:12px}
+  a{color:var(--accent)}
+  .simwrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  @media(max-width:820px){.simwrap{grid-template-columns:1fr}}
+  .chip{display:inline-block;background:#12151d;border:1px solid var(--line);border-radius:8px;padding:4px 8px;margin:3px 3px 0 0;font-size:12.5px}
+  .mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(94px,1fr));gap:8px;margin-top:10px}
+  .mbox{background:#12151d;border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+  .mbox .ml{color:var(--mut);font-size:11px}
+  .mbox .mv{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
+  .sbtn[disabled]{opacity:.35;cursor:default}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row" style="justify-content:space-between">
+    <h1>DFS Engine</h1><div class="date" id="hdr-date"></div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div id="content"></div>
+  <div class="foot">DFS is negative-EV after rake for most entries. This tool improves your edge — it does not guarantee profit.
+   Contest types stay PAPER until their field-graded backtest gate passes. Bet within your bankroll.</div>
+</div>
+<script>
+const DATA = __DFS_DATA__;
+const S = { sport:null, section:"plan", contest:"all", sortCol:"proj", sortDir:-1, q:"", simq:"", topMetric:"gppRoi", topN:10, bbPos:"ALL", bbSort:"adp", bbDir:1, bbQ:"", optContest:"gpp", optN:20, optExpo:60, simContest:0 };
+const SIM = { sport:null, sel:[], top:null, opt:null };   // interactive lineup simulator state
+// contest presets: objective to maximize + lambda weights (risk / dupe / portfolio-overlap penalties)
+// weights are scale-matched to each term (ROI~±1, roiStd~2-20, dupe~0.05-0.30, overlap~0-1)
+// and validated so the portfolio is never worse than top-N (GPP: slightly better + more diverse).
+const OPT_CONTESTS = {
+  gpp:    { label:"GPP (large-field)", obj:"gppRoi", l1:0.01,  l2:0.8, l3:0.35 },  // keep ceiling, fade dupes, diversify
+  gpp20:  { label:"20-entry GPP",      obj:"gppRoi", l1:0.006, l2:0.4, l3:0.18 },  // your 20-max format (backtest-tuned): concentrate on best, light self-diversify, don't over-fade chalk
+  cash:   { label:"Cash / Double-up",  obj:"cash",   l1:0.003, l2:0.1, l3:0.10 },  // floor, dupes ok, low diversity
+  single: { label:"Single-entry GPP",  obj:"gppRoi", l1:0.02,  l2:0.6, l3:0.00 }   // one lineup, mild risk aversion
+};
+const SIM_METRICS = [["gppRoi","GPP ROI","desc"],["cash","Cash %","desc"],["win","Win %","desc"],
+  ["top1","Top 1%","desc"],["ceil","Ceiling","desc"],["proj","Projection","desc"],["own","Lowest own","asc"]];
+
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+function statusBadge(c){ const m={ready:["live","ready"],no_slate:["off","no slate"],placeholder:["soon","coming soon"],error:["paper","error"]};
+  if(c.status==="ready"){ const live=c.gates&&(c.gates.cash||c.gates.gpp); return `<span class="badge ${live?'live':'paper'}">${live?'LIVE':'PAPER'}</span>`; }
+  const x=m[c.status]||["off",c.status]; return `<span class="badge ${x[0]}">${x[1]}</span>`; }
+
+function renderTabs(){
+  const t=document.getElementById("tabs"); t.innerHTML="";
+  if(DATA.scorecard){
+    const b=el("button","tab"+(S.sport==="__score__"?" active":""));
+    b.innerHTML=`<span class="dot" style="background:#f0b54a"></span>📊 Scorecard`;
+    b.onclick=()=>{ S.sport="__score__"; render(); };
+    t.appendChild(b);
+  }
+  if(DATA.bestball){
+    const b=el("button","tab"+(S.sport==="__bb__"?" active":""));
+    b.innerHTML=`<span class="dot" style="background:#7da2ff"></span>🏈 Best Ball`;
+    b.onclick=()=>{ S.sport="__bb__"; render(); };
+    t.appendChild(b);
+  }
+  DATA.sports.forEach(c=>{
+    const b=el("button","tab"+(c.sport===S.sport?" active":""));
+    const col=c.status==="ready"?"#54e08a":c.status==="placeholder"?"#7da2ff":"#6b7280";
+    b.innerHTML=`<span class="dot" style="background:${col}"></span>${c.name}`;
+    b.onclick=()=>{ S.sport=c.sport; S.section="plan"; render(); };
+    t.appendChild(b);
+  });
+}
+
+function fmt(n,d=1){ return (n==null||isNaN(n))?"–":Number(n).toFixed(d); }
+function money(n){ return "$"+(n==null?0:n).toLocaleString(); }
+function mean(a){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]; return s/a.length; }
+
+// ── BEST BALL: season-long draft board (forward projections + ADP value + risk) ──
+function renderBestBall(root){
+  const bb = DATA.bestball;
+  if(!bb){ root.appendChild(el("div","card",'<div class="msg">Best-ball board unavailable (ADP / nflverse fetch failed at build).</div>')); return; }
+  const wrap=el("div","card");
+  let head=`<div class="row" style="justify-content:space-between"><div><b style="font-size:16px">Best Ball draft board</b>
+      <div class="date">${bb.n} players · forward projections + ADP value · updated ${bb.updated}</div></div></div>
+    <div class="date" style="margin:4px 0 8px">Proj/G = forward per-game projection · Boom = weekly spike rate · Play% = games-played expectation · Value = ADP vs proven production (<span style="color:#54e08a">green cheap</span> / <span style="color:#e08a8a">red reach</span>).
+      Season advance-rate sim is CLI: <span class="pos">Rscript jobs/bestball.R --roster "Name1,...,Name18"</span></div>
+    <div class="sub" style="flex-wrap:wrap">`+
+    ["ALL","QB","RB","WR","TE"].map(p=>`<button class="sbtn${S.bbPos===p?' active':''}" data-pos="${p}">${p}</button>`).join("")+
+    `<input class="search" id="bbq" placeholder="search player…" value="${S.bbQ||""}" style="margin-left:auto"></div>`;
+  wrap.innerHTML=head;
+  const COLS=[["adp","ADP",1],["player","Player",0],["pos","Pos",0],["team","Tm",0],["proj_pg","Proj/G",1],
+    ["boom","Boom%",1],["play","Play%",1],["bye","Bye",1],["age","Age",1],["value","Val",1],["status","Status",0]];
+  const tbl=el("table"); let hh="<tr>";
+  COLS.forEach(([k,l,num])=>{ const ar=S.bbSort===k?`<span class="ar">${S.bbDir<0?'▼':'▲'}</span>`:"";
+    hh+=`<th class="sortable ${num?'num':''}" data-k="${k}">${l} ${ar}</th>`; });
+  tbl.innerHTML=hh+"</tr>"; const tb=el("tbody"); tb.id="bbbody"; tbl.appendChild(tb);
+  wrap.appendChild(tbl); root.appendChild(wrap);
+  wrap.querySelectorAll("[data-pos]").forEach(b=>b.onclick=()=>{ S.bbPos=b.dataset.pos; render(); });
+  wrap.querySelector("#bbq").oninput=e=>{ S.bbQ=e.target.value; fillBB(); };
+  tbl.querySelectorAll("th").forEach(th=>th.onclick=()=>{ const k=th.dataset.k;
+    if(S.bbSort===k) S.bbDir*=-1; else { S.bbSort=k; S.bbDir=(k==="adp")?1:-1; } render(); });
+  fillBB();
+}
+function fillBB(){
+  const tb=document.getElementById("bbbody"); if(!tb) return;
+  let rows=DATA.bestball.players.slice();
+  if(S.bbPos!=="ALL") rows=rows.filter(p=>p.pos===S.bbPos);
+  if(S.bbQ){ const q=S.bbQ.toLowerCase(); rows=rows.filter(p=>p.player.toLowerCase().includes(q)); }
+  rows.sort((a,b)=>{ let x=a[S.bbSort],y=b[S.bbSort];
+    if(x==null) x=(S.bbDir<0?-1e9:1e9); if(y==null) y=(S.bbDir<0?-1e9:1e9);
+    if(typeof x==="string") return S.bbDir*x.localeCompare(y); return S.bbDir*((x||0)-(y||0)); });
+  tb.innerHTML="";
+  rows.slice(0,300).forEach(p=>{
+    const st=p.status||"", sc=/VALUE/.test(st)?"#54e08a":/REACH/.test(st)?"#e08a8a":/discount/.test(st)?"#f0b54a":"var(--mut)";
+    const vc=(p.value>0)?"#54e08a":(p.value<0)?"#e08a8a":"var(--txt)";
+    tb.innerHTML+=`<tr><td class="num">${p.adp}</td><td>${p.player}</td><td>${p.pos}</td><td>${p.team||""}</td>
+      <td class="num">${fmt(p.proj_pg,1)}</td><td class="num">${p.boom==null?"–":p.boom+"%"}</td>
+      <td class="num">${p.play==null?"–":p.play+"%"}</td><td class="num">${p.bye||"–"}</td>
+      <td class="num">${p.age==null?"–":fmt(p.age,0)}</td>
+      <td class="num" style="color:${vc}">${p.value==null?"–":(p.value>0?"+":"")+p.value}</td>
+      <td style="white-space:normal;color:${sc};font-size:12px">${st}</td></tr>`;
+  });
+}
+// ── SCORECARD: fused P&L ledger + projection accuracy with a play/avoid verdict ──
+function renderScorecard(root){
+  const sc = DATA.scorecard;
+  if(!sc){ root.appendChild(el("div","card",'<div class="msg">No results logged yet. Enter contests, then the daily sync populates P&amp;L + accuracy here.</div>')); return; }
+  if(sc.overall){ const o=sc.overall, nc=o.net>=0?"#54e08a":"#e08a8a";
+    root.appendChild(el("div","card",`<div class="row" style="justify-content:space-between">
+      <div><b style="font-size:16px">Your tracked results</b>
+        <div class="date">${o.entries} settled entries · $${o.buyins} wagered</div></div>
+      <div class="row">
+        <div class="kpi">net P&amp;L<br><b style="color:${nc}">${o.net>=0?'+':''}$${o.net}</b></div>
+        <div class="kpi">ROI<br><b style="color:${nc}">${o.roi}%</b></div>
+        <div class="kpi">won<br><b>$${o.winnings}</b></div>
+        <div class="kpi">cash rate<br><b>${o.cash}%</b></div>
+      </div></div>`));
+  }
+  const c=el("div","card");
+  let h=`<div class="date" style="margin-bottom:8px">Verdict = <b style="color:#54e08a">PLAY</b> where we're profitable AND our projection beats the salary baseline ·
+    <b style="color:#f0b54a">CAUTION</b> = model has edge but losing (variance/execution) · <b style="color:#e08a8a">AVOID</b> = no edge.
+    corr = projection rank skill · bias += we over-project · vs$ = beats the naive salary baseline.</div>
+    <table><tr><th>Sport</th><th>Verdict</th><th class="num">Entries</th><th class="num">Net</th><th class="num">ROI</th>
+    <th class="num">Cash%</th><th class="num">Slates</th><th class="num">Corr</th><th class="num">RMSE</th><th class="num">Bias</th><th class="num">vs $</th></tr>`;
+  const dash=v=>(v==null||isNaN(v))?"–":v;
+  sc.sports.forEach(s=>{
+    const vc = s.verdict==="PLAY"?"live":s.verdict==="AVOID"?"avoid":"caution";
+    const nc = (s.net==null)?"var(--txt)":s.net>=0?"#54e08a":"#e08a8a";
+    h+=`<tr><td><b>${s.sport.toUpperCase()}</b></td>
+      <td><span class="badge ${vc}">${s.verdict}</span></td>
+      <td class="num">${s.entries||"–"}</td>
+      <td class="num" style="color:${nc}">${s.net==null?"–":(s.net>=0?"+":"")+"$"+s.net}</td>
+      <td class="num" style="color:${nc}">${s.roi==null?"–":s.roi+"%"}</td>
+      <td class="num">${s.cash==null?"–":s.cash+"%"}</td>
+      <td class="num">${s.slates||"–"}</td>
+      <td class="num">${dash(s.corr)}</td>
+      <td class="num">${dash(s.rmse)}</td>
+      <td class="num">${s.bias==null?"–":(s.bias>0?"+":"")+s.bias}</td>
+      <td class="num">${s.corr==null?"–":(s.beats_salary?"✓":"✗")}</td></tr>`;
+  });
+  h+=`</table>`;
+  c.innerHTML=h; root.appendChild(c);
+}
+
+function render(){
+  document.getElementById("hdr-date").textContent = DATA.date + "  ·  bankroll "+money(DATA.bankroll);
+  renderTabs();
+  const root0 = document.getElementById("content");
+  if(S.sport==="__score__"){ root0.innerHTML=""; renderScorecard(root0); return; }
+  if(S.sport==="__bb__"){ root0.innerHTML=""; renderBestBall(root0); return; }
+  const card = DATA.sports.find(c=>c.sport===S.sport);
+  const root = document.getElementById("content"); root.innerHTML="";
+  if(!card){ root.appendChild(el("div","msg","Select a sport.")); return; }
+  if(card.status!=="ready"){ root.appendChild(el("div","card",`<div class="msg">${statusBadge(card)}<br><br>${card.message||""}</div>`)); return; }
+
+  // summary
+  const sd = card.mode==="showdown";
+  const sum = el("div","card");
+  const cinfo = card.contest ? `<div class="date">${card.title||""}</div>
+      <div class="date">$${card.contest.fee} entry · ${(card.contest.field||0).toLocaleString()} field · 1st $${(card.contest.first||0).toLocaleString()} · cap ${card.contest.max_user}/user</div>`
+    : `<div class="date">${card.slate_id}</div>`;
+  sum.innerHTML = `<div class="row" style="justify-content:space-between">
+    <div><b style="font-size:16px">${card.name}</b> ${statusBadge(card)} ${sd?'<span class="badge soon">SHOWDOWN</span>':''}
+      ${cinfo}</div>
+    <div class="row">
+      <div class="kpi">${sd?'game players':'players'}<br><b>${card.players.length}</b></div>
+      <div class="kpi">lineups<br><b>${card.lineups.length}</b></div>
+      <div class="kpi">real $ today<br><b>${money(card.live_total)}</b></div>
+      <div class="kpi">daily cap<br><b>${money(card.daily_budget)}</b></div>
+    </div></div>`;
+  root.appendChild(sum);
+
+  // section nav (Captains tab only for showdown)
+  const nav=el("div","sub");
+  let secs=[["plan","Plan"],["lineups","Lineups"],["players","Players"]];
+  if(sd) secs.splice(1,0,["captains","Captains"]);
+  if(card.sim) secs.push(["sim","Simulator"]);
+  if(sd && S.section==="captains"){} else if(!secs.find(s=>s[0]===S.section)) S.section="plan";
+  secs.forEach(([k,lbl])=>{
+    const b=el("button","sbtn"+(S.section===k?" active":""),lbl); b.onclick=()=>{S.section=k;render();}; nav.appendChild(b);
+  });
+  root.appendChild(nav);
+
+  if(S.section==="plan") renderPlan(root,card);
+  if(S.section==="captains") renderCaptains(root,card);
+  if(S.section==="lineups") renderLineups(root,card);
+  if(S.section==="players") renderPlayers(root,card);
+  if(S.section==="sim") renderSim(root,card);
+}
+
+// ── interactive lineup SIMULATOR (Stokastic-style) ───────────────────────────
+// Scores a user-built lineup against the embedded Monte-Carlo field, mirroring
+// grade_candidates(): per-sim lineup total vs the field's per-sim score grid.
+function gridAt(g,q,level){                       // field score at CDF level `level`
+  const n=q.length; if(level<=q[0]) return g[0]; if(level>=q[n-1]) return g[n-1];
+  for(let j=0;j<n-1;j++){ if(level<=q[j+1]){ const f=(level-q[j])/(q[j+1]-q[j]); return g[j]+(g[j+1]-g[j])*f; } }
+  return g[n-1];
+}
+function pctBeaten(tot,g,q){                       // fraction of the field this total beats
+  const n=g.length;
+  let p;
+  if(tot<=g[0]) p=q[0]*Math.max(0,Math.min(1,tot/Math.max(g[0],1)));
+  else if(tot>=g[n-1]) p=q[n-1]+(1-q[n-1])*Math.min(1,(tot-g[n-1])/Math.max(1,g[n-1]-g[n-2]));
+  else { p=q[n-1]; for(let j=0;j<n-1;j++){ if(tot<=g[j+1]){ const f=(tot-g[j])/Math.max(1e-9,(g[j+1]-g[j])); p=q[j]+(q[j+1]-q[j])*f; break; } } }
+  return Math.max(0,Math.min(0.9999,p));
+}
+// selected contest's payout-multiplier vector (falls back to the default GPP curve)
+function activeContest(sp){ if(!sp.contests||!sp.contests.length) return null;
+  return sp.contests[S.simContest] || sp.contests[0]; }
+function activeMult(sp){ const c=activeContest(sp); return (c&&c.mult)?c.mult:sp.gpp_mult; }
+function simMetrics(sp,sel){
+  const k=sp.k, q=sp.qlevels, fs=sp.field_size, M=activeMult(sp);
+  const tot=new Float64Array(k);
+  for(const i of sel){ const d=sp.draws[i]; for(let s=0;s<k;s++) tot[s]+=d[s]; }
+  const sorted=Array.from(tot).sort((a,b)=>a-b);
+  const qat=p=>sorted[Math.min(k-1,Math.max(0,Math.round(p*(k-1))))];
+  let cash=0,top1=0,win=0,finsum=0,gpp=0,gpp2=0;
+  for(let s=0;s<k;s++){
+    const g=sp.fgrid[s];
+    const pct=pctBeaten(tot[s],g,q); finsum+=pct;
+    if(tot[s]>=gridAt(g,q,0.5)) cash++;
+    if(pct>=0.99) top1++;
+    if(pct>=1-1/fs) win++;
+    let rank=Math.round((1-pct)*fs); if(rank<1)rank=1; if(rank>fs)rank=fs;
+    const mult=M[rank-1]||0; gpp+=mult; gpp2+=mult*mult;
+  }
+  const own=sel.reduce((a,i)=>a+sp.players[i].own,0);
+  const projSum=sel.reduce((a,i)=>a+sp.players[i].proj,0);
+  const roiMean=gpp/k-1, roiStd=Math.sqrt(Math.max(gpp2/k-(gpp/k)*(gpp/k),0));  // ROI uncertainty
+  // duplication proxy: geometric-mean ownership (chalkier -> more mass-duplicated -> split prizes)
+  const dupe=Math.pow(sel.reduce((a,i)=>a*Math.max(sp.players[i].own,0.004),1),1/sel.length);
+  return { proj:projSum, simMean:mean(tot), floor:qat(0.10), ceil:qat(0.90), cash:cash/k, top1:top1/k,
+           win:win/k, fin:finsum/k, gppRoi:roiMean, roiStd:roiStd, dupe:dupe, own:own };
+}
+function mbox(l,v){ return `<div class="mbox"><div class="ml">${l}</div><div class="mv">${v}</div></div>`; }
+function renderMetrics(sp,m){
+  const need=sp.roster.n, avgown=m.own/need;
+  const dupe=avgown>0.18?["High","#e08a8a"]:avgown>0.10?["Medium","#f0b54a"]:["Low","#54e08a"];
+  const evc=m.gppRoi>0?"#54e08a":"#e08a8a";
+  return `<div class="row" style="justify-content:space-between;align-items:baseline">
+      <b>Simulated outcomes</b><span class="date">${sp.k.toLocaleString()} sims · ${sp.field_size.toLocaleString()}-entry field</span></div>
+    <div class="mgrid">
+      ${mbox("Projection",fmt(m.proj,1))}
+      ${mbox("Floor (10th)",fmt(m.floor,1))}
+      ${mbox("Ceiling (90th)",fmt(m.ceil,1))}
+      ${mbox("Cash %",fmt(m.cash*100,1)+"%")}
+      ${mbox("Top 1 %",fmt(m.top1*100,1)+"%")}
+      ${mbox("Win % (1st)",fmt(m.win*100,2)+"%")}
+      ${mbox("Beats field",fmt(m.fin*100,0)+"%")}
+      ${mbox("GPP ROI",'<span style="color:'+evc+'">'+fmt(m.gppRoi*100,0)+'%</span>')}
+      ${mbox("Total own",fmt(m.own*100,0)+"%")}
+      ${mbox("Dupe risk",'<span style="color:'+dupe[1]+'">'+dupe[0]+'</span>')}
+    </div>
+    <div class="why" style="margin-top:8px">Field = opponents who also optimize (near-optimal + leverage), so chalk grades as low/negative GPP EV and leverage higher.
+      Cash% = P(beat the field median); Top 1% / Win% = P(finish top 1% / 1st). GPP ROI is <b>indicative</b> (representative top-heavy payout,
+      high-variance — small slates read especially high) and stays PAPER until a backtest gate passes.</div>`;
+}
+function refreshSimPool(card){
+  const sp=card.sim, tb=document.getElementById("simpoolbody"); if(!tb) return;
+  const q=(S.simq||"").toLowerCase();
+  const need=sp.roster.n, cap=sp.roster.cap;
+  const salary=SIM.sel.reduce((a,i)=>a+sp.players[i].salary,0);
+  let idx=sp.players.map((p,i)=>i).filter(i=>!SIM.sel.includes(i));
+  if(q) idx=idx.filter(i=>sp.players[i].name.toLowerCase().includes(q));
+  idx.sort((a,b)=>sp.players[b].proj-sp.players[a].proj);
+  tb.innerHTML="";
+  const hasPos=!!(sp.roster&&sp.roster.slots);
+  idx.slice(0,140).forEach(i=>{ const p=sp.players[i];
+    const afford=(SIM.sel.length<need)&&(salary+p.salary<=cap);
+    tb.innerHTML+=`<tr><td>${p.name}</td>${hasPos?`<td>${p.pos||""}</td>`:``}<td class="num">$${p.salary}</td><td class="num">${fmt(p.proj)}</td>
+      <td class="num">${fmt(p.own*100,0)}%</td>
+      <td class="num"><button class="sbtn" data-add="${i}" ${afford?'':'disabled'}>+</button></td></tr>`; });
+  tb.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.add;
+    if(!SIM.sel.includes(i)&&SIM.sel.length<sp.roster.n){ SIM.sel.push(i); render(); } });
+}
+function fillFromLineup(card,li){
+  const sp=card.sim, L=(card.lineups||[])[li]; if(!L) return;
+  const sel=[]; L.players.forEach(pl=>{ const i=sp.players.findIndex((p,ix)=>p.name===pl.name&&!sel.includes(ix)); if(i>=0) sel.push(i); });
+  SIM.sel=sel; render();
+}
+// score EVERY candidate lineup, sort by the chosen metric, keep the top N
+// candidate metrics: prefer the R-graded 50k-sim metrics embedded per candidate; fall back
+// to the live (down-sampled K-sim) scorer only if they weren't embedded. simMetrics also
+// returns simMean/floor/ceil which cand_metrics omits, so merge the two when both exist.
+function candMetric(sp,ci,sel){
+  const cm=sp.cand_metrics && sp.cand_metrics[ci];
+  if(!cm) return simMetrics(sp,sel);
+  return Object.assign(simMetrics(sp,sel), cm);   // 50k roi/roiStd/cash/top1/win/fin/dupe/own override
+}
+function generateTop(card){
+  const sp=card.sim, metric=S.topMetric||"gppRoi";
+  const dir=(SIM_METRICS.find(x=>x[0]===metric)||[])[2]||"desc";
+  const scored=(sp.cands||[]).map((sel,ci)=>({sel:sel, m:candMetric(sp,ci,sel)}));
+  scored.sort((a,b)=> dir==="asc" ? a.m[metric]-b.m[metric] : b.m[metric]-a.m[metric]);
+  SIM.top={ metric:metric, rows:scored.slice(0, Math.max(1,Math.min(200, S.topN||10))) };
+  render();
+}
+function exportTopCSV(card){
+  const sp=card.sim; if(!SIM.top) return;
+  const hdr=["rank","players","salary","proj","ceiling","own_pct","cash_pct","top1_pct","win_pct","gpp_roi_pct"];
+  const lines=[hdr.join(",")];
+  SIM.top.rows.forEach((r,i)=>{ const sal=r.sel.reduce((a,j)=>a+sp.players[j].salary,0);
+    lines.push([i+1, '"'+r.sel.map(j=>sp.players[j].name).join(" | ")+'"', sal, r.m.proj.toFixed(1),
+      r.m.ceil.toFixed(1), (r.m.own*100).toFixed(0), (r.m.cash*100).toFixed(1), (r.m.top1*100).toFixed(1),
+      (r.m.win*100).toFixed(2), (r.m.gppRoi*100).toFixed(0)].join(",")); });
+  const blob=new Blob([lines.join("\n")],{type:"text/csv"});
+  const a=el("a"); a.href=URL.createObjectURL(blob);
+  a.download=`top_${SIM.top.metric}_${card.sport}_${DATA.date}.csv`; document.body.appendChild(a); a.click(); a.remove();
+}
+// ── OPTIMIZE: select the best PORTFOLIO of lineups (not top-N individually) ──
+// Adjusted Score = Sim ROI − λ1·ROI-uncertainty − λ2·duplication; then greedily add the
+// lineup maximizing (Adjusted Score − λ3·overlap-with-portfolio) under exposure caps. A
+// diversified portfolio covers more winning sims than N copies of the same chalk core.
+function optimizePortfolio(card){
+  const sp=card.sim, cfg=OPT_CONTESTS[S.optContest]||OPT_CONTESTS.gpp;
+  const N=Math.max(1,Math.min(150,S.optN||20));
+  const maxCount=Math.max(1,Math.ceil((S.optExpo||60)/100*N));   // max lineups a player may appear in
+  const seen={}, cand=[];
+  (sp.cands||[]).forEach((sel,ci)=>{ const key=sel.slice().sort((a,b)=>a-b).join(",");
+    if(seen[key]) return; seen[key]=1;
+    const m=candMetric(sp,ci,sel);   // 50k-sim metrics
+    cand.push({sel:sel, m:m, adj:m[cfg.obj]-cfg.l1*m.roiStd-cfg.l2*m.dupe, set:new Set(sel), picked:false}); });
+  cand.sort((a,b)=>b.adj-a.adj);
+  const port=[], expo={};
+  while(port.length<N){
+    let best=null, bestScore=-1e18;
+    for(const c of cand){
+      if(c.picked) continue;
+      let cap=false; for(const i of c.sel){ if((expo[i]||0)>=maxCount){cap=true;break;} }
+      if(cap) continue;
+      let ov=0; for(const p of port){ let s=0; for(const i of c.sel) if(p.set.has(i)) s++; ov+=s/c.sel.length; }
+      const score=c.adj-cfg.l3*(port.length? ov/port.length : 0);
+      if(score>bestScore){ bestScore=score; best=c; }
+    }
+    if(!best) break;
+    best.picked=true; port.push(best); best.sel.forEach(i=>expo[i]=(expo[i]||0)+1);
+  }
+  SIM.opt={ port, expo, contest:S.optContest, N:port.length, equity:portfolioEquity(sp,port) };
+  render();
+}
+// combined portfolio equity across sims: P(at least ONE lineup finishes top-1% / 1st / cashes),
+// and the average ROI per entry. This is where diversification pays — more sims covered.
+function portfolioEquity(sp,port){
+  const k=sp.k,q=sp.qlevels,fs=sp.field_size;
+  const tots=port.map(p=>{ const t=new Float64Array(k); for(const i of p.sel){ const d=sp.draws[i]; for(let s=0;s<k;s++) t[s]+=d[s]; } return t; });
+  let anyTop1=0,anyWin=0,anyCash=0,sumMult=0; const M=activeMult(sp);
+  for(let s=0;s<k;s++){
+    const g=sp.fgrid[s], med=gridAt(g,q,0.5); let bestPct=0, cashed=false;
+    for(let li=0;li<port.length;li++){ const pc=pctBeaten(tots[li][s],g,q); if(pc>bestPct)bestPct=pc; if(tots[li][s]>=med)cashed=true;
+      let r=Math.round((1-pc)*fs); if(r<1)r=1; if(r>fs)r=fs; sumMult+=M[r-1]||0; }
+    if(bestPct>=0.99)anyTop1++; if(bestPct>=1-1/fs)anyWin++; if(cashed)anyCash++;
+  }
+  return { anyTop1:anyTop1/k, anyWin:anyWin/k, anyCash:anyCash/k, portRoi:sumMult/(k*Math.max(port.length,1))-1 };
+}
+function exportOptimizeCSV(card){
+  const sp=card.sim, o=SIM.opt; if(!o) return;
+  const lines=[["lineup","players","salary","proj","ceiling","own_pct","gpp_roi_pct","top1_pct","dupe_pct"].join(",")];
+  o.port.forEach((p,i)=>{ const sal=p.sel.reduce((a,j)=>a+sp.players[j].salary,0);
+    lines.push([i+1,'"'+p.sel.map(j=>sp.players[j].name).join(" | ")+'"',sal,p.m.proj.toFixed(1),p.m.ceil.toFixed(1),
+      (p.m.own*100).toFixed(0),(p.m.gppRoi*100).toFixed(0),(p.m.top1*100).toFixed(1),(p.m.dupe*100).toFixed(0)].join(",")); });
+  const blob=new Blob([lines.join("\n")],{type:"text/csv"});
+  const a=el("a"); a.href=URL.createObjectURL(blob); a.download=`portfolio_${o.contest}_${card.sport}_${DATA.date}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function renderOptimizeCard(card){
+  const sp=card.sim, c=el("div","card");
+  let h=`<div class="row" style="justify-content:space-between"><b>⚙ Optimize portfolio</b>
+      <span class="date">${(sp.opt_k||sp.k).toLocaleString()}-sim ROI · diversified, not top-N duplicates</span></div>
+    <div class="date" style="margin:2px 0 8px">Builds a PORTFOLIO that maximizes combined equity: Adjusted Score = ROI − risk − duplication, then adds lineups that don't overlap what's already selected (so one bust can't sink them all). Contest type sets the objective + how hard to diversify.</div>
+    <div class="sub" style="flex-wrap:wrap">`+
+    Object.keys(OPT_CONTESTS).map(kk=>`<button class="sbtn${S.optContest===kk?' active':''}" data-oc="${kk}">${OPT_CONTESTS[kk].label}</button>`).join("")+
+    `</div><div class="sub" style="align-items:center;margin-top:6px">lineups <input id="optn" class="search" style="width:52px" value="${S.optN||20}">
+      &nbsp;max exposure <input id="opte" class="search" style="width:48px" value="${S.optExpo||60}">%
+      <button class="sbtn" data-opt="1">Optimize</button>`+
+      (SIM.opt?`<button class="sbtn" data-oexp="1">⬇ Export</button>`:``)+`</div>`;
+  if(SIM.opt){ const o=SIM.opt, e=o.equity;
+    h+=`<div class="mgrid" style="margin-top:10px">
+      ${mbox("Lineups",o.N)}
+      ${mbox("Avg ROI/entry",'<span style="color:'+(e.portRoi>0?"#54e08a":"#e08a8a")+'">'+fmt(e.portRoi*100,0)+'%</span>')}
+      ${mbox("P(any 1st)",fmt(e.anyWin*100,2)+"%")}
+      ${mbox("P(any top 1%)",fmt(e.anyTop1*100,1)+"%")}
+      ${mbox("P(any cash)",fmt(e.anyCash*100,0)+"%")}</div>`;
+    const expo=Object.keys(o.expo).map(i=>({i:+i,n:o.expo[i]})).sort((a,b)=>b.n-a.n).slice(0,14);
+    h+=`<div class="date" style="margin:10px 0 4px">exposure across the ${o.N} lineups:</div><div style="margin-bottom:8px">`+
+      expo.map(x=>`<span class="chip">${sp.players[x.i].name} <b>${Math.round(100*x.n/o.N)}%</b></span>`).join("")+`</div>`;
+    h+=`<table><tr><th>#</th><th>Lineup</th><th class="num">$</th><th class="num">Proj</th><th class="num">Own%</th><th class="num">GPP ROI</th><th class="num">Top1%</th><th></th></tr>`;
+    o.port.forEach((p,i)=>{ const sal=p.sel.reduce((a,j)=>a+sp.players[j].salary,0); const rc=p.m.gppRoi>0?"#54e08a":"#e08a8a";
+      h+=`<tr><td>${i+1}</td><td style="white-space:normal">${p.sel.map(j=>sp.players[j].name).join(", ")}</td>
+        <td class="num">$${sal}</td><td class="num">${fmt(p.m.proj,0)}</td><td class="num">${fmt(p.m.own*100,0)}%</td>
+        <td class="num" style="color:${rc}">${fmt(p.m.gppRoi*100,0)}%</td><td class="num">${fmt(p.m.top1*100,1)}%</td>
+        <td><button class="sbtn" data-ouse="${i}">edit</button></td></tr>`; });
+    h+=`</table>`;
+  }
+  c.innerHTML=h;
+  c.querySelectorAll("[data-oc]").forEach(b=>b.onclick=()=>{ S.optContest=b.dataset.oc; SIM.opt=null; render(); });
+  const rn=c.querySelector("#optn"), re=c.querySelector("#opte");
+  const ob=c.querySelector("[data-opt]"); if(ob) ob.onclick=()=>{ if(rn)S.optN=parseInt(rn.value)||20; if(re)S.optExpo=parseInt(re.value)||60; optimizePortfolio(card); };
+  const xb=c.querySelector("[data-oexp]"); if(xb) xb.onclick=()=>exportOptimizeCSV(card);
+  c.querySelectorAll("[data-ouse]").forEach(b=>b.onclick=()=>{ SIM.sel=SIM.opt.port[+b.dataset.ouse].sel.slice(); render(); });
+  return c;
+}
+function renderTopCard(card){
+  const sp=card.sim, cur=S.topMetric||"gppRoi", c=el("div","card");
+  let h=`<div class="row" style="justify-content:space-between"><b>Top lineups (auto-generate + export)</b>
+      <span class="date">${(sp.cands||[]).length.toLocaleString()} competitive candidates</span></div>
+    <div class="date" style="margin:2px 0 6px">Rank the candidate lineups by a metric and export the best. Ownership sorts ascending (most contrarian first).</div>
+    <div class="sub" style="flex-wrap:wrap">`+
+    SIM_METRICS.map(m=>`<button class="sbtn${m[0]===cur?' active':''}" data-metric="${m[0]}">${m[1]}</button>`).join("")+
+    `</div><div class="sub" style="align-items:center;margin-top:6px">top&nbsp;<input id="topn" class="search" style="width:56px" value="${S.topN||10}">
+      <button class="sbtn" data-gen="1">Generate</button>`+
+      (SIM.top?`<button class="sbtn" data-exp="1">⬇ Export CSV</button>`:``)+`</div>`;
+  if(SIM.top && SIM.top.rows.length){
+    h+=`<table style="margin-top:8px"><tr><th>#</th><th>Lineup</th><th class="num">$</th><th class="num">Proj</th><th class="num">Ceil</th>
+      <th class="num">Own%</th><th class="num">Cash%</th><th class="num">Top1%</th><th class="num">Win%</th><th class="num">GPP ROI</th><th></th></tr>`;
+    SIM.top.rows.forEach((r,i)=>{ const sal=r.sel.reduce((a,j)=>a+sp.players[j].salary,0);
+      const roic=r.m.gppRoi>0?"#54e08a":"#e08a8a";
+      h+=`<tr><td>${i+1}</td><td style="white-space:normal">${r.sel.map(j=>sp.players[j].name).join(", ")}</td>
+        <td class="num">$${sal}</td><td class="num">${fmt(r.m.proj,0)}</td><td class="num">${fmt(r.m.ceil,0)}</td>
+        <td class="num">${fmt(r.m.own*100,0)}%</td><td class="num">${fmt(r.m.cash*100,0)}%</td>
+        <td class="num">${fmt(r.m.top1*100,1)}%</td><td class="num">${fmt(r.m.win*100,2)}%</td>
+        <td class="num" style="color:${roic};font-weight:600">${fmt(r.m.gppRoi*100,0)}%</td>
+        <td><button class="sbtn" data-use="${i}">edit</button></td></tr>`; });
+    h+=`</table>`;
+  }
+  c.innerHTML=h;
+  c.querySelectorAll("[data-metric]").forEach(b=>b.onclick=()=>{ S.topMetric=b.dataset.metric; SIM.top=null; render(); });
+  const nb=c.querySelector("#topn"); if(nb) nb.onchange=e=>{ S.topN=parseInt(e.target.value)||10; };
+  const gb=c.querySelector("[data-gen]"); if(gb) gb.onclick=()=>{ const n=c.querySelector("#topn"); if(n) S.topN=parseInt(n.value)||10; generateTop(card); };
+  const eb=c.querySelector("[data-exp]"); if(eb) eb.onclick=()=>exportTopCSV(card);
+  c.querySelectorAll("[data-use]").forEach(b=>b.onclick=()=>{ SIM.sel=SIM.top.rows[+b.dataset.use].sel.slice(); render(); });
+  return c;
+}
+// positional validity for slot-based sports (WNBA: 2 G, 3 F, 1 UTIL). Flat-n sports
+// (golf/tennis) have no slots -> always valid. A lineup is legal iff every dedicated slot
+// is met and the flex-eligible surplus covers the UTIL count.
+function posValid(sp,sel){
+  const r=sp.roster; if(!r||!r.slots) return true;
+  const cnt={}; sel.forEach(i=>{ const p=(sp.players[i].pos||"?"); cnt[p]=(cnt[p]||0)+1; });
+  const flexPos=(r.flex&&r.flex.positions)||[]; let flexPool=0;
+  for(const pos in r.slots){ const have=cnt[pos]||0; if(have<r.slots[pos]) return false;
+    if(flexPos.includes(pos)) flexPool+=have-r.slots[pos]; }
+  for(const pos in cnt){ if(!(pos in r.slots)&&flexPos.includes(pos)) flexPool+=cnt[pos]; }
+  return flexPool>=((r.flex&&r.flex.count)||0);
+}
+function slotReq(r){ if(!r||!r.slots) return ""; const parts=[];
+  for(const pos in r.slots) parts.push(r.slots[pos]+" "+pos);
+  if(r.flex&&r.flex.count) parts.push(r.flex.count+" UTIL"); return parts.join(", "); }
+function posTally(sp,sel){ const cnt={}; sel.forEach(i=>{ const p=(sp.players[i].pos||"?"); cnt[p]=(cnt[p]||0)+1; });
+  return Object.keys(cnt).sort().map(p=>p+":"+cnt[p]).join("  "); }
+function renderSim(root,card){
+  const sp=card.sim;
+  if(!sp){ root.appendChild(el("div","card",'<div class="msg">Simulator data not available for this slate.</div>')); return; }
+  if(SIM.sport!==card.sport){ SIM.sport=card.sport; SIM.sel=[]; SIM.top=null; SIM.opt=null; }
+  // contest picker — drives the simulator's payout shape (EV/ROI/cash%) below
+  if(sp.contests&&sp.contests.length){
+    if(S.simContest>=sp.contests.length) S.simContest=0;
+    const c=activeContest(sp), cbar=el("div","card");
+    cbar.innerHTML=`<div class="row" style="justify-content:space-between;align-items:center;gap:10px">
+        <b>Contest</b>
+        <select id="simContestSel" class="search" style="max-width:62%">${
+          sp.contests.map((c,ci)=>`<option value="${ci}"${ci===S.simContest?" selected":""}>${c.name}</option>`).join("")}</select>
+      </div>
+      <div class="date" style="margin-top:4px">Simulator cash% / GPP ROI below use this contest's payout shape${
+        (c&&isFinite(c.field))?` · ${(+c.field).toLocaleString()}-entry`:""}${(c&&isFinite(c.fee))?` · $${c.fee} entry`:""}.</div>`;
+    root.appendChild(cbar);
+    cbar.querySelector("#simContestSel").onchange=e=>{ S.simContest=+e.target.value; render(); };
+  }
+  root.appendChild(renderOptimizeCard(card));
+  root.appendChild(renderTopCard(card));
+  const need=sp.roster.n, cap=sp.roster.cap;
+  const salary=SIM.sel.reduce((a,i)=>a+sp.players[i].salary,0);
+  const posok=posValid(sp,SIM.sel);
+  const full=SIM.sel.length===need && salary<=cap && posok;   // DK enforces cap + size + positions
+  const req=slotReq(sp.roster);
+  const wrap=el("div","simwrap");
+
+  // LEFT — player pool
+  const left=el("div","card");
+  const bar=el("div","row"); bar.style.justifyContent="space-between"; bar.innerHTML="<b>Player pool</b>";
+  const inp=el("input","search"); inp.placeholder="search…"; inp.value=S.simq||"";
+  inp.oninput=e=>{ S.simq=e.target.value; refreshSimPool(card); };
+  bar.appendChild(inp); left.appendChild(bar);
+  const tbl=el("table"); tbl.innerHTML=`<tr><th>Player</th>${(sp.roster&&sp.roster.slots)?'<th>Pos</th>':''}<th class="num">$</th><th class="num">Proj</th><th class="num">Own%</th><th></th></tr>`;
+  const tbody=el("tbody"); tbody.id="simpoolbody"; tbl.appendChild(tbody); left.appendChild(tbl);
+
+  // RIGHT — lineup + results
+  const right=el("div");
+  const lu=el("div","card");
+  let luh=`<div class="row" style="justify-content:space-between"><b>Your lineup</b>
+     <span class="date">${SIM.sel.length}/${need} · $${salary.toLocaleString()} / $${cap.toLocaleString()} ${salary>cap?'<span style="color:#e08a8a">OVER CAP</span>':''}${(SIM.sel.length&&!posok)?' <span style="color:#e08a8a">· needs '+req+'</span>':''}</span></div>`;
+  if(req){ luh+=`<div class="date" style="margin-top:2px">Roster: ${req}${SIM.sel.length?` &nbsp;·&nbsp; have ${posTally(sp,SIM.sel)}`:''}</div>`; }
+  if(!SIM.sel.length){ luh+=`<div class="msg" style="padding:16px">Add ${need} players (${req||need+' players'}) from the pool to simulate — or load a suggested lineup below.</div>`; }
+  else { luh+=`<div style="margin-top:8px">`+SIM.sel.map(i=>{const p=sp.players[i];
+      return `<span class="chip">${p.name} <span class="pos">${(sp.roster&&sp.roster.slots&&p.pos)?p.pos+' · ':''}$${p.salary}</span> <b data-rm="${i}" style="cursor:pointer;color:#e08a8a">✕</b></span>`;}).join("")+`</div>`; }
+  luh+=`<div class="sub" style="margin-top:10px;flex-wrap:wrap">`+
+    (card.lineups||[]).slice(0,6).map((l,li)=>`<button class="sbtn" data-fill="${li}">↺ ${l.role||('LU'+(li+1))}</button>`).join("")+
+    (SIM.sel.length?`<button class="sbtn" data-clear="1">Clear</button>`:``)+`</div>`;
+  lu.innerHTML=luh;
+
+  const res=el("div","card");
+  res.innerHTML = full ? renderMetrics(sp,simMetrics(sp,SIM.sel))
+    : `<div class="msg">Complete a valid ${need}-player lineup${req?` (${req})`:''} under the $${cap.toLocaleString()} cap${(SIM.sel.length===need&&salary<=cap&&!posok)?' — <span style="color:#e08a8a">positions don\'t satisfy '+req+'</span>':''} to simulate cash%, top-1%, ceiling and GPP ROI (${sp.k.toLocaleString()} sims vs a ${sp.field_size.toLocaleString()}-entry field).</div>`;
+  right.appendChild(lu); right.appendChild(res);
+
+  wrap.appendChild(left); wrap.appendChild(right); root.appendChild(wrap);
+  wrap.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{ SIM.sel=SIM.sel.filter(x=>x!==+b.dataset.rm); render(); });
+  wrap.querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>fillFromLineup(card,+b.dataset.fill));
+  wrap.querySelectorAll("[data-clear]").forEach(b=>b.onclick=()=>{ SIM.sel=[]; render(); });
+  refreshSimPool(card);
+}
+
+function renderCaptains(root,card){
+  const c=el("div","card");
+  c.innerHTML=`<div class="meta" style="color:var(--mut);font-size:12px;margin-bottom:6px">The captain (1.5× points &amp; salary) is the biggest leverage decision in Showdown. Top rows = highest captain ceiling; green leverage = the field is likely underweight.</div>
+   <table><tr><th>Captain (1.5×)</th><th>Tm</th><th class="num">CPT $</th><th class="num">CPT Proj</th><th class="num">CPT Ceil</th><th class="num">CPT Own%</th><th class="num">Lev</th></tr>`+
+   (card.captains||[]).map(c=>{const lc=c.leverage>0.1?"#54e08a":c.leverage<-0.1?"#e08a8a":"var(--txt)";
+     return `<tr><td>${c.player}</td><td>${c.team||""}</td><td class="num">$${c.cpt_salary}</td><td class="num">${fmt(c.cpt_proj)}</td>
+       <td class="num">${fmt(c.cpt_ceil)}</td><td class="num">${fmt(c.cpt_own)}%</td><td class="num" style="color:${lc};font-weight:600">${fmt(c.leverage,2)}</td></tr>`;}).join("")+`</table>`;
+  root.appendChild(c);
+}
+
+function contestFilter(card){
+  const f=el("div","sub");
+  [["all","All"],["cash","Cash"],["gpp","GPP"]].forEach(([k,lbl])=>{
+    const b=el("button","sbtn"+(S.contest===k?" active":""),lbl); b.onclick=()=>{S.contest=k;render();}; f.appendChild(b);
+  });
+  return f;
+}
+
+function renderPlan(root,card){
+  const c=el("div","card");
+  let h=`<table><tr><th>Contest</th><th>Type</th><th class="num">Entries</th><th class="num">$/entry</th><th class="num">Total</th><th>Status</th><th>Why</th></tr>`;
+  card.plan.filter(p=>S.contest==="all"||p.type.toLowerCase()===S.contest).forEach(p=>{
+    h+=`<tr><td>${p.contest}</td><td>${p.type}</td><td class="num">${p.entries}</td><td class="num">${money(p.fee)}</td><td class="num">${money(p.total)}</td>
+        <td><span class="badge ${p.status==='LIVE'?'live':'paper'}">${p.status}</span></td><td style="white-space:normal;color:var(--mut)">${p.why}</td></tr>`;
+  });
+  h+=`</table>`;
+  c.innerHTML=h; root.appendChild(contestFilter(card)); root.appendChild(c);
+}
+
+function renderLineups(root,card){
+  root.appendChild(contestFilter(card));
+  const want = S.contest==="cash" ? r=>/cash/i.test(r) : S.contest==="gpp" ? r=>!/cash/i.test(r) : ()=>true;
+  card.lineups.filter(l=>want(l.role)).forEach(l=>{
+    const d=el("div","lu");
+    const pls=l.players.map(p=>{ const cpt=p.slot==="CPT";
+      return `<span style="${cpt?'color:#f0b54a;font-weight:600':''}">${cpt?'★ ':''}${p.name}</span> <span class="pos">($${p.salary}, ${fmt(p.proj,0)})</span>`;
+    }).join(" &nbsp;·&nbsp; ");
+    const capline = l.captain ? `<span style="color:#f0b54a">CPT: ${l.captain}</span> &nbsp;·&nbsp; ` : "";
+    d.innerHTML=`<h4>#${l.n} ${l.role} <span class="badge ${l.live?'live':'paper'}">${l.live?'LIVE':'PAPER'}</span></h4>
+      <div class="meta">${capline}$${l.salary} · ${fmt(l.proj)} proj · ${fmt(l.ceil)} ceil · ${fmt(l.own*100,0)}% own</div>
+      <div class="pl">${pls}</div><div class="why">${l.reason||""}</div>`;
+    root.appendChild(d);
+  });
+}
+
+const COLS=[["name","Player",0],["team","Tm",0],["pos","Pos",0],["salary","$",1],["proj","Proj",1],
+  ["ceil","Ceil",1],["floor","Floor",1],["own","Own%",1],["lev","Lev",1],["value","Val",1]];
+
+function renderPlayers(root,card){
+  const bar=el("div","sub");
+  const inp=el("input","search"); inp.placeholder="search player…"; inp.value=S.q;
+  inp.oninput=e=>{ S.q=e.target.value; const tb=document.getElementById("ptbody"); if(tb) fillPlayers(tb,card); };
+  bar.appendChild(inp); root.appendChild(bar);
+
+  const c=el("div","card"); const tbl=el("table");
+  let head="<tr>";
+  COLS.forEach(([k,lbl,num])=>{ const ar=S.sortCol===k?`<span class="ar">${S.sortDir<0?'▼':'▲'}</span>`:"";
+    head+=`<th class="sortable ${num?'num':''}" data-k="${k}">${lbl} ${ar}</th>`; });
+  head+="</tr>";
+  tbl.innerHTML=head;
+  tbl.querySelectorAll("th").forEach(th=>th.onclick=()=>{ const k=th.dataset.k;
+    if(S.sortCol===k) S.sortDir*=-1; else {S.sortCol=k; S.sortDir = k==="name"||k==="team"||k==="pos"?1:-1;} render(); });
+  const tb=el("tbody"); tb.id="ptbody"; tbl.appendChild(tb);
+  c.appendChild(tbl); root.appendChild(c); fillPlayers(tb,card);
+}
+
+function fillPlayers(tb,card){
+  let rows=card.players.slice();
+  if(S.q){ const q=S.q.toLowerCase(); rows=rows.filter(p=>p.name.toLowerCase().includes(q)); }
+  rows.sort((a,b)=>{ let x=a[S.sortCol],y=b[S.sortCol];
+    if(typeof x==="string"){ return S.sortDir*x.localeCompare(y); } return S.sortDir*((x||0)-(y||0)); });
+  tb.innerHTML="";
+  rows.forEach(p=>{
+    const levcol = p.lev>0.15?"#54e08a":p.lev<-0.15?"#e08a8a":"var(--txt)";
+    tb.innerHTML+=`<tr><td>${p.name}</td><td>${p.team||""}</td><td>${p.pos||""}</td>
+      <td class="num">$${p.salary}</td><td class="num">${fmt(p.proj)}</td><td class="num">${fmt(p.ceil)}</td>
+      <td class="num">${fmt(p.floor)}</td><td class="num">${fmt(p.own*100,0)}%</td>
+      <td class="num lev" style="color:${levcol}">${fmt(p.lev,2)}</td><td class="num">${fmt(p.value,1)}</td></tr>`;
+  });
+}
+
+// boot
+S.sport = DATA.scorecard ? "__score__" : (DATA.sports.find(c=>c.status==="ready")||DATA.sports[0]||{}).sport;
+render();
+</script>
+</body>
+</html>

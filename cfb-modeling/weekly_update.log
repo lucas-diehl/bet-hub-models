@@ -1,0 +1,117 @@
+================ Tue 08/04/2026  9:35:27.37 ================ 
+2026-08-04 09:35:29 | === weekly_update start | season 2025 === 
+2026-08-04 09:35:29 | SKIP_REFRESH 
+2026-08-04 09:35:29 | SKIP_REBUILD 
+2026-08-04 09:35:30 | pick week: 16 | grade weeks: 14,15 
+2026-08-04 09:35:49 | week 14 feed ->   wrote results_2025-11-29.json  (5 graded) ;  ; ✓ feed written to C:/Users/ljdie/OneDrive/Documents/dashboard_feed/cfb-modeling/cfb  (season 2025 wk 14, mode PAPER) 
+2026-08-04 09:36:08 | week 15 feed ->   wrote results_2025-12-05.json  (1 graded) ;  ; ✓ feed written to C:/Users/ljdie/OneDrive/Documents/dashboard_feed/cfb-modeling/cfb  (season 2025 wk 15, mode PAPER) 
+2026-08-04 09:36:24 | week 16 feed ->   wrote picks_2026-08-04.json  (0 bets) ;  ; ✓ feed written to C:/Users/ljdie/OneDrive/Documents/dashboard_feed/cfb-modeling/cfb  (season 2025 wk 16, mode PAPER) 
+2026-08-04 09:36:24 | === weekly_update done === 
+exit code 0 
+================ Tue 08/04/2026  9:43:53.20 ================ 
+2026-08-04 09:43:57 | === weekly_update start | season 2026 === 
+2026-08-04 09:43:57 | refreshing data... 
+2026-08-04 09:44:13 |   refresh FAIL pbp_data.rds seasons <= most_recent_cfb_season() is not TRUE 
+2026-08-04 09:44:13 |   no new rows pbp_data.rds 
+2026-08-04 09:44:17 |   refreshed game_info.rds - 1638 rows 
+2026-08-04 09:44:19 |   refreshed betting_lines.rds - 103 rows 
+2026-08-04 09:44:19.917228: Invalid arguments or no SP+ ratings data available!
+2026-08-04 09:44:19 |   no new rows sp_ratings.rds 
+2026-08-04 09:44:20 |   refreshed coaches.rds - 138 rows 
+2026-08-04 09:44:20 | rebuild: 01_build_possessions.R 
+STEP 0: POSSESSION EXTRACTION
+------------------------------------------------------------------------------ 
+  loading pbp (large; ~1-3 min)...
+================ Thu 08/06/2026 14:20:09.34 ================ 
+2026-08-06 14:20:24 | === weekly_update start | season 2026 === 
+2026-08-06 14:20:39 |   refreshed game_info.rds 1638 rows 
+2026-08-06 14:20:40 |   refreshed betting_lines.rds 103 rows 
+2026-08-06 14:20:40.214692: Invalid arguments or no SP+ ratings data available!
+2026-08-06 14:20:40 |   refreshed coaches.rds 138 rows 
+2026-08-06 14:20:40 | idle (no games within window for season 2026 ) — fast exit, no refresh/rebuild. 
+exit code 0 
+================ Mon 08/10/2026 11:31:30.82 ================ 
+2026-08-10 11:32:07 | === weekly_update start | season 2026 === 
+2026-08-10 11:32:28 |   refreshed game_info.rds 1638 rows 
+2026-08-10 11:32:37 |   refreshed betting_lines.rds 104 rows 
+2026-08-10 11:32:40.821137: Invalid arguments or no SP+ ratings data available!
+2026-08-10 11:32:41 |   refreshed coaches.rds 138 rows 
+2026-08-10 11:32:42 | idle (no games within window for season 2026 ) — fast exit, no refresh/rebuild. 
+exit code 0 
+================ Thu 08/13/2026 13:59:17.35 ================ 
+2026-08-13 13:59:26 | === weekly_update start | season 2026 === 
+2026-08-13 13:59:45 |   refreshed game_info.rds 1638 rows 
+2026-08-13 13:59:48 |   refreshed betting_lines.rds 104 rows 
+2026-08-13 13:59:48 |   refreshed sp_ratings.rds 139 rows 
+2026-08-13 13:59:49 |   refreshed coaches.rds 138 rows 
+2026-08-13 13:59:51 | idle (no games within window for season 2026 ) — fast exit, no refresh/rebuild. 
+exit code 0 
+================ Mon 08/17/2026  8:00:00.53 ================ 
+2026-08-17 08:00:03 | === weekly_update start | season 2026 === 
+2026-08-17 08:00:29 |   refreshed game_info.rds 1638 rows 
+2026-08-17 08:00:30 |   refreshed betting_lines.rds 104 rows 
+2026-08-17 08:00:30 |   refreshed sp_ratings.rds 139 rows 
+2026-08-17 08:00:30 |   refreshed coaches.rds 138 rows 
+2026-08-17 08:00:30 | idle (no games within window for season 2026 ) — fast exit, no refresh/rebuild. 
+exit code 0 
+================ Thu 08/20/2026 20:54:22.82 ================ 
+2026-08-20 20:54:54 | === weekly_update start | season 2026 === 
+2026-08-20 20:56:18 |   refreshed game_info.rds 3610 rows 
+2026-08-20 20:56:22 |   refreshed betting_lines.rds 166 rows 
+2026-08-20 20:56:22 |   refreshed sp_ratings.rds 139 rows 
+2026-08-20 20:56:23 |   refreshed coaches.rds 138 rows 
+2026-08-20 20:56:27 | new data ( 0 final games; prev '  ') -> refresh pbp + rebuild 
+2026-08-20 20:56:34 |   refreshed game_info.rds 3610 rows 
+2026-08-20 20:56:45 |   refreshed betting_lines.rds 166 rows 
+2026-08-20 20:56:46 |   refreshed sp_ratings.rds 139 rows 
+2026-08-20 20:56:59 |   refreshed coaches.rds 138 rows 
+================ Mon 08/24/2026  9:27:07.96 ================ 
+2026-08-24 09:27:16 | === weekly_update start | season 2026 === 
+Request failed [429]. Retrying in 1 seconds...
+Request failed [429]. Retrying in 3.1 seconds...
+2026-08-24 09:27:45.393857: Invalid arguments or no game info data available!
+Request failed [429]. Retrying in 1.8 seconds...
+Request failed [429]. Retrying in 1.8 seconds...
+2026-08-24 09:27:50.19894: Invalid arguments or no betting lines data available!
+Request failed [429]. Retrying in 1.6 seconds...
+Request failed [429]. Retrying in 1.5 seconds...
+2026-08-24 09:27:55.908876: Invalid arguments or no SP+ ratings data available!
+Request failed [429]. Retrying in 1.7 seconds...
+Request failed [429]. Retrying in 2.8 seconds...
+2026-08-24 09:28:03.879366: Invalid arguments or no coaches data available!
+2026-08-24 09:28:05 | new data ( 0 final games; prev '  ') -> refresh pbp + rebuild 
+Request failed [429]. Retrying in 1.9 seconds...
+Request failed [429]. Retrying in 1 seconds...
+2026-08-24 09:28:11.644609: Invalid arguments or no game info data available!
+Request failed [429]. Retrying in 1 seconds...
+Request failed [429]. Retrying in 1.7 seconds...
+2026-08-24 09:28:15.789673: Invalid arguments or no betting lines data available!
+Request failed [429]. Retrying in 1.3 seconds...
+Request failed [429]. Retrying in 2.8 seconds...
+2026-08-24 09:28:20.950247: Invalid arguments or no SP+ ratings data available!
+Request failed [429]. Retrying in 1.5 seconds...
+Request failed [429]. Retrying in 1 seconds...
+2026-08-24 09:28:24.505172: Invalid arguments or no coaches data available!
+2026-08-24 09:35:41 |    01_build_possessions.R exit 0 -  ; ✓ saved data_cache/drive_data.rds and data_cache/team_game_ppp.rds 
+2026-08-24 09:36:36 |    02_build_asof_ratings.R exit 0 -  ; ✓ saved data_cache/asof_ratings.rds 
+2026-08-24 09:38:35 |    05_build_features.R exit 0 -   league 2nd-&-short pass rate: 0.319 ; ✓ saved data_cache/team_game_features.rds 
+Warning messages:
+1: In readRDS(con) :
+  cannot open URL 'https://github.com/sportsdataverse/sportsdataverse-data/releases/download/cfbfastR_cfb_pbp/play_by_play_2026.rds': HTTP status was '404 Not Found'
+2: Failed to readRDS from
+<https://github.com/sportsdataverse/sportsdataverse-data/releases/download/cfbfastR_cfb_pbp/play_by_play_2026.rds> 
+2026-08-24 09:38:37 | pick week 1 | grade weeks none 
+2026-08-24 09:38:50 |    07_write_feed.R exit 0 - STEP 7B: WRITE FEED  season 2026 wk 1  mode PAPER ;   no book-priced games for 2026 wk 1 -> empty picks_2026-09-07.json 
+2026-08-24 09:38:50 | === weekly_update done === 
+exit code 0 
+================ Thu 08/27/2026  8:00:00.25 ================ 
+2026-08-27 08:00:03 | === weekly_update start | season 2026 === 
+2026-08-27 08:00:28 |   refreshed game_info.rds 3677 rows 
+2026-08-27 08:00:42 |   refreshed betting_lines.rds 167 rows 
+2026-08-27 08:00:44 |   refreshed sp_ratings.rds 139 rows 
+2026-08-27 08:00:46 |   refreshed coaches.rds 138 rows 
+2026-08-27 08:00:47 | no new completed games ( 0 ) — skip rebuild 
+2026-08-27 08:00:47 | pick week 1 | grade weeks none 
+2026-08-27 08:01:01 |    07_write_feed.R exit 0 -   picks_2026-09-05.json (14 upcoming) ; ✓ feed done (LIVE, 20 bets built) 
+2026-08-27 08:01:01 | === weekly_update done === 
+exit code 0 

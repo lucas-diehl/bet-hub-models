@@ -1,0 +1,67 @@
+name: cfb
+
+# College-football weekly picks feed. Best-effort cron (Mon + Thu mornings ET).
+on:
+  schedule:
+    - cron: "0 13 * * 1"   # Mon ~09:00 ET — full weekly rebuild + picks
+    - cron: "0 13 * * 4"   # Thu ~09:00 ET — refresh with mid-week lines
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "PPP_SEASON (blank = auto)"
+        required: false
+      week:
+        description: "PPP_WEEK (blank = auto)"
+        required: false
+
+concurrency:
+  group: cfb
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      FEED_DIR: ${{ github.workspace }}/_feed
+      R_LIBS_USER: ${{ github.workspace }}/.rlib
+      CFB_API_KEY: ${{ secrets.CFB_API_KEY }}
+      PPP_MODE: LIVE
+      PPP_SEASON: ${{ github.event.inputs.season }}
+      PPP_WEEK: ${{ github.event.inputs.week }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.4"
+          use-public-rspm: true
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: rlib-cfb-${{ runner.os }}-${{ hashFiles('.github/workflows/cfb.yml') }}
+          restore-keys: rlib-cfb-${{ runner.os }}-
+
+      - name: Cache CFBD data_cache (heavy, rebuildable)
+        uses: actions/cache@v4
+        with:
+          path: cfb-modeling/data_cache
+          key: cfb-datacache-${{ runner.os }}
+
+      - name: Install R packages
+        run: |
+          mkdir -p "$R_LIBS_USER"
+          Rscript -e 'p<-c("cfbfastR","dplyr","tidyr","stringr","lubridate","zoo","purrr","readr","tibble","jsonlite","xgboost"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+
+      - name: Run cfb model + write feed
+        working-directory: cfb-modeling
+        run: |
+          Rscript weekly_update.R
+          Rscript 07_write_feed.R
+
+      - name: Ingest to Supabase
+        uses: ./.github/actions/ingest
+        with:
+          database-url: ${{ secrets.DATABASE_URL }}
+          feed-dir: ${{ github.workspace }}/_feed

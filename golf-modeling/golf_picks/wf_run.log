@@ -1,0 +1,49 @@
+[09:41:21] === WALK-FORWARD MATCHUP HARNESS (go/no-go) === 
+[09:41:21] Loading cached raw rounds... 
+[09:41:22] Building leakage-free features... 
+[09:41:24]   Feature snapshots:  9515  player-events 
+[09:41:24] Walk-forward SG regression... 
+[09:41:27]    2023 : train  5683  -> test  1230  | RMSE  1.543 
+[09:41:29]    2024 : train  6913  -> test  1365  | RMSE  1.644 
+[09:41:33]    2025 : train  8278  -> test  1237  | RMSE  1.773 
+[09:41:33] Fetching historical tournament-matchup odds (incremental/resumable)... 
+[09:45:49]   Cached events:  138  | with data:  138  | this run: new= 0  skipped= 138  failed= 81 
+[09:45:49]   Matchup rows total:  25631  across  138  events 
+[09:45:49] Evaluating model vs market... 
+[09:45:49]   Fair pre-tournament 2-ball matchups:  4484 
+[09:45:49]   Usable matchups with model preds:  508  ( 72-hole Match=182, R1 Match-Up=326 ) 
+[09:45:49]  
+[09:45:49] === BY YEAR: log-loss (lower is better) === 
+    year     n  ll_model ll_market brier_model brier_market acc_model
+   <int> <int>     <num>     <num>       <num>        <num>     <num>
+1:  2025   279 0.6948207 0.6929182   0.2507524     0.249927 0.4946237
+   acc_market
+        <num>
+1:  0.5448029
+[09:45:49]  
+[09:45:49] === BY MATCHUP TYPE === 
+        bet_type     n  ll_model ll_market brier_model brier_market acc_model
+          <fctr> <int>     <num>     <num>       <num>        <num>     <num>
+1:   R1 Match-Up   185 0.6931867 0.6920872   0.2500547    0.2494786 0.4972973
+2: 72-hole Match    94 0.6980364 0.6945537   0.2521257    0.2508094 0.4893617
+   acc_market
+        <num>
+1:  0.5405405
+2:  0.5531915
+[09:45:49]  
+[09:45:49] === OVERALL (out-of-sample, walk-forward) === 
+     year     n  ll_model ll_market brier_model brier_market acc_model
+   <char> <int>     <num>     <num>       <num>        <num>     <num>
+1:    ALL   279 0.6948207 0.6929182   0.2507524     0.249927 0.4946237
+   acc_market
+        <num>
+1:  0.5448029
+[09:45:49]  
+[09:45:49] === SIGNIFICANCE: paired bootstrap, log-loss gain (market - model) === 
+       n mean_ll_gain       ci_lo      ci_hi p_model_better
+   <int>        <num>       <num>      <num>          <num>
+1:   279  -0.00190246 -0.01841689 0.01410755          0.393
+[09:45:49]   (mean_ll_gain > 0 = model better; CI must exclude 0 to be real) 
+[09:45:49]  
+[09:45:49] VERDICT: model does NOT beat market -> pivot to CLV / market-vs-prior 
+[09:45:49] Saved result to golf_picks/wf_matchup_result.rds 
