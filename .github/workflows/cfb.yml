@@ -54,11 +54,11 @@ jobs:
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("cfbfastR","dplyr","tidyr","stringr","lubridate","zoo","purrr","readr","tibble","jsonlite","xgboost"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
-      - name: Run cfb model + write feed
+      - name: Run cfb model (refresh cache, rebuild if new games, write + grade feed)
         working-directory: cfb-modeling
         run: |
-          Rscript weekly_update.R
-          Rscript 07_write_feed.R
+          mkdir -p data_cache   # cold runner has no cache dir; refresh() needs it to save
+          Rscript weekly_update.R   # this also writes + grades the feed per week itself
 
       - name: Ingest to Supabase
         uses: ./.github/actions/ingest

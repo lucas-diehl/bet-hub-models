@@ -32,5 +32,6 @@ runs:
         DATABASE_URL: ${{ inputs.database-url }}
         FEED_DIR: ${{ inputs.feed-dir }}
       run: |
+        mkdir -p "$FEED_DIR"   # ensure it exists so an empty feed (e.g. preseason) is a clean no-op
         pnpm install --frozen-lockfile
         pnpm --filter @bet/ingest start
