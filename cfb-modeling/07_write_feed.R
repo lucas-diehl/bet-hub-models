@@ -126,14 +126,19 @@ ats <- slate %>% filter(week %in% EARLY_WEEKS, !is.na(h4), !is.na(a4), h_n4>=N4_
   mutate(pick_home=(h4-a4)>0, pick_team=if_else(pick_home,home_team,away_team),
          pick_side=if_else(pick_home,"home","away"), pick_line=if_else(pick_home,dec_spread,-dec_spread),
          gap=abs(h4-a4), tier=if_else(gap>=0.20,"STRONG","std"), mp=if_else(gap>=0.20,0.60,0.55),
-         stake=if_else(gap>=0.20,1.0,0.5), is_dog=pick_line>0)
+         stake=dplyr::case_when(gap>=0.25 ~ 1.2, gap>=0.20 ~ 1.0, TRUE ~ 0.5), is_dog=pick_line>0)
+
+# Unit sizing — edge/confidence-scaled to match the NFL feed's shape (standard bet
+# ~1u, cap ~1.5u), replacing the old flat 1.0. Bigger point-edge -> bigger stake, in
+# the spirit of the quarter-Kelly the CFB backtest validated but kept as clean tiers.
+cfb_total_units <- function(under_edge) if (under_edge >= 6) 1.5 else if (under_edge >= 4) 1.0 else 0.6
 
 mk_total_obj <- function(r) { tags <- c("UNDER", r$strategy); if (isTRUE(r$dog_ats)) tags <- c(tags,"dog")
   compact(list(bet_id=sprintf("cfb-modeling-%d-wk%d-%s-%s-under", TS, TW, slug(r$away_team), slug(r$home_team)),
     event=r$event, event_start=if(is.na(r$event_start)) NULL else r$event_start, market="total",
     selection=sprintf("Under %s", round(r$dec_total,1)), side="under", line=round(r$dec_total,1),
     odds_american=ODDS, book=r$book, model_prob=round(r$p_under,4), market_prob=MKT_PROB,
-    edge=round(r$p_under-MKT_PROB,4), ev_pct=amer_ev(r$p_under), stake_units=1.0, confidence=r$conf,
+    edge=round(r$p_under-MKT_PROB,4), ev_pct=amer_ev(r$p_under), stake_units=cfb_total_units(r$under_edge), confidence=r$conf,
     tags=as.list(tags), details=list(proj_total=round(r$proj_total,1), under_edge=round(r$under_edge,1), strategy=r$strategy))) }
 mk_ats_obj <- function(r) { tags <- c("early_ats", if(isTRUE(r$is_dog))"dog" else "fav", if(r$tier=="STRONG")"strong")
   compact(list(bet_id=sprintf("cfb-modeling-%d-wk%d-%s-%s-ats", TS, TW, slug(r$away_team), slug(r$home_team)),
