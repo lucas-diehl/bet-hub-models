@@ -1,12 +1,22 @@
 name: nfl
 
-# NFL weekly picks feed. Best-effort cron (Tue morning ET, refresh Thu/Sun).
+# NFL published-picks pipeline for the Bet Hub feed (scripts/57 publish + 58 grade/capture).
+#   publish       Tue  — refresh TD board, publish the week's picks, grade last week
+#   capture-close Thu + Sun — snapshot near-kickoff lines for closing-line value (CLV)
+# NFL is STATEFUL: the frozen-pick ledger (data/processed/published_picks_ledger.csv)
+# and the closing-line capture (data/processed/closing_line_capture.csv) must survive
+# between runs, so NFL/data is cached with a rolling key (restored newest, saved each run).
+# Best-effort cron; the whole thing is a cheap no-op until Week 1 (2026-09-09).
 on:
   schedule:
-    - cron: "0 14 * * 2"   # Tue ~09:00 ET — weekly board
-    - cron: "0 14 * * 5"   # Fri ~09:00 ET — refresh with the week's lines
+    - cron: "0 14 * * 2"   # Tue ~09:00 ET — publish + grade last week
+    - cron: "0 23 * * 4"   # Thu ~19:00 ET — capture close before TNF (~20:15 ET kickoff)
+    - cron: "0 15 * * 0"   # Sun ~11:00 ET — capture close before the 13:00 ET slate
   workflow_dispatch:
     inputs:
+      job:
+        description: "publish | capture-close | grade (blank = pick from the schedule)"
+        required: false
       season:
         description: "NFL_SEASON (blank = auto)"
         required: false
@@ -39,23 +49,50 @@ jobs:
           key: rlib-nfl-${{ runner.os }}-${{ hashFiles('.github/workflows/nfl.yml') }}
           restore-keys: rlib-nfl-${{ runner.os }}-
 
-      - name: Cache nflverse data (heavy, rebuildable)
-        uses: actions/cache@v4
+      # Rolling key: restore the newest prior NFL/data (nflverse cache + ledger +
+      # closing-line capture), save a fresh copy each run so state accumulates.
+      - name: Restore NFL data (nflverse cache + ledger + CLV snapshots)
+        uses: actions/cache/restore@v4
         with:
           path: NFL/data
-          key: nfl-data-${{ runner.os }}
+          key: nfl-data-${{ github.run_id }}
+          restore-keys: nfl-data-
 
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("nflfastR","nflreadr","dplyr","tidyr","purrr","slider","readr","stringr","lubridate","yaml","jsonlite","httr2","ranger","xgboost","nnet"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
-      - name: Run nfl model + write feed
+      - name: Run NFL job (publish / capture-close / grade)
         working-directory: NFL
-        run: Rscript weekly_feed.R
+        run: |
+          JOB="${{ github.event.inputs.job }}"
+          if [ -z "$JOB" ]; then
+            case "${{ github.event.schedule }}" in
+              "0 14 * * 2") JOB="publish" ;;
+              *)            JOB="capture-close" ;;
+            esac
+          fi
+          echo "NFL job = $JOB"
+          if [ "$JOB" = "publish" ]; then
+            Rscript scripts/15_build_2026_td_board.R --execute || echo "TD board refresh failed; game-level bets only"
+            Rscript scripts/57_publish_weekly_picks.R --execute
+            Rscript scripts/58_grade_published_picks.R --grade --execute || echo "grade: nothing final to grade yet"
+          elif [ "$JOB" = "grade" ]; then
+            Rscript scripts/58_grade_published_picks.R --grade --execute
+          else
+            Rscript scripts/58_grade_published_picks.R --capture-close --execute
+          fi
 
       - name: Ingest to Supabase
         uses: ./.github/actions/ingest
         with:
           database-url: ${{ secrets.DATABASE_URL }}
           feed-dir: ${{ github.workspace }}/_feed
+
+      - name: Save NFL data (persist ledger + CLV snapshots)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: NFL/data
+          key: nfl-data-${{ github.run_id }}
