@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       sports:
-        description: "Comma list (default: wnba,tennis,golf,nfl)"
+        description: "Comma list (blank = all sports, incl. round/captain golf + ncaaf)"
         required: false
 
 concurrency:
@@ -46,12 +46,15 @@ jobs:
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
-      - name: Run DFS engine (writes pool + value feeds)
+      - name: Run DFS engine (pool + value + round feeds; all sports by default)
         working-directory: dfs-engine
         run: |
           SPORTS="${{ github.event.inputs.sports }}"
-          if [ -z "$SPORTS" ]; then SPORTS="wnba,tennis,golf,nfl"; fi
-          Rscript jobs/run_all.R --sports "$SPORTS"
+          if [ -n "$SPORTS" ]; then
+            Rscript jobs/run_all.R --bankroll 300 --sports "$SPORTS"
+          else
+            Rscript jobs/run_all.R --bankroll 300   # run_all's full default sport set
+          fi
 
       - name: Ingest to Supabase
         uses: ./.github/actions/ingest
