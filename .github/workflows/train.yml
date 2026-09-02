@@ -1,0 +1,84 @@
+name: train
+
+# WEEKLY model retrain — the missing piece. dfs.yml and golf.yml only PROJECT from
+# committed artifacts; they never retrain them, so:
+#   • golf v2_master / v2_elo / v2_bundle were frozen (Elo never moved on the site)
+#   • tennis/wnba/nfl trained models are gitignored (data/models/), so the runner never
+#     had them and projected on BASELINE instead of the trained model.
+# This job rebuilds everything and COMMITS the refreshed .rds back so the daily runs use
+# them. data/models is gitignored, so those are force-added.
+on:
+  schedule:
+    - cron: "0 12 * * 2"    # Tuesday ~08:00 ET — after weekend/Monday-finish events settle
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "all | golf | dfs  (which models to retrain)"
+        required: false
+        default: "all"
+
+concurrency:
+  group: train
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      R_LIBS_USER: ${{ github.workspace }}/.rlib
+      DATAGOLF_API_KEY: ${{ secrets.DATAGOLF_API_KEY }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.4"
+          use-public-rspm: true
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: rlib-train-${{ runner.os }}-${{ hashFiles('.github/workflows/train.yml') }}
+          restore-keys: rlib-train-${{ runner.os }}-
+
+      - name: Install R packages
+        run: |
+          mkdir -p "$R_LIBS_USER"
+          Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb","nnet"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+
+      - name: Retrain golf (master -> elo -> bundle)
+        if: ${{ github.event.inputs.scope != 'dfs' }}
+        working-directory: golf-modeling
+        run: |
+          Rscript engine/data.R                 # rebuild v2_master + round_shapes from fresh results
+          Rscript engine/elo.R                  # recompute personalized Elo from the new master
+          Rscript engine/data.R                 # 2nd pass: refresh the leak-free Elo feature in master
+          Rscript -e 'Sys.setenv(EXPORT_SOURCE_ONLY="1"); source("engine/export.R"); saveRDS(load_bundle(retrain_days=0), "golf_picks/v2_bundle.rds"); cat("v2_bundle retrained on fresh master\n")'
+
+      - name: Retrain DFS sports (projection + ownership weights)
+        if: ${{ github.event.inputs.scope != 'golf' }}
+        working-directory: dfs-engine
+        run: |
+          for S in wnba tennis nfl; do
+            echo "== training $S =="
+            Rscript jobs/train_models.R --sport "$S" || echo "  $S train failed (non-fatal)"
+          done
+
+      - name: Commit refreshed models
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f golf-modeling/golf_picks/v2_master.rds golf-modeling/golf_picks/v2_elo.rds golf-modeling/golf_picks/v2_round_shapes.rds golf-modeling/golf_picks/v2_bundle.rds 2>/dev/null || true
+          git add -f dfs-engine/data/models/*.rds 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "no model changes to commit"
+          else
+            git commit -m "weekly model refresh: golf master/elo/bundle + tennis/wnba/nfl [skip ci]"
+            git push
+          fi
