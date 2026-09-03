@@ -13,7 +13,9 @@ data/slates/
 data/lineups/
 data/reports/
 data/ownership_inbox/
-data/models/
+# data/models/ — INTENTIONALLY tracked in the monorepo: the GitHub Action runs the
+# committed models (it has no access to your laptop), and publish_models.ps1 pushes
+# retrained weights here. Do NOT re-ignore this.
 
 # R
 .Rhistory
