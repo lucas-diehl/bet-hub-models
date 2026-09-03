@@ -5,9 +5,11 @@ name: dfs
 # Also refreshes the golf H2H picks via the sibling golf-modeling checkout.
 on:
   schedule:
-    - cron: "0 12 * * *"   # ~08:00 ET
-    - cron: "0 16 * * *"   # ~12:00 ET
+    - cron: "0 11 * * *"   # ~07:00 ET — early, so morning slates are fresh
+    - cron: "0 14 * * *"   # ~10:00 ET
+    - cron: "0 17 * * *"   # ~13:00 ET
     - cron: "0 20 * * *"   # ~16:00 ET
+    - cron: "0 23 * * *"   # ~19:00 ET
   workflow_dispatch:
     inputs:
       sports:
