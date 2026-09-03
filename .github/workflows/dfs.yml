@@ -48,6 +48,13 @@ jobs:
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
+      - name: Init DuckDB schema
+        # The DuckDB (data/dfs.duckdb) is gitignored, so CI starts with an empty db and
+        # every scrape fails ("Table 'slates'/'salaries' does not exist"). db_bootstrap()
+        # creates the schema (idempotent) so the scrape can store salaries -> pools build.
+        working-directory: dfs-engine
+        run: Rscript -e 'source("bootstrap.R"); dfs_load_spine(); invisible(db_bootstrap()); cat("duckdb schema ready\n")'
+
       - name: Run DFS engine (pool + value + round feeds; all sports by default)
         working-directory: dfs-engine
         run: |
