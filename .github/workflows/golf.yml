@@ -53,7 +53,7 @@ jobs:
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
-          Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","nnet"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+          Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","nnet","lpSolve"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
       - name: Run golf model (post live, or grade on the Mon/Tue cron & manual date)
         working-directory: golf-modeling
