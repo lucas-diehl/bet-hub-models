@@ -113,4 +113,7 @@ log("pick week", pick_week, "| grade weeks", if (length(grade_weeks)) paste(grad
 for (w in weeks)
   run_step("07_write_feed.R", setenv = list(PPP_SEASON = as.character(season), PPP_WEEK = as.character(w), PPP_MODE = "PAPER"))
 
+# full-slate model board for the Extras tab (every game + model numbers), current week only
+run_step("08_write_slate.R", setenv = list(PPP_SEASON = as.character(season), PPP_WEEK = as.character(pick_week), PPP_MODE = "PAPER"))
+
 log("=== weekly_update done ===")

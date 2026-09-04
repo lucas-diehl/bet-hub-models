@@ -484,7 +484,8 @@ POOL_SPORT_MAP <- list(
   tennis     = list(sport = "tennis", slate_type = NA_character_),
   golf       = list(sport = "golf",   slate_type = NA_character_),
   golf_round = list(sport = "golf",   slate_type = "single_round"),
-  nfl        = list(sport = "nfl",    slate_type = NA_character_)
+  nfl        = list(sport = "nfl",    slate_type = NA_character_),
+  ncaaf      = list(sport = "ncaaf",  slate_type = NA_character_)
 )
 publish_pools <- function(cards, date, site = "draftkings") {
   feed <- Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Documents/dashboard_feed")
