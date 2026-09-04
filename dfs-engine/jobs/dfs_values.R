@@ -29,7 +29,7 @@ VALUE_MAX_SAL_PCTILE    <- 0.80          # value fallback: exclude priciest ~20%
 N_VALUES                <- 10L           # top N players emitted
 N_ENTRIES               <- 20L           # GPP entries for the exposure build
 MAX_EXPOSURE            <- 0.40          # per-player exposure cap
-DFS_SPORTS              <- c("golf", "wnba", "tennis", "nfl")
+DFS_SPORTS              <- c("golf", "wnba", "tennis", "nfl", "ncaaf")
 dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Documents/dashboard_feed")
 
 # "Last, First" -> "First Last" (golf stores names comma-first)
