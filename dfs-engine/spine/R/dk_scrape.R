@@ -73,10 +73,20 @@ dk_find_slates <- function(sport) {
 
 # The main slate to play for a sport: classic multi-game if available, else the
 # (single-game) Showdown. Detects Showdown authoritatively from the draftables.
+#
+# DK often runs TONIGHT's smaller classic slate alongside TOMORROW's bigger one
+# (e.g. a 4-game Friday-night slate + a 12-game Saturday slate, both live at once).
+# Sorting by game count alone picks the bigger-but-later slate and silently skips
+# tonight's contest. Fix: pick the SOONEST calendar day among classic slates first,
+# then the biggest slate within that day.
 dk_main_slate <- function(sport) {
   s <- dk_find_slates(sport); if (is.null(s) || !nrow(s)) return(NULL)
   classic <- s[GameCount > 1 & !grepl("showdown|captain", top_name, ignore.case = TRUE)]
-  pick <- if (nrow(classic)) classic[1] else s[1]
+  pick <- if (nrow(classic)) {
+    d <- as.Date(substr(classic$StartDateEst, 1, 10))
+    soonest <- classic[d == min(d, na.rm = TRUE)]
+    soonest[order(-GameCount)][1]
+  } else s[1]
   showdown <- tryCatch({
     j <- .dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", pick$dg))
     uniqueN(as.data.table(j$draftables)$rosterSlotId) == 2
