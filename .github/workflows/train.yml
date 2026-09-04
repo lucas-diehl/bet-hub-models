@@ -65,7 +65,7 @@ jobs:
         if: ${{ github.event.inputs.scope != 'golf' }}
         working-directory: dfs-engine
         run: |
-          for S in wnba tennis nfl; do
+          for S in wnba tennis nfl ncaaf; do
             echo "== training $S =="
             Rscript jobs/train_models.R --sport "$S" || echo "  $S train failed (non-fatal)"
           done

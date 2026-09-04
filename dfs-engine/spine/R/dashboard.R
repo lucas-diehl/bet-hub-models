@@ -13,7 +13,7 @@ DASH_SPORT_NAMES <- c(wnba="WNBA", tennis="Tennis", golf="Golf", `golf_m80`="Gol
                       `golf_opp`="Golf — 2nd Event", `golf_opp_m80`="Golf 2nd (80% Model)",
                       `golf_round`="Golf — Live Round (20-max GPP)",
                       `golf_captain`="Golf — Captain Showdown (20-max GPP)", nfl="NFL", ncaaf="NCAAF", nba="NBA")
-DASH_PLACEHOLDER <- c("ncaaf","nba")   # plugins not built yet (NFL now live via sports/nfl/project.R)
+DASH_PLACEHOLDER <- c("nba")   # plugins not built yet (NFL + NCAAF now live via sports/{nfl,ncaaf}/project.R)
 # golf TABS -> the extra args passed to the golf plugin. "main" = the PGA event, "opp" =
 # opposite-field; golf_round = the LIVE single-round (R1..R4, auto-detected) 1-day contest
 # with its own DK salaries, built as a 20-lineup 20-max GPP set.
