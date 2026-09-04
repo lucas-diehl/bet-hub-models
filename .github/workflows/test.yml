@@ -41,3 +41,8 @@ jobs:
       - name: Run tests
         working-directory: dfs-engine
         run: Rscript tests/test_validate_projection.R
+      - name: Simulator/engine parity
+        working-directory: dfs-engine
+        run: |
+          Rscript tests/parity/gen_fixture.R
+          node tests/parity/parity.js
