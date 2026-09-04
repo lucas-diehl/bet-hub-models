@@ -19,13 +19,17 @@ build_constraints <- function(pool, rr) {
   add(pool$salary, "<=", rr$cap)                              # salary cap
   if (!is.null(rr$floor)) add(pool$salary, ">=", rr$floor)    # salary floor
 
-  # position slots with a single FLEX group (covers DK classic templates)
+  # position slots with a FLEX group, plus an optional SUPERFLEX group stacked on top
+  # (e.g. NCAAF: QB|RB|WR) — covers DK classic templates.
   if (!is.null(rr$slots)) {
-    flexpos <- rr$flex$positions; flexn <- rr$flex$count %||% 0
+    flexpos  <- rr$flex$positions;      flexn  <- rr$flex$count %||% 0
+    sflexpos <- rr$superflex$positions; sflexn <- rr$superflex$count %||% 0
     for (pos in names(rr$slots)) {
       ind   <- as.numeric(!is.na(pool$position) & pool$position == pos)
       lower <- rr$slots[[pos]]
-      upper <- lower + (if (!is.null(flexpos) && pos %in% flexpos) flexn else 0)
+      extra <- (if (!is.null(flexpos)  && pos %in% flexpos)  flexn  else 0) +
+               (if (!is.null(sflexpos) && pos %in% sflexpos) sflexn else 0)
+      upper <- lower + extra
       add(ind, ">=", lower)
       if (upper < rr$n) add(ind, "<=", upper)
     }

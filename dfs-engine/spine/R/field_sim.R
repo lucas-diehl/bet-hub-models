@@ -55,6 +55,13 @@ field_opt_lineup <- function(pool, rr, val) {
     if (!is.null(rr$flex) && (rr$flex$count %||% 0) > 0)
       roles[[length(roles) + 1L]] <- list(
         elig = which(!is.na(pool$position) & pool$position %in% rr$flex$positions), need = rr$flex$count)
+    # SUPERFLEX (e.g. NCAAF: QB|RB|WR) — a second flex-like slot on top of the base FLEX.
+    # Without this, roster_rules$n counts it but no role fills it, so every field lineup
+    # (and thus every exported optimizer candidate, which is field-derived) comes up one
+    # player short of the roster.
+    if (!is.null(rr$superflex) && (rr$superflex$count %||% 0) > 0)
+      roles[[length(roles) + 1L]] <- list(
+        elig = which(!is.na(pool$position) & pool$position %in% rr$superflex$positions), need = rr$superflex$count)
   }
 
   sel <- integer(0); role_of <- integer(0); used_grp <- character(0)
