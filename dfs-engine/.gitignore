@@ -21,3 +21,4 @@ data/ownership_inbox/
 .Rhistory
 .RData
 .Rproj.user/
+tests/parity/_*.json
