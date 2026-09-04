@@ -32,6 +32,7 @@ jobs:
       R_LIBS_USER: ${{ github.workspace }}/.rlib
       DATAGOLF_API_KEY: ${{ secrets.DATAGOLF_API_KEY }}
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+      CFB_API_KEY: ${{ secrets.CFB_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
