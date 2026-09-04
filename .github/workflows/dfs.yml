@@ -46,7 +46,7 @@ jobs:
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
-          Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb","lpSolve"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+          Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb","lpSolve")); i2<-c("nnet"); if(!"nnet" %in% rownames(installed.packages())) install.packages("nnet"; i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
       - name: Init DuckDB schema
         # The DuckDB (data/dfs.duckdb) is gitignored, so CI starts with an empty db and
