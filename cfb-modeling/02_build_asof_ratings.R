@@ -206,6 +206,18 @@ build_priors <- function(s) {
   pri
 }
 
+# preseason rating table (prior values, LG-filled) for a set of teams
+preseason_base <- function(teams, priors) {
+  base <- tibble(team = teams)
+  for (nm in names(METRICS)) {
+    po <- priors[[nm]]$off; pd <- priors[[nm]]$def
+    base[[paste0("adj_off_", nm)]] <- ifelse(teams %in% names(po), po[teams], LG[[nm]])
+    base[[paste0("adj_def_", nm)]] <- ifelse(teams %in% names(pd), pd[teams], LG[[nm]])
+  }
+  base$pace <- LG_PACE / 2
+  base
+}
+
 # ----------------------------------------------------------------------------
 # Pass 2: as-of ratings for every (season, week), games strictly before week
 # ----------------------------------------------------------------------------
@@ -217,20 +229,16 @@ for (s in sort(unique(tg$season))) {
   for (w in wks) {
     to_date <- rs %>% filter(week < w)                 # LEAK-FREE: strictly before
     stopifnot(nrow(to_date) == 0 || max(to_date$week) < w)  # leakage assertion
+    # carryover FBS set (prior teams) so EVERY team playing this season is covered,
+    # even before it has played a game — otherwise mid-season (once a few teams have
+    # played) the not-yet-played teams would silently lose ratings and get no picks.
+    carry <- names(priors[["ppd"]]$off)
     if (nrow(to_date) == 0) {
-      # preseason: use priors directly
-      teams <- sort(unique(rs$team))
-      base <- tibble(team = teams)
-      for (nm in names(METRICS)) {
-        po <- priors[[nm]]$off; pd <- priors[[nm]]$def
-        base[[paste0("adj_off_", nm)]] <- ifelse(teams %in% names(po), po[teams], LG[[nm]])
-        base[[paste0("adj_def_", nm)]] <- ifelse(teams %in% names(pd), pd[teams], LG[[nm]])
-      }
-      base$pace <- LG_PACE / 2
-      a <- base; hfa_ppd <- 0.10
+      a <- preseason_base(sort(unique(c(rs$team, carry))), priors); hfa_ppd <- 0.10
     } else {
-      a <- adjust_all(to_date, priors)
-      hfa_ppd <- attr(a, "hfa_ppd")
+      a <- adjust_all(to_date, priors); hfa_ppd <- attr(a, "hfa_ppd")
+      miss <- setdiff(carry, a$team)                 # carryover teams that haven't played yet
+      if (length(miss)) a <- bind_rows(a, preseason_base(miss, priors))
     }
     a$season <- s; a$as_of_week <- w
     a$hfa_ppd <- hfa_ppd; a$lg_ppd <- LG[["ppd"]]; a$lg_pace <- LG_PACE

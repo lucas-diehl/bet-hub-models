@@ -71,6 +71,13 @@ refresh <- function(yr, heavy) {
 # ---- 1. light refresh (schedule + lines) -----------------------------------
 if (!SKIP_REFRESH) tryCatch(refresh(season, heavy = FALSE), error = function(e) log("light refresh error:", conditionMessage(e))) else log("SKIP_REFRESH")
 
+# Backstop opening-line capture (cheap, ~2 API credits), AFTER the light refresh so game_info is
+# current for event matching. The dedicated CFB-Open-Capture-Sun/Mon tasks fire earlier in the
+# week for freshness but currently need the user logged in (InteractiveToken — see HANDOFF for
+# the S4U-registration limitation); this Mon/Thu run is confirmed S4U/hands-off, so it guarantees
+# at least one capture attempt per week regardless. Append-only ledger = always safe to re-run.
+run_step("09_capture_open_lines.R")
+
 if (!file.exists("data_cache/game_info.rds")) { log("no game_info cache; nothing to do."); quit(save="no", status=0) }
 gi <- readRDS("data_cache/game_info.rds")
 gs <- gi %>% mutate(season = if ("season" %in% names(.)) season else year,

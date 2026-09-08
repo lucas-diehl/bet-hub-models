@@ -1,10 +1,18 @@
 name: cfb
 
-# College-football weekly picks feed. Best-effort cron (Mon + Thu mornings ET).
+# College-football weekly picks feed. Best-effort cron (Mon + Thu mornings ET for the
+# full weekly rebuild; Sun evening + Mon early morning for opening-line capture — see
+# below). Two live signals: UNDER totals (always on) and Arm O (proj_vs_open, tag
+# OPEN_ATS) — betting the model against the OPENING line, which needs the number
+# frozen as early in the week as possible (the edge decays toward kickoff). Replaces
+# the local machine's CFB-PPP-Weekly + CFB-Open-Capture-Sun/-Mon tasks (all disabled —
+# see DATA_SCIENTIST_HANDOFF.md §9/§5.3 for why those needed this).
 on:
   schedule:
-    - cron: "0 13 * * 1"   # Mon ~09:00 ET — full weekly rebuild + picks
-    - cron: "0 13 * * 4"   # Thu ~09:00 ET — refresh with mid-week lines
+    - cron: "0 13 * * 1"   # Mon ~09:00 ET — full weekly rebuild + picks (+ 09 backstop)
+    - cron: "0 13 * * 4"   # Thu ~09:00 ET — refresh with mid-week lines (+ 09 backstop)
+    - cron: "0 0 * * 1"    # Sun ~20:00 ET — capture opening lines ASAP (light, no rebuild)
+    - cron: "0 10 * * 1"   # Mon ~06:00 ET — capture opening lines again, before the 09:00 rebuild
   workflow_dispatch:
     inputs:
       season:
@@ -25,6 +33,7 @@ jobs:
       FEED_DIR: ${{ github.workspace }}/_feed
       R_LIBS_USER: ${{ github.workspace }}/.rlib
       CFB_API_KEY: ${{ secrets.CFB_API_KEY }}
+      ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}   # 09_capture_open_lines.R expects this name
       PPP_MODE: LIVE
       PPP_SEASON: ${{ github.event.inputs.season }}
       PPP_WEEK: ${{ github.event.inputs.week }}
@@ -43,25 +52,44 @@ jobs:
           key: rlib-cfb-${{ runner.os }}-${{ hashFiles('.github/workflows/cfb.yml') }}
           restore-keys: rlib-cfb-${{ runner.os }}-
 
-      - name: Cache CFBD data_cache (heavy, rebuildable)
-        uses: actions/cache@v4
+      # Rolling key (restore newest, save every run): data_cache now holds BOTH the
+      # rebuildable CFBD pull AND opening_lines.csv, a frozen append-only ledger that
+      # must accumulate across runs — a static cache key would restore it once and then
+      # never save new captures (the ledger would silently stop growing).
+      - name: Restore CFBD data_cache
+        uses: actions/cache/restore@v4
         with:
           path: cfb-modeling/data_cache
-          key: cfb-datacache-${{ runner.os }}
+          key: cfb-datacache-${{ github.run_id }}
+          restore-keys: cfb-datacache-
 
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
-          Rscript -e 'p<-c("cfbfastR","dplyr","tidyr","stringr","lubridate","zoo","purrr","readr","tibble","jsonlite","xgboost"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+          Rscript -e 'p<-c("cfbfastR","dplyr","tidyr","stringr","lubridate","zoo","purrr","readr","tibble","jsonlite","xgboost","httr2"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
-      - name: Run cfb model (refresh cache, rebuild if new games, write + grade feed)
+      - name: Run cfb (full rebuild on Mon/Thu + manual; opening-line capture only on the extra Sun/Mon crons)
         working-directory: cfb-modeling
         run: |
-          mkdir -p data_cache   # cold runner has no cache dir; refresh() needs it to save
-          Rscript weekly_update.R   # this also writes + grades the feed per week itself
+          mkdir -p data_cache   # cold runner may have no cache dir yet
+          case "${{ github.event.schedule }}" in
+            "0 0 * * 1"|"0 10 * * 1")
+              echo "=== opening-line capture only ==="
+              Rscript 09_capture_open_lines.R ;;
+            *)
+              echo "=== full weekly rebuild (writes + grades the feed; also runs 09 as a backstop) ==="
+              Rscript weekly_update.R ;;
+          esac
 
       - name: Ingest to Supabase
         uses: ./.github/actions/ingest
         with:
           database-url: ${{ secrets.DATABASE_URL }}
           feed-dir: ${{ github.workspace }}/_feed
+
+      - name: Save CFBD data_cache (persist opening_lines.csv + rebuildable cache)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: cfb-modeling/data_cache
+          key: cfb-datacache-${{ github.run_id }}

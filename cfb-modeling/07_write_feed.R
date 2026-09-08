@@ -35,6 +35,7 @@ MODEL_VER <- "ppp-ppd-2026"
 ODDS      <- -110L
 MKT_PROB  <- round(110/210, 4)
 UNDER_EDGE <- 4.0; DOG_EDGE <- 3.0; AGG_GAP <- 0.10; N4_MIN <- 20; EARLY_WEEKS <- 1:4
+ATS_OPEN_EDGE_MIN <- as.numeric(Sys.getenv("PPP_ATS_OPEN_EDGE_MIN", "3"))
 
 slug     <- function(x) gsub("[^a-z0-9]", "", tolower(x))
 compact  <- function(l) l[!vapply(l, is.null, logical(1))]
@@ -125,21 +126,48 @@ ats <- slate %>% filter(week %in% EARLY_WEEKS, !is.na(h4), !is.na(a4), h_n4>=N4_
                         abs(h4-a4)>=AGG_GAP, !is.na(dec_spread)) %>%
   mutate(pick_home=(h4-a4)>0, pick_team=if_else(pick_home,home_team,away_team),
          pick_side=if_else(pick_home,"home","away"), pick_line=if_else(pick_home,dec_spread,-dec_spread),
-         gap=abs(h4-a4), tier=if_else(gap>=0.20,"STRONG","std"), mp=if_else(gap>=0.20,0.60,0.55),
-         stake=dplyr::case_when(gap>=0.25 ~ 1.2, gap>=0.20 ~ 1.0, TRUE ~ 0.5), is_dog=pick_line>0)
+         gap=abs(h4-a4), tier=if_else(gap>=0.20,"STRONG","std"),
+         mp=if_else(gap>=0.20,0.593,0.546),   # beta-binomial shrunk toward 0.524 (was raw 0.60/0.55)
+         stake=if_else(gap>=0.20,1.0,0.5), is_dog=pick_line>0)
 
-# Unit sizing — edge/confidence-scaled to match the NFL feed's shape (standard bet
-# ~1u, cap ~1.5u), replacing the old flat 1.0. Bigger point-edge -> bigger stake, in
-# the spirit of the quarter-Kelly the CFB backtest validated but kept as clean tiers.
-cfb_total_units <- function(under_edge) if (under_edge >= 6) 1.5 else if (under_edge >= 4) 1.0 else 0.6
+# ---- proj_vs_open ATS: bet the model vs the FROZEN OPENING line (09_capture_open_lines.R) --
+# Validated 2026-09: the market fully encompasses proj_margin vs the CLOSE (p=0.76) but NOT vs
+# the OPEN post-2023 (coef 0.138, p=0.004, clean Odds API data; CLV-confirmed +0.31pt @mag>=3;
+# mechanism = recency lag, edge builds through the season). Distinct edge from the retired
+# early-season 4th-down `ats` arm above — different mechanism, own gate, own bet_id suffix.
+# Requires the ledger `data_cache/opening_lines.csv` (09_capture_open_lines.R, run early-week
+# BEFORE the number sharpens toward the model). No ledger row for a game = no bet (never falls
+# back to the current/live spread — that would silently re-introduce the close, which is dead).
+ledger_path <- file.path(CACHE, "opening_lines.csv")
+if (file.exists(ledger_path)) {
+  ledger <- read.csv(ledger_path, stringsAsFactors = FALSE, colClasses = c(game_id = "character")) %>%
+    mutate(pref = case_when(book=="DraftKings"~1L, book=="FanDuel"~2L, TRUE~NA_integer_)) %>%
+    filter(!is.na(pref), !is.na(home_spread_open)) %>%
+    arrange(pref) %>% distinct(game_id, .keep_all = TRUE) %>%    # DK preferred; Caesars captured but not bettable (book-list convention)
+    transmute(game_id, open_book = book, open_spread = home_spread_open, open_total = total_open, captured_at)
+  ats_open <- slate %>% mutate(game_id = as.character(game_id)) %>% inner_join(ledger, by = "game_id") %>%
+    mutate(open_margin = -open_spread, ats_open_edge = proj_margin - open_margin, mag = abs(ats_open_edge),
+           pick_home = ats_open_edge > 0, pick_team = if_else(pick_home, home_team, away_team),
+           pick_side = if_else(pick_home, "home", "away"), pick_line = if_else(pick_home, open_spread, -open_spread),
+           is_dog = pick_line > 0,
+           # deliberately modest & shrunk toward breakeven (0.524) — backtest was 53.4%/53.6% at these
+           # thresholds, not the 57%+ that got the OLD ats arm removed for overclaiming; see registry.
+           mp = if_else(mag>=6, 0.535, 0.525), stake = 0.5) %>%
+    filter(mag >= ATS_OPEN_EDGE_MIN)
+} else { ats_open <- slate[0, ] %>% mutate(open_book=character(), open_spread=numeric(), open_total=numeric(),
+    captured_at=character(), open_margin=numeric(), ats_open_edge=numeric(), mag=numeric(), pick_home=logical(),
+    pick_team=character(), pick_side=character(), pick_line=numeric(), is_dog=logical(), mp=numeric(), stake=numeric()) }
 
 mk_total_obj <- function(r) { tags <- c("UNDER", r$strategy); if (isTRUE(r$dog_ats)) tags <- c(tags,"dog")
   compact(list(bet_id=sprintf("cfb-modeling-%d-wk%d-%s-%s-under", TS, TW, slug(r$away_team), slug(r$home_team)),
     event=r$event, event_start=if(is.na(r$event_start)) NULL else r$event_start, market="total",
     selection=sprintf("Under %s", round(r$dec_total,1)), side="under", line=round(r$dec_total,1),
     odds_american=ODDS, book=r$book, model_prob=round(r$p_under,4), market_prob=MKT_PROB,
-    edge=round(r$p_under-MKT_PROB,4), ev_pct=amer_ev(r$p_under), stake_units=cfb_total_units(r$under_edge), confidence=r$conf,
-    tags=as.list(tags), details=list(proj_total=round(r$proj_total,1), under_edge=round(r$under_edge,1), strategy=r$strategy))) }
+    edge=round(r$p_under-MKT_PROB,4), ev_pct=amer_ev(r$p_under), stake_units=1.0, confidence=r$conf,
+    tags=as.list(tags), details=list(proj_total=round(r$proj_total,1), under_edge=round(r$under_edge,1), strategy=r$strategy,
+      status="paper", prob_source="modelled",                       # NOTE: model_prob is over-confident in the tail (see outputs/totals_calibration.csv)
+      posted_total=round(r$dec_total,1),
+      min_total=round(r$proj_total + (if (grepl("UNDER4", r$strategy)) UNDER_EDGE else DOG_EDGE), 1)))) }  # self-expire if book_total drops below this
 mk_ats_obj <- function(r) { tags <- c("early_ats", if(isTRUE(r$is_dog))"dog" else "fav", if(r$tier=="STRONG")"strong")
   compact(list(bet_id=sprintf("cfb-modeling-%d-wk%d-%s-%s-ats", TS, TW, slug(r$away_team), slug(r$home_team)),
     event=r$event, event_start=if(is.na(r$event_start)) NULL else r$event_start, market="spread",
@@ -147,10 +175,35 @@ mk_ats_obj <- function(r) { tags <- c("early_ats", if(isTRUE(r$is_dog))"dog" els
     model_prob=r$mp, market_prob=MKT_PROB, edge=round(r$mp-MKT_PROB,4), ev_pct=amer_ev(r$mp),
     stake_units=r$stake, confidence=if(r$tier=="STRONG")"medium" else "low", tier=r$tier, tags=as.list(tags),
     details=list(go_rate_pick=round(if(r$pick_home)r$h4 else r$a4,3), go_rate_opp=round(if(r$pick_home)r$a4 else r$h4,3),
-                 gap=round(r$gap,3), week=TW))) }
+                 gap=round(r$gap,3), week=TW,
+                 status="paper", prob_source="empirical_insample",   # 0.593/0.546 are shrunk in-sample tier rates, NOT a calibrated model output
+                 posted_spread=round(r$pick_line,1), min_line=round(r$pick_line - 2, 1)))) }
+mk_ats_open_obj <- function(r) { tags <- c("OPEN_ATS", if(isTRUE(r$is_dog))"dog" else "fav")
+  compact(list(bet_id=sprintf("cfb-modeling-%d-wk%d-%s-%s-atsopen", TS, TW, slug(r$away_team), slug(r$home_team)),
+    event=r$event, event_start=if(is.na(r$event_start)) NULL else r$event_start, market="spread",
+    selection=r$pick_team, side=r$pick_side, line=round(r$pick_line,1), odds_american=ODDS, book=r$open_book,
+    model_prob=r$mp, market_prob=MKT_PROB, edge=round(r$mp-MKT_PROB,4), ev_pct=amer_ev(r$mp),
+    stake_units=r$stake, confidence=if(r$mag>=6)"medium" else "low", tags=as.list(tags),
+    details=list(proj_margin=round(r$proj_margin,1), open_spread=round(r$open_spread,1), edge_pts=round(r$mag,1),
+                 opened=r$captured_at, week=TW,
+                 status="paper", prob_source="empirical_insample",   # 0.525/0.535 shrunk near breakeven; see FEATURE_REGISTRY proj_vs_open
+                 mechanism="beats the OPENING line only (encompassed by the true close); regime-dependent (post-2023), monitor decay",
+                 posted_spread=round(r$pick_line,1), min_line=round(r$pick_line - 2, 1)))) }  # don't chase >2pts worse than posted
 
-cand <- c(lapply(seq_len(nrow(tot)), function(i){ o<-mk_total_obj(tot[i,]); o$.date<-tot$slate_date[i]; o$.gkey<-tot$gkey[i]; o$.completed<-tot$completed[i]; o }),
-          lapply(seq_len(nrow(ats)), function(i){ o<-mk_ats_obj(ats[i,]);   o$.date<-ats$slate_date[i]; o$.gkey<-ats$gkey[i]; o$.completed<-ats$completed[i]; o }))
+# ATS is REMOVED from the live feed (2026-09): the encompassing test showed the market
+# fully encompasses our margin projection AND its components (all p>0.35) — ATS is closed,
+# and the early-4th-down niche is unconfirmed (flat CLV, fails multiplicity, H2-only). The
+# `ats` build + mk_ats_obj stay in place for research/backtest; set PPP_EMIT_ATS=1 to re-emit
+# if a genuine ATS edge is ever established. Totals (UNDER) continue to flow.
+EMIT_ATS <- nzchar(Sys.getenv("PPP_EMIT_ATS"))
+# proj_vs_open is a NEW, independently-validated edge (CLV-confirmed) — defaults ON (opt OUT
+# with PPP_EMIT_ATS_OPEN=0), unlike the retired early-4th-down `ats` arm above which defaults off.
+EMIT_ATS_OPEN <- Sys.getenv("PPP_EMIT_ATS_OPEN", "1") != "0"
+cand <- lapply(seq_len(nrow(tot)), function(i){ o<-mk_total_obj(tot[i,]); o$.date<-tot$slate_date[i]; o$.gkey<-tot$gkey[i]; o$.completed<-tot$completed[i]; o })
+if (EMIT_ATS)
+  cand <- c(cand, lapply(seq_len(nrow(ats)), function(i){ o<-mk_ats_obj(ats[i,]); o$.date<-ats$slate_date[i]; o$.gkey<-ats$gkey[i]; o$.completed<-ats$completed[i]; o }))
+if (EMIT_ATS_OPEN && nrow(ats_open) > 0)
+  cand <- c(cand, lapply(seq_len(nrow(ats_open)), function(i){ o<-mk_ats_open_obj(ats_open[i,]); o$.date<-ats_open$slate_date[i]; o$.gkey<-ats_open$gkey[i]; o$.completed<-ats_open$completed[i]; o }))
 
 # ---- grade one posted bet (returns a results-entry or NULL) ----------------
 grade_bet <- function(b) {                       # b: a posted bet list (bet_id, market, side, line, stake_units, event, .gkey?)
