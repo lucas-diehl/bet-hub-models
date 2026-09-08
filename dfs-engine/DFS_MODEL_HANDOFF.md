@@ -368,6 +368,16 @@ To reproduce a given day's outputs deterministically:
 - **Round shapes / weather:** per-tee-time wind + round-scoring shapes (`round_sim.R`, `weather.R`).
 > **Action for the auditor:** there is no committed data dictionary in-repo — generate one programmatically from `attr(master,'feats')` + `names(master)` and check it in next to `data.R`. Enumerating all ~48 with provenance is a good first PR.
 
+## 20. NFL: drop backup QBs (2026-09)
+
+**Bug (real, user-reported):** a healthy benched backup QB (concrete case: Carson Wentz, MIN, depth-chart rank 3) isn't "injured," so `apply_inactives()`'s ESPN-injury-based safeguard can't catch him. He'd get a small nonzero salary-baseline projection (DK prices him very low, and the baseline formula scales ~linearly with salary), which a min-salary-hungry optimizer happily plugs in as "cheap value" despite his real expected output being ~0 — he's never actually going to play.
+
+**Fix:** `sports/nfl/ingest.R::nfl_qb_starters()` pulls nflverse's free, no-key, ~daily-updated depth-chart dataset (`depth_charts_<year>.csv`), takes the latest snapshot, and returns the set of current QB1s (`pos_rank == 1`) per team. `sports/nfl/project.R` drops any pool row where `position == "QB"` and the player isn't in that set, right before the final column selection (after all projection sources — external model, built-in model, salary baseline — have already run, so it catches a backup regardless of which path produced his number). Fails safe: if the depth-chart pull is unavailable and there's no cache yet, the filter is skipped entirely rather than blocking the build or wrongly dropping every QB.
+
+**Scope, deliberately narrow:** QB only, per the request — it's a clean 1-starter-per-team position, unlike RB/WR/TE where committee backfields make "backup" fuzzy and often still fantasy-relevant. Applying the same depth-chart signal to other positions would need a different bar (e.g. "gets meaningful snap share" rather than "is rank 1"), not attempted here.
+
+**Verified:** live pull correctly excludes Wentz; a real slate (`run_slate("nfl", date="2026-09-07", ...)`) resolved to exactly 32 QBs, one per team, all recognizable current starters. Regression test: `tests/test_nfl_qb_starters.R`.
+
 ---
 
 *Questions the previous maintainer would answer: “is the training loop actually running in Actions?” (see §12 — it wasn't for golf/master and tennis/wnba models; `train.yml` PR #1 fixes it). “Can I trust the sim's GPP EV?” (no — §10). “What's the real edge target?” (contest selection + differentiation + ownership, not more stud-projection accuracy).*
