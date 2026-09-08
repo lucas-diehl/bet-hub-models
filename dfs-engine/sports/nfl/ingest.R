@@ -100,6 +100,51 @@ nfl_qb_starters <- function(max_age_hours = 12) {
   starters
 }
 
+# nflverse WEEKLY ROSTER STATUS (free, no key) — closes a real blind spot in
+# apply_inactives(): the ESPN injury feed is a "status for THIS WEEK'S game" report, so
+# a player on a LONG-TERM injured reserve (season-ending, placed weeks ago) can fall off
+# it entirely once he's no longer "in question" — he's just not on the report at all
+# (confirmed case: Ricky Pearsall, SF, on IR — absent from injury_report("nfl") though
+# DK's salary feed still listed him). Roster status ("RES" = reserve/IR/PUP/NFI, "CUT",
+# "RET" = retired, "EXE" = exempt) is a DIFFERENT, more complete signal: is this player
+# even ON the active roster today, independent of this week's game-status news cycle.
+# Excludes "DEV" (practice squad) too — not eligible without a real elevation, which is
+# the rare exception, not the default to design around.
+NFL_ROSTER_URL <- function() Sys.getenv("NFL_ROSTERS_URL",
+  sprintf("https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_%d.csv",
+          as.integer(format(Sys.Date(), "%Y"))))
+nfl_roster_path <- function() dfs_path("data", "raw", "nfl_roster_status.rds")
+
+# normalized set of names NOT on an active roster today (RES/CUT/RET/EXE/DEV), latest
+# week only. Cached ~12h; NULL (skip filter) on total failure — never blocks the build.
+nfl_inactive_roster <- function(max_age_hours = 12) {
+  p <- nfl_roster_path()
+  fresh <- file.exists(p) && difftime(Sys.time(), file.info(p)$mtime, units = "hours") < max_age_hours
+  if (!fresh) {
+    resp <- tryCatch(httr2::request(NFL_ROSTER_URL()) |> httr2::req_user_agent("DFS-ENGINE/1.0") |>
+                       httr2::req_timeout(90) |> httr2::req_perform(), error = function(e) NULL)
+    if (!is.null(resp) && httr2::resp_status(resp) == 200) {
+      R <- tryCatch(fread(text = httr2::resp_body_string(resp), showProgress = FALSE), error = function(e) NULL)
+      if (!is.null(R) && nrow(R)) { dir.create(dirname(p), recursive = TRUE, showWarnings = FALSE); saveRDS(R, p) }
+    }
+  }
+  if (!file.exists(p)) return(NULL)
+  R <- tryCatch(as.data.table(readRDS(p)), error = function(e) NULL)
+  if (is.null(R) || !nrow(R) || !all(c("status", "full_name", "week", "team") %in% names(R))) return(NULL)
+  R <- R[week == max(week)]
+  # KEY ON name+team, not name alone — common names collide across teams (confirmed real
+  # case: "DeVonta Smith" PHI WR, active, vs "Devonta Smith" CAR practice-squad DB; a
+  # name-only match would wrongly exclude the active Eagles starter too).
+  R[, `:=`(norm = norm_name(full_name), tk = toupper(team))]
+  inactive <- unique(R[status %in% c("RES", "CUT", "RET", "EXE", "DEV"), .(norm, team = tk)])
+  active   <- unique(R[status == "ACT", .(norm, team = tk)])
+  # an ACT row for the same name+team always wins over a stale/ambiguous inactive one —
+  # wrongly excluding a real player is worse than the original bug this closes.
+  inactive <- inactive[!active, on = c("norm", "team")]
+  if (!nrow(inactive)) return(NULL)
+  inactive
+}
+
 # DK points from nflverse components (reuses the tested nfl_dk_scoring contract).
 .nfl_dk_points <- function(D) {
   z <- function(col) { v <- if (col %in% names(D)) as.numeric(D[[col]]) else 0; fifelse(is.na(v), 0, v) }
