@@ -146,10 +146,11 @@ nfl_project_players <- function(slate) {
     for (c in c("proj", "sim_sd", "ceil", "floor", "p_zero")) pool[[c]][miss] <- bl[[c]][miss] }
 
   # --- Vegas game environment (free, ESPN): high totals -> higher ceilings + correlation
-  pool[, game_total_z := 0]
+  pool[, `:=`(game_total_z = 0, exp_margin = 11.1)]   # exp_margin default = empirical mean |margin| (2021-25)
   vg <- tryCatch(vegas_games("nfl", slate$date), error = function(e) NULL)
   if (!is.null(vg) && nrow(vg) && "vegas_total" %in% names(vg)) {
-    pool[as.data.table(vg)[, .(game_id, vt = vegas_total)], on = "game_id", vt := i.vt]
+    vg <- as.data.table(vg)
+    pool[vg[, .(game_id, vt = vegas_total)], on = "game_id", vt := i.vt]
     if (sum(!is.na(pool$vt)) >= 0.5 * nrow(pool)) {
       mu <- mean(pool$vt, na.rm = TRUE); sv <- sd(pool$vt, na.rm = TRUE)
       pool[, game_total_z := fifelse(is.na(vt) | !is.finite(sv) | sv == 0, 0, (vt - mu) / sv)]
@@ -157,6 +158,13 @@ nfl_project_players <- function(slate) {
       msg("  vegas: NFL game totals applied to", sum(!is.na(pool$vt)), "of", nrow(pool), "players")
     }
     pool[, vt := NULL]
+    # real closing spread -> pregame expected |margin| for scenario-conditioned correlation
+    # (nfl_correlation, sports/nfl/correlate.R). Reuses the SAME game_id-matched vg table.
+    if ("spread" %in% names(vg)) {
+      pool[vg[, .(game_id, sp = spread)], on = "game_id", sp := i.sp]
+      pool[is.finite(sp), exp_margin := abs(sp)]
+      pool[, sp := NULL]
+    }
   }
 
   # --- cold-start projected ownership (chalk tracks value); refined once trained ------
@@ -166,5 +174,5 @@ nfl_project_players <- function(slate) {
 
   persist_salaries(pool, slate$slate_id, "nfl")
   pool[, .(player_id, player_name, dk_id, team, game_id, position,
-           salary, proj, sim_sd, ceil, floor, p_zero, own, game_total_z)]
+           salary, proj, sim_sd, ceil, floor, p_zero, own, game_total_z, exp_margin)]
 }
