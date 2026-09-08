@@ -119,7 +119,11 @@ run_contest <- function(contest_id, sport = NULL, date = Sys.Date(), n_lineups =
   msg(sprintf("Contest %s (%s%s): %d lineups, field %s, $%s entry",
               contest$contest_id, sport, if (showdown) " SHOWDOWN" else "",
               length(picks), fsize, contest$entry_fee))
+  # sim + field are returned (not just used locally) so build_contest_card() can feed
+  # them to build_sim_payload() — needed to publish this contest as an optimizer pool
+  # (e.g. the single-game Showdown layout in the /dfs layout picker).
   list(contest = contest, sport = sport, showdown = showdown, slate_id = slate_obj$slate_id,
        pool = pool_out, base_pool = base, picks = picks, res = res, gates = gates, rr = rr,
+       sim = if (showdown) esim else sim, field = field,
        captain_board = cap_board, curve = curve)
 }

@@ -356,6 +356,12 @@ build_contest_card <- function(contest_id, sport = NULL, date = Sys.Date(),
     x <- r$captain_board[i]; list(player = x$player, team = x$team, cpt_salary = x$cpt_salary,
       cpt_proj = x$cpt_proj, cpt_ceil = x$cpt_ceil, cpt_own = x$cpt_own, leverage = x$leverage) })
 
+  # Optimizer pool payload (browser /dfs page) — same build_sim_payload() the classic
+  # path uses; needs r$sim/r$field, which run_contest() now returns for this reason.
+  sim_payload <- tryCatch(build_sim_payload(r), error = function(e) { msg("  sim payload skipped:", conditionMessage(e)); NULL })
+  if (!is.null(sim_payload))
+    sim_payload$contests <- tryCatch(dash_contest_options(r$sport, sim_payload$field_size), error = function(e) NULL)
+
   ct <- r$contest; first <- if (!is.null(ct$prizes) && nrow(ct$prizes)) max(ct$prizes$prize) else NA
   list(sport = paste0("ct_", ct$contest_id), name = paste0(toupper(r$sport),
          if (r$showdown) " SD" else "", " $", ct$entry_fee), title = ct$name,
@@ -366,7 +372,7 @@ build_contest_card <- function(contest_id, sport = NULL, date = Sys.Date(),
        gates = list(cash = isTRUE(r$gates$cash_enabled), gpp = isTRUE(r$gates$gpp_enabled)),
        bankroll = opts$bankroll, daily_budget = round(attr(plan, "daily_budget"), 2),
        live_total = attr(plan, "live_total"), plan = plan_list, captains = captains,
-       lineups = lineups, players = players)
+       lineups = lineups, players = players, sim = sim_payload)
 }
 
 # Golf CAPTAIN MODE SHOWDOWN card (1 CPT @1.5x + 5 FLEX, $50k). Auto-detects the live DK
