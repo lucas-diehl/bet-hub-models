@@ -67,7 +67,7 @@ wnba_project_players <- function(slate) {
 
   # --- game environment (Vegas-free): shapes ceiling/blowout + correlation ----
   # NOTE: leaves the validated MEAN (proj) untouched; only the joint distribution.
-  pool[, `:=`(game_total_z = 0, blowout = 0)]
+  pool[, `:=`(game_total_z = 0, blowout = 0, exp_margin = 0)]
   if (!is.null(box)) {
     env <- tryCatch(wnba_team_env_asof(wnba_build_team_games(box), slate$date),
                     error = function(e) NULL)
@@ -75,7 +75,7 @@ wnba_project_players <- function(slate) {
       vg <- tryCatch(vegas_games("wnba", slate$date), error = function(e) NULL)   # market lines (free)
       ge <- wnba_attach_game_env(pool, env, vegas = vg)
       m <- match(pool$player_id, ge$player_id)
-      pool[, `:=`(game_total_z = ge$game_total_z[m], blowout = ge$blowout[m])]
+      pool[, `:=`(game_total_z = ge$game_total_z[m], blowout = ge$blowout[m], exp_margin = ge$exp_margin[m])]
       pool[, ceil   := pmax(ceil + 0.06 * game_total_z * proj, proj)]   # upside ~ game total
       pool[, p_zero := pmin(p_zero + 0.04 * blowout, 0.40)]             # blowout exit risk
     }
@@ -96,5 +96,5 @@ wnba_project_players <- function(slate) {
 
   persist_salaries(pool, slate$slate_id, "wnba")
   pool[, .(player_id, player_name, dk_id, team, game_id, position,
-           salary, proj, sim_sd, ceil, floor, p_zero, own, game_total_z)]
+           salary, proj, sim_sd, ceil, floor, p_zero, own, game_total_z, exp_margin)]
 }

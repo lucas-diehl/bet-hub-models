@@ -121,8 +121,15 @@ ok(tl2[1] > 0 && tl2[3] < 0, "NFL team-load: QB stack positive, RB game-script n
 Cm <- cor(t(slate_sim(np, get_loadings(np, "nfl"), team_loadings = tl2, n_sims = 20000L, seed = 3)$scores))
 ok(Cm[1, 2] > Cm[1, 4] + 0.1, "QB-WR same-team stack correlates MORE than bring-back")
 ok(Cm[1, 3] < Cm[1, 2] - 0.1, "RB decoupled from its own QB (game script)")
-ok(all(get_team_loadings(data.table(player_id = 1:2, position = "G", team = "X", game_id = "Y"), "wnba") == 0),
+ok(all(get_team_loadings(data.table(player_id = 1:2, position = "G", team = "X", game_id = "Y"), "golf") == 0),
    "non-stacking sports keep single-factor (team_load = 0)")
+# NOTE: WNBA used to be this test's example, but is no longer single-factor by design —
+# sports/wnba/correlate.R now supplies a scenario-conditioned (close/blowout) two-regime
+# team_load, calibrated against real box scores (tests/validate_game_script_correlation.R
+# found the realized correlation SIGN FLIPS by game script, which a flat factor can't
+# represent). See DFS_MODEL_HANDOFF.md section 15.
+ok(inherits(get_loadings(data.table(player_id = 1, team = "A", game_id = "A@B", exp_margin = 5), "wnba"),
+            "regime_loadings"), "WNBA correlation is now scenario-conditioned (regime_loadings)")
 
 cat("== Realistic field simulation (competitive optimizer field) ==\n")
 set.seed(7)
