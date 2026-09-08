@@ -167,6 +167,19 @@ nfl_project_players <- function(slate) {
     }
   }
 
+  # --- DROP backup QBs (won't play, so their salary-baseline "value" is fictional) -----
+  # QB is a clean 1-starter-per-team position (unlike RB/WR/TE committees) — see
+  # nfl_qb_starters() for the depth-chart source + rationale. Skips (never blocks the
+  # build) if the depth-chart pull is unavailable and there's no cache yet.
+  starters <- tryCatch(nfl_qb_starters(), error = function(e) NULL)
+  if (!is.null(starters)) {
+    is_qb <- toupper(pool$position) == "QB"
+    drop <- is_qb & !(pool$norm %in% starters)
+    if (any(drop)) { msg(sprintf("  nfl: dropped %d backup QB(s) (%s)", sum(drop),
+                                 paste(head(pool$player_name[drop], 5), collapse = ", ")))
+      pool <- pool[!drop] }
+  }
+
   # --- cold-start projected ownership (chalk tracks value); refined once trained ------
   pool[, .val := proj / pmax(salary / 1000, 0.1)]
   r <- frank(pool$.val) / nrow(pool)
