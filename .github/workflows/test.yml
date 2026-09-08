@@ -36,7 +36,7 @@ jobs:
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
-          Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb","nnet"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+          Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb","nnet","lpSolve"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
       - name: Run tests
         working-directory: dfs-engine
