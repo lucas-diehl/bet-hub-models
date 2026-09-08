@@ -100,7 +100,9 @@ wnba_attach_game_env <- function(pool, env, vegas = NULL) {
   P[, game_total_z := pmin(pmax((g_total - lg_total) / sd_total, -2.5), 2.5)]
   P[, pace_mult := pmin(pmax(g_pace / lg_pace, 0.9), 1.1)]
   P[, blowout := pmin(.margin / 15, 1)]
-  P[!is.finite(game_total_z), game_total_z := 0][!is.finite(pace_mult), pace_mult := 1][!is.finite(blowout), blowout := 0]
+  P[, exp_margin := pmin(.margin, 30)]     # uncapped (vs `blowout`) pregame |margin| -> script-probability calibration
+  P[!is.finite(game_total_z), game_total_z := 0][!is.finite(pace_mult), pace_mult := 1]
+  P[!is.finite(blowout), blowout := 0][!is.finite(exp_margin), exp_margin := 0]
   P[]
 }
 
