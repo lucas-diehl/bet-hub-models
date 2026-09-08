@@ -80,13 +80,37 @@ ok("get_loadings(ncaaf) returns a regime_loadings object", inherits(Lg, "regime_
 sim <- tryCatch(slate_sim(poolG, Lg, n_sims = 20000L, seed = 8L), error = function(e) NULL)
 ok("slate_sim runs clean on real ncaaf_correlation() output", !is.null(sim) && all(dim(sim$scores) == c(4L, 20000L)))
 
+cat("regime_loadings: NFL mixed case (game factor regime-conditional, team factor plain)\n")
+poolH <- data.table(player_id = 1:4, salary = rep(6000, 4), proj = rep(20, 4), sim_sd = rep(6, 4),
+                    game_id = rep("A@B", 4), team = c("A", "A", "B", "B"), position = "QB", exp_margin = 3)
+Lh <- get_loadings(poolH, "nfl"); Th <- get_team_loadings(poolH, "nfl")
+ok("get_loadings(nfl) IS regime-conditional (has load_alt/p_alt)", inherits(Lh, "regime_loadings"))
+ok("get_team_loadings(nfl) stays a PLAIN vector (no team_load_alt supplied)", is.numeric(Th) && !inherits(Th, "regime_loadings"))
+sim <- tryCatch(slate_sim(poolH, Lh, team_loadings = Th, n_sims = 20000L, seed = 9L), error = function(e) NULL)
+ok("slate_sim runs clean on the mixed regime/plain combination", !is.null(sim) && all(dim(sim$scores) == c(4L, 20000L)))
+# isolated: same position (QB) both sides -> game_ld identical -> clean opponent-corr check
+poolI <- data.table(player_id = 1:2, salary = rep(6000, 2), proj = rep(20, 2), sim_sd = rep(6, 2),
+                    game_id = rep("A@B", 2), team = c("A", "B"), position = "QB")
+Li <- structure(list(base = rep(0.50, 2), alt = rep(0.50 * sqrt(0.009 / 0.038), 2), p_alt = rep(0, 2)), class = "regime_loadings")
+sim <- slate_sim(poolI, Li, n_sims = 60000L, seed = 10L)
+z <- scale(t(sim$scores))
+ok("nfl close regime (QB-QB opponent): cor ~ 0.50^2 = 0.25", close_enough(cor(z[, 1], z[, 2]), 0.25, 0.03))
+Li$p_alt <- rep(1, 2)
+sim <- slate_sim(poolI, Li, n_sims = 60000L, seed = 11L)
+z <- scale(t(sim$scores))
+ok("nfl blowout regime (QB-QB opponent): cor shrinks toward measured ratio", close_enough(cor(z[, 1], z[, 2]), 0.25 * (0.009 / 0.038), 0.03))
+
 cat("regime_loadings: OTHER sports completely unaffected (backward compatibility)\n")
+# NOTE: NFL used to be this test's example, but is no longer plain-vector by design —
+# nfl_correlation() now always supplies load_alt/p_alt too (see sports/nfl/correlate.R).
+# golf/tennis have no team/script concept and remain genuinely unaffected.
+dfs_load_sport("golf")
 poolE <- data.table(player_id = 1:4, salary = rep(6000, 4), proj = rep(20, 4), sim_sd = rep(6, 4),
                     game_id = rep("X@Y", 4), team = c("X", "X", "Y", "Y"))
-Le <- get_loadings(poolE, "nfl")
-ok("get_loadings(nfl) returns a plain numeric vector, not regime_loadings", is.numeric(Le) && !inherits(Le, "regime_loadings"))
-sim <- tryCatch(slate_sim(poolE, Le, team_loadings = get_team_loadings(poolE, "nfl"), n_sims = 5000L, seed = 5L), error = function(e) NULL)
-ok("slate_sim runs clean with plain-vector loadings (NFL)", !is.null(sim) && all(dim(sim$scores) == c(4L, 5000L)))
+Le <- get_loadings(poolE, "golf")
+ok("get_loadings(golf) returns a plain numeric vector, not regime_loadings", is.numeric(Le) && !inherits(Le, "regime_loadings"))
+sim <- tryCatch(slate_sim(poolE, Le, team_loadings = get_team_loadings(poolE, "golf"), n_sims = 5000L, seed = 5L), error = function(e) NULL)
+ok("slate_sim runs clean with plain-vector loadings (golf)", !is.null(sim) && all(dim(sim$scores) == c(4L, 5000L)))
 
 cat(sprintf("\n%d passed, %d failed\n", .pass, .fail))
 if (.fail > 0L) quit(status = 1L)
