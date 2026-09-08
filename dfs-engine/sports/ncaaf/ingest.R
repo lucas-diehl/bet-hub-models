@@ -55,6 +55,39 @@ cfb_src_json    <- function(year, week) file.path(cfb_src_dir(), sprintf("games_
   "receiving:YDS" = "rec_yds", "receiving:TD" = "rec_td", "receiving:REC" = "receptions",
   "fumbles:LOST" = "fumbles_lost")
 
+# team-level final scores for one week's games (already present on the SAME cached JSON
+# as the player box scores -- g$teams[[]]$points -- no extra API call needed). Used for
+# real-margin / game-script correlation calibration (tests/validate_ncaaf_game_script_correlation.R).
+.cfb_team_scores_week <- function(gj, year, week) {
+  if (is.null(gj) || !length(gj)) return(NULL)
+  rbindlist(lapply(gj, function(g) {
+    rbindlist(lapply(g$teams %||% list(), function(tm) {
+      data.table(game_id = g$id %||% NA_integer_, team = tm$team %||% NA_character_,
+                 points = suppressWarnings(as.numeric(tm$points %||% NA)))
+    }), fill = TRUE)
+  }), fill = TRUE)[, `:=`(season = year, wk = week)]
+}
+
+# Build a (game_id, team, points, opp, opp_points) table from ALL cached raw week JSONs
+# (data/raw/ncaaf_src/*.json) -- reads local cache only, zero new API calls.
+cfb_game_scores <- function(years = NULL, weeks = 1:15) {
+  fs <- list.files(cfb_src_dir(), pattern = "^games_players_\\d+_wk\\d+\\.json$", full.names = TRUE)
+  if (!length(fs)) return(NULL)
+  meta <- regmatches(basename(fs), regexec("games_players_(\\d+)_wk(\\d+)\\.json", basename(fs)))
+  yr <- as.integer(vapply(meta, `[`, character(1), 2)); wk <- as.integer(vapply(meta, `[`, character(1), 3))
+  keep <- if (is.null(years)) rep(TRUE, length(fs)) else yr %in% years & wk %in% weeks
+  rows <- rbindlist(lapply(which(keep), function(i) {
+    gj <- tryCatch(jsonlite::fromJSON(fs[i], simplifyVector = FALSE), error = function(e) NULL)
+    tryCatch(.cfb_team_scores_week(gj, yr[i], wk[i]), error = function(e) NULL)
+  }), fill = TRUE)
+  if (is.null(rows) || !nrow(rows)) return(NULL)
+  rows <- rows[!is.na(team) & is.finite(points)]
+  self <- rows[, .(game_id, team, points)]
+  opp  <- rows[, .(game_id, opp = team, opp_points = points)]
+  m <- merge(self, opp, by = "game_id", allow.cartesian = TRUE)[team != opp]
+  unique(merge(m, rows[, .(game_id, season, wk)], by = "game_id"), by = c("game_id", "team"))
+}
+
 # flatten one week's nested games -> long (game_id, team, athlete_id, player, category, stat_name, value)
 .cfb_flatten_week <- function(gj, year, week) {
   if (is.null(gj) || !length(gj)) return(NULL)
