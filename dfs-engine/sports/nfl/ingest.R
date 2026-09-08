@@ -34,6 +34,34 @@ nfl_src_csv     <- function(year) file.path(nfl_src_dir(), sprintf("stats_player
   writeLines(txt, local); fread(text = txt, showProgress = FALSE)
 }
 
+# nflverse SCHEDULE/RESULTS (separate release from player stats -- has real final scores
+# + the historical closing Vegas spread_line, both absent from stats_player). Free, no
+# key. Used for game-script correlation calibration (tests/validate_nfl_game_script_correlation.R)
+# and, live, as the pregame exp_margin source (real spread when available).
+NFL_SCHED_URL <- function() Sys.getenv("NFL_SCHEDULES_URL",
+  "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv")
+nfl_games_path <- function() dfs_path("data", "raw", "nfl_games.rds")
+
+nfl_game_scores <- function(seasons = NULL, refresh = FALSE) {
+  if (!refresh && file.exists(nfl_games_path())) {
+    G <- as.data.table(readRDS(nfl_games_path()))
+  } else {
+    resp <- tryCatch(httr2::request(NFL_SCHED_URL()) |> httr2::req_user_agent("DFS-ENGINE/1.0") |>
+                       httr2::req_timeout(60) |> httr2::req_retry(max_tries = 3) |> httr2::req_perform(),
+                     error = function(e) NULL)
+    if (is.null(resp) || httr2::resp_status(resp) != 200) {
+      if (file.exists(nfl_games_path())) G <- as.data.table(readRDS(nfl_games_path()))
+      else stop("nfl_game_scores: schedule fetch failed and no cache present")
+    } else {
+      G <- fread(text = httr2::resp_body_string(resp), showProgress = FALSE)
+      dir.create(dirname(nfl_games_path()), recursive = TRUE, showWarnings = FALSE)
+      saveRDS(G, nfl_games_path())
+    }
+  }
+  if (!is.null(seasons)) G <- G[season %in% seasons]
+  G[game_type == "REG" & is.finite(home_score) & is.finite(away_score)]
+}
+
 # DK points from nflverse components (reuses the tested nfl_dk_scoring contract).
 .nfl_dk_points <- function(D) {
   z <- function(col) { v <- if (col %in% names(D)) as.numeric(D[[col]]) else 0; fifelse(is.na(v), 0, v) }
