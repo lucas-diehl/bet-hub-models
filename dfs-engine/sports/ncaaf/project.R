@@ -64,6 +64,16 @@ ncaaf_project_players <- function(slate) {
   if (any(miss)) { bl <- .ncaaf_baseline(pool)
     for (c1 in c("proj", "sim_sd", "ceil", "floor", "p_zero")) pool[[c1]][miss] <- bl[[c1]][miss] }
 
+  # --- pregame expected |margin| for scenario-conditioned correlation (ncaaf_correlation)
+  # TODO: wire real Vegas spreads in (vegas_games("ncaaf", slate$date) already works, same
+  # ESPN-lines infra as WNBA) once a DK-abbreviation <-> ESPN-team-name alias map exists
+  # (CFBD/ESPN use full school names; DK draftables use its own abbreviations — a fuzzy
+  # join without a verified alias table risks silent mismatches, so deferred rather than
+  # shipped unverified). Until then, use the empirical mean |margin| (~18.8, measured in
+  # tests/validate_ncaaf_game_script_correlation.R) as a neutral per-game prior — better
+  # than defaulting to 0, which would wrongly imply every game is a toss-up.
+  pool[, exp_margin := 18.8]
+
   # cold-start projected ownership (chalk tracks value); refined once trained (train_ownership_model)
   own_pred <- tryCatch(predict_ownership(pool, "ncaaf"), error = function(e) NULL)
   if (!is.null(own_pred)) { pool[, own := own_pred]; msg("  NCAAF ownership: trained model") }
@@ -74,5 +84,5 @@ ncaaf_project_players <- function(slate) {
   }
 
   persist_salaries(pool, slate$slate_id, "ncaaf")
-  pool[, .(player_id, player_name, dk_id, team, game_id, position, salary, proj, sim_sd, ceil, floor, p_zero, own)]
+  pool[, .(player_id, player_name, dk_id, team, game_id, position, salary, proj, sim_sd, ceil, floor, p_zero, own, exp_margin)]
 }
