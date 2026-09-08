@@ -167,6 +167,22 @@ nfl_project_players <- function(slate) {
     }
   }
 
+  # --- DROP players not on an active roster (IR/cut/retired/practice-squad) -----------
+  # Closes a real blind spot in apply_inactives(): the ESPN injury feed only reports
+  # THIS WEEK's game-status, so a long-term IR player (season-ending, placed weeks ago)
+  # can fall off it entirely — see nfl_inactive_roster() for the confirmed case (Ricky
+  # Pearsall, on IR, absent from the injury feed but still in DK's salary file). ALL
+  # positions, not just QB — this is a roster-eligibility signal, not a depth-chart one.
+  inactive <- tryCatch(nfl_inactive_roster(), error = function(e) NULL)
+  if (!is.null(inactive) && "team" %in% names(pool)) {
+    key <- paste(pool$norm, toupper(pool$team))
+    ikey <- paste(inactive$norm, inactive$team)
+    drop_ir <- key %in% ikey
+    if (any(drop_ir)) { msg(sprintf("  nfl: dropped %d player(s) not on an active roster (%s)", sum(drop_ir),
+                                    paste(head(pool$player_name[drop_ir], 5), collapse = ", ")))
+      pool <- pool[!drop_ir] }
+  }
+
   # --- DROP backup QBs (won't play, so their salary-baseline "value" is fictional) -----
   # QB is a clean 1-starter-per-team position (unlike RB/WR/TE committees) — see
   # nfl_qb_starters() for the depth-chart source + rationale. Skips (never blocks the
