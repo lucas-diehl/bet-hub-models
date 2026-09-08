@@ -40,7 +40,10 @@ jobs:
 
       - name: Run tests
         working-directory: dfs-engine
-        run: Rscript tests/test_validate_projection.R
+        run: |
+          Rscript tests/test_validate_projection.R
+          Rscript tests/test_scoring_roster.R
+          Rscript tests/test_regime_correlation.R
       - name: Simulator/engine parity
         working-directory: dfs-engine
         run: |
