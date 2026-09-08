@@ -378,6 +378,18 @@ To reproduce a given day's outputs deterministically:
 
 **Verified:** live pull correctly excludes Wentz; a real slate (`run_slate("nfl", date="2026-09-07", ...)`) resolved to exactly 32 QBs, one per team, all recognizable current starters. Regression test: `tests/test_nfl_qb_starters.R`.
 
+## 21. NFL: drop players not on an active roster — a DIFFERENT blind spot than §20 (2026-09)
+
+**Bug (real, user-reported):** Ricky Pearsall (SF) was appearing in lineups despite being on **season-ending IR**. Root cause is *not* the same as §20's — `apply_inactives()`'s ESPN injury feed is a "status for THIS WEEK's game" report; a player placed on long-term IR weeks ago can fall off it entirely once he's no longer "in question" for the current week's game. Confirmed live: `injury_report("nfl")` (800 real rows) had **no entry for Pearsall at all**, yet DK's salary feed still listed him.
+
+**Fix:** `sports/nfl/ingest.R::nfl_inactive_roster()` pulls nflverse's free, no-key, weekly **roster status** dataset (`roster_weekly_<year>.csv` — a *roster-eligibility* signal, independent of the injury-news cycle) and flags anyone with status `RES` (reserve/IR/PUP/NFI), `CUT`, `RET`, `EXE`, or `DEV` (practice squad). Applied in `project.R` across **all positions** (broader than §20's QB-only fix — this is about roster eligibility, not depth-chart rank).
+
+**A real bug caught and fixed during development, not just the headline case:** matching by name alone is unsafe — "DeVonta Smith" (PHI WR, active, a clear starter) and "Devonta Smith" (CAR practice-squad DB, different capitalization) share a normalized name. An early version of this fix wrongly excluded the *active* Eagles starter too, caught by manually checking the drop list rather than trusting the Pearsall fix alone. Fixed by keying on **(normalized name, team)**, with an explicit tie-break: an `ACT` row for the same identity always wins over a stale/ambiguous inactive one — wrongly excluding a real player is worse than the bug this closes.
+
+**Verified:** Pearsall correctly dropped; DeVonta Smith correctly kept; 251 players dropped total on a real live slate, salary range $2,500–$5,100 (consistent with genuine inactives — no plausible starter caught). Regression test `tests/test_nfl_active_roster.R` asserts the DeVonta-Smith-collision case specifically, not just the Pearsall case, so this exact failure mode can't silently regress.
+
+**Not yet extended:** WNBA/golf/tennis don't need this (no long-term-IR concept in the same way, or no roster/depth structure at all). NCAAF has the exact same theoretical exposure (a CFB player on season-ending injury could similarly fall off whatever injury signal exists) but CFBD has no equivalent free roster-status dataset — flagged as a gap for the CFB parity work, not solved here.
+
 ---
 
 *Questions the previous maintainer would answer: “is the training loop actually running in Actions?” (see §12 — it wasn't for golf/master and tennis/wnba models; `train.yml` PR #1 fixes it). “Can I trust the sim's GPP EV?” (no — §10). “What's the real edge target?” (contest selection + differentiation + ownership, not more stud-projection accuracy).*
