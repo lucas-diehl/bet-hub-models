@@ -1,16 +1,20 @@
 name: cfb
 
-# College-football weekly picks feed. Best-effort cron (Mon + Thu mornings ET for the
-# full weekly rebuild; Sun evening + Mon early morning for opening-line capture — see
-# below). Two live signals: UNDER totals (always on) and Arm O (proj_vs_open, tag
-# OPEN_ATS) — betting the model against the OPENING line, which needs the number
-# frozen as early in the week as possible (the edge decays toward kickoff). Replaces
-# the local machine's CFB-PPP-Weekly + CFB-Open-Capture-Sun/-Mon tasks (all disabled —
-# see DATA_SCIENTIST_HANDOFF.md §9/§5.3 for why those needed this).
+# College-football picks + grading feed. Two live signals: UNDER totals (always on)
+# and Arm O (proj_vs_open, tag OPEN_ATS) — betting the model against the OPENING
+# line, which needs the number frozen as early in the week as possible (the edge
+# decays toward kickoff). Replaces the local machine's CFB-PPP-Weekly +
+# CFB-Open-Capture-Sun/-Mon tasks (all disabled — see DATA_SCIENTIST_HANDOFF.md
+# §9/§5.3 for why those needed this).
+#
+# DAILY full run (not just Mon/Thu): CFB games finish on every day of the week
+# (Tue-Mon), and weekly_update.R grades per-GAME as soon as it's final — a Mon/Thu-
+# only cadence left games from other days ungraded for up to a week. weekly_update.R
+# self-gates (idle check + "rebuild only if new completed games"), so a quiet day is
+# cheap; this just makes sure a finished game is graded same-day/next-day, not later.
 on:
   schedule:
-    - cron: "0 13 * * 1"   # Mon ~09:00 ET — full weekly rebuild + picks (+ 09 backstop)
-    - cron: "0 13 * * 4"   # Thu ~09:00 ET — refresh with mid-week lines (+ 09 backstop)
+    - cron: "0 13 * * *"   # daily ~09:00 ET — post + grade whatever finished (self-gated cost)
     - cron: "0 0 * * 1"    # Sun ~20:00 ET — capture opening lines ASAP (light, no rebuild)
     - cron: "0 10 * * 1"   # Mon ~06:00 ET — capture opening lines again, before the 09:00 rebuild
   workflow_dispatch:
@@ -68,7 +72,7 @@ jobs:
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("cfbfastR","dplyr","tidyr","stringr","lubridate","zoo","purrr","readr","tibble","jsonlite","xgboost","httr2"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
-      - name: Run cfb (full rebuild on Mon/Thu + manual; opening-line capture only on the extra Sun/Mon crons)
+      - name: Run cfb (full daily rebuild + manual; opening-line capture only on the extra Sun/Mon crons)
         working-directory: cfb-modeling
         run: |
           mkdir -p data_cache   # cold runner may have no cache dir yet

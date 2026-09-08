@@ -112,8 +112,15 @@ if (need_rebuild) {
 # ---- 4. write/grade the feed (current season only) -------------------------
 future <- gs %>% filter(start >= now - 12*3600)
 pick_week <- if (nrow(future) > 0) min(future$week, na.rm = TRUE) else max(gs$week, na.rm = TRUE)
-grade_weeks <- gs %>% group_by(week) %>% summarise(all_final = all(final), .groups = "drop") %>%
-  filter(all_final, week >= pick_week - GRADE_LOOKBACK, week < pick_week) %>% pull(week)
+# Re-check every week in the lookback window, NOT just weeks that are 100% final. A
+# CFB week spans Tue-Mon (games finish on different days), so requiring all_final
+# meant a Monday-night game's own week never got re-graded until the WHOLE week
+# (including that Monday game plus everything after it) was done — some weeks never
+# hit that. 07_write_feed.R already grades per-GAME (glu_l[[key]]$completed), so it's
+# safe/cheap to call it for any recent week every run; it just skips what isn't final
+# yet and re-posts nothing that's already started.
+grade_weeks <- gs %>% distinct(week) %>%
+  filter(week >= pick_week - GRADE_LOOKBACK, week < pick_week) %>% pull(week)
 weeks <- sort(unique(c(grade_weeks, pick_week))); weeks <- weeks[is.finite(weeks)]
 log("pick week", pick_week, "| grade weeks", if (length(grade_weeks)) paste(grade_weeks, collapse=",") else "none")
 
