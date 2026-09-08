@@ -127,7 +127,11 @@ log("pick week", pick_week, "| grade weeks", if (length(grade_weeks)) paste(grad
 for (w in weeks)
   run_step("07_write_feed.R", setenv = list(PPP_SEASON = as.character(season), PPP_WEEK = as.character(w), PPP_MODE = "PAPER"))
 
-# full-slate model board for the Extras tab (every game + model numbers), current week only
-run_step("08_write_slate.R", setenv = list(PPP_SEASON = as.character(season), PPP_WEEK = as.character(pick_week), PPP_MODE = "PAPER"))
+# full-slate model board for the Extras tab (every game + model numbers). Loop the
+# same `weeks` as 07 above (not just pick_week) — otherwise a past week's board file
+# never gets refreshed once a game in it finishes, so the site's board grading
+# (completed/final_margin/final_total) stays stale even after results are graded.
+for (w in weeks)
+  run_step("08_write_slate.R", setenv = list(PPP_SEASON = as.character(season), PPP_WEEK = as.character(w), PPP_MODE = "PAPER"))
 
 log("=== weekly_update done ===")
