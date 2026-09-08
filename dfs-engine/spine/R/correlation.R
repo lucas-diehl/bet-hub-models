@@ -29,31 +29,56 @@ loadings_from_rho <- function(player_id, game_id, rho = 0.4, signs = NULL) {
 
 # Resolve loadings for a pool: call the sport's correlation() plugin, align to the
 # pool's player_id order, clamp, and fill missing with 0 (independent). Returns a
-# numeric vector `load` parallel to pool rows.
+# numeric vector `load` parallel to pool rows — OR, if the plugin's correlation()
+# output also includes `load_alt` + `p_alt` columns (scenario-conditioned correlation,
+# e.g. sports/wnba/correlate.R's close/blowout regimes), a `regime_loadings` object
+# list(base, alt, p_alt) that slate_sim() detects and blends per-simulation. Plugins
+# without load_alt/p_alt are completely unaffected — same plain vector as always.
 get_loadings <- function(pool, sport) {
   spec <- get_sport(sport)
-  load_vec <- rep(0, nrow(pool))
+  load_vec <- rep(0, nrow(pool)); alt_vec <- rep(0, nrow(pool)); p_alt_vec <- rep(0, nrow(pool))
+  has_alt <- FALSE
   if (!is.null(spec$correlation)) {
     cl <- tryCatch(spec$correlation(pool), error = function(e) { msg("  correlation() failed:", conditionMessage(e)); NULL })
     if (!is.null(cl) && nrow(cl)) {
       cl <- as.data.table(cl)
       m <- match(pool$player_id, cl$player_id)
       load_vec <- ifelse(is.na(m), 0, cl$load[m])
+      if (all(c("load_alt", "p_alt") %in% names(cl))) {
+        has_alt <- TRUE
+        alt_vec   <- ifelse(is.na(m), 0, cl$load_alt[m])
+        p_alt_vec <- ifelse(is.na(m), 0, cl$p_alt[m])
+      }
     }
   }
-  pmin(pmax(load_vec, -0.99), 0.99)
+  load_vec <- pmin(pmax(load_vec, -0.99), 0.99)
+  if (!has_alt) return(load_vec)
+  structure(list(base = load_vec, alt = pmin(pmax(alt_vec, -0.99), 0.99),
+                 p_alt = pmin(pmax(p_alt_vec, 0), 1)), class = "regime_loadings")
 }
 
-# Optional SECOND-factor (team) loadings for stacking sports (NFL/NBA). Reads a
+# Optional SECOND-factor (team) loadings for stacking sports (NFL/NBA/WNBA). Reads a
 # `team_load` column from the sport's correlation() output; 0 if absent (single-factor).
+# If the plugin ALSO supplies `team_load_alt` (+ `load_alt`/`p_alt` for the game factor —
+# script only needs one shared regime draw), returns a `regime_loadings` object like
+# get_loadings() above so slate_sim() blends both factors from the SAME per-sim draw.
 get_team_loadings <- function(pool, sport) {
-  spec <- get_sport(sport); tv <- rep(0, nrow(pool))
+  spec <- get_sport(sport); tv <- rep(0, nrow(pool)); alt_tv <- rep(0, nrow(pool)); p_alt_vec <- rep(0, nrow(pool))
+  has_alt <- FALSE
   if (!is.null(spec$correlation)) {
     cl <- tryCatch(spec$correlation(pool), error = function(e) NULL)
     if (!is.null(cl) && "team_load" %in% names(cl) && nrow(cl)) {
       cl <- as.data.table(cl); m <- match(pool$player_id, cl$player_id)
       tv <- ifelse(is.na(m), 0, cl$team_load[m])
+      if (all(c("team_load_alt", "p_alt") %in% names(cl))) {
+        has_alt <- TRUE
+        alt_tv    <- ifelse(is.na(m), 0, cl$team_load_alt[m])
+        p_alt_vec <- ifelse(is.na(m), 0, cl$p_alt[m])
+      }
     }
   }
-  pmin(pmax(tv, -0.99), 0.99)
+  tv <- pmin(pmax(tv, -0.99), 0.99)
+  if (!has_alt) return(tv)
+  structure(list(base = tv, alt = pmin(pmax(alt_tv, -0.99), 0.99),
+                 p_alt = pmin(pmax(p_alt_vec, 0), 1)), class = "regime_loadings")
 }
