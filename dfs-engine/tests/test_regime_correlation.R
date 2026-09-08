@@ -16,7 +16,7 @@ local({
   bp <- file.path(root, "bootstrap.R"); if (!file.exists(bp)) bp <- file.path(getwd(), "bootstrap.R")
   source(bp)
 })
-dfs_load_spine(); dfs_load_sport("wnba"); dfs_load_sport("nfl")
+dfs_load_spine(); dfs_load_sport("wnba"); dfs_load_sport("nfl"); dfs_load_sport("ncaaf")
 suppressPackageStartupMessages(library(data.table))
 
 .pass <- 0L; .fail <- 0L
@@ -62,6 +62,23 @@ ok("get_team_loadings(wnba) returns a regime_loadings object", inherits(Tld, "re
 ok("p_alt in [0,1]", all(Ld$p_alt >= 0 & Ld$p_alt <= 1))
 sim <- tryCatch(slate_sim(poolD, Ld, team_loadings = Tld, n_sims = 20000L, seed = 4L), error = function(e) NULL)
 ok("slate_sim runs clean on real wnba_correlation() output", !is.null(sim) && all(dim(sim$scores) == c(6L, 20000L)))
+
+cat("regime_loadings: NCAAF isolated regime targets + end-to-end (team_load=0 both regimes)\n")
+poolF <- data.table(player_id = 1:4, salary = rep(6000, 4), proj = rep(20, 4), sim_sd = rep(6, 4),
+                    game_id = rep("A@B", 4), team = c("A", "A", "B", "B"))
+Lf <- structure(list(base = rep(sqrt(0.060), 4), alt = sqrt(0.082) * c(1, 1, -1, -1), p_alt = rep(0, 4)), class = "regime_loadings")
+sim <- slate_sim(poolF, Lf, n_sims = 80000L, seed = 6L)
+z <- scale(t(sim$scores))
+ok("ncaaf close regime: opponent cor ~ +0.060", close_enough(cor(z[, 1], z[, 3]), 0.060, 0.02))
+Lf$p_alt <- rep(1, 4)
+sim <- slate_sim(poolF, Lf, n_sims = 80000L, seed = 7L)
+z <- scale(t(sim$scores))
+ok("ncaaf blowout regime: opponent cor ~ -0.082", close_enough(cor(z[, 1], z[, 3]), -0.082, 0.02))
+poolG <- copy(poolF); poolG[, exp_margin := 10]
+Lg <- get_loadings(poolG, "ncaaf")
+ok("get_loadings(ncaaf) returns a regime_loadings object", inherits(Lg, "regime_loadings"))
+sim <- tryCatch(slate_sim(poolG, Lg, n_sims = 20000L, seed = 8L), error = function(e) NULL)
+ok("slate_sim runs clean on real ncaaf_correlation() output", !is.null(sim) && all(dim(sim$scores) == c(4L, 20000L)))
 
 cat("regime_loadings: OTHER sports completely unaffected (backward compatibility)\n")
 poolE <- data.table(player_id = 1:4, salary = rep(6000, 4), proj = rep(20, 4), sim_sd = rep(6, 4),

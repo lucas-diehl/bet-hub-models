@@ -20,7 +20,7 @@ NCAAF_ROSTER <- list(
 register_sport("ncaaf", list(
   ingest          = if (exists("cfb_ingest")) cfb_ingest else NULL,
   project_players = if (exists("ncaaf_project_players")) ncaaf_project_players else NULL,
-  correlation     = NULL,
+  correlation     = if (exists("ncaaf_correlation")) ncaaf_correlation else NULL,
   roster_rules    = NCAAF_ROSTER,
   dk_scoring      = cfb_dk_scoring
 ))
