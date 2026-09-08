@@ -62,6 +62,44 @@ nfl_game_scores <- function(seasons = NULL, refresh = FALSE) {
   G[game_type == "REG" & is.finite(home_score) & is.finite(away_score)]
 }
 
+# nflverse DEPTH CHARTS (free, no key, updated ~daily from team-reported charts) — the
+# only reliable "will this QB actually play" signal for a HEALTHY backup. A benched
+# 3rd-stringer (e.g. a real case: Carson Wentz, MIN, pos_rank 3) is not "injured" so the
+# ESPN-injury-based apply_inactives() safeguard can't catch him — he'd otherwise get a
+# small nonzero salary-baseline projection (his DK price is very low, and the baseline
+# formula scales proj ~linearly with salary) that a min-salary-hungry optimizer will
+# happily plug in as "cheap value" despite his real expected output being ~0.
+# QB only (per user request) — it's a clean 1-starter-per-team position, unlike
+# RB/WR/TE where committee backfields make "backup" fuzzy and often still relevant.
+NFL_DEPTH_URL <- function() Sys.getenv("NFL_DEPTH_CHARTS_URL",
+  sprintf("https://github.com/nflverse/nflverse-data/releases/download/depth_charts/depth_charts_%d.csv",
+          as.integer(format(Sys.Date(), "%Y"))))
+nfl_depth_path <- function() dfs_path("data", "raw", "nfl_depth_charts.rds")
+
+# normalized set of CURRENT starting-QB names (one per team, latest snapshot only).
+# Cached ~12h (the file is ~50MB; "who's starting" doesn't change within a day). Falls
+# back to a stale cache on fetch failure, and to NULL (caller skips the filter) if
+# there's no cache at all — never blocks the pipeline on a missing/failed external pull.
+nfl_qb_starters <- function(max_age_hours = 12) {
+  p <- nfl_depth_path()
+  fresh <- file.exists(p) && difftime(Sys.time(), file.info(p)$mtime, units = "hours") < max_age_hours
+  if (!fresh) {
+    resp <- tryCatch(httr2::request(NFL_DEPTH_URL()) |> httr2::req_user_agent("DFS-ENGINE/1.0") |>
+                       httr2::req_timeout(90) |> httr2::req_perform(), error = function(e) NULL)
+    if (!is.null(resp) && httr2::resp_status(resp) == 200) {
+      DC <- tryCatch(fread(text = httr2::resp_body_string(resp), showProgress = FALSE), error = function(e) NULL)
+      if (!is.null(DC) && nrow(DC)) { dir.create(dirname(p), recursive = TRUE, showWarnings = FALSE); saveRDS(DC, p) }
+    }
+  }
+  if (!file.exists(p)) return(NULL)
+  DC <- tryCatch(as.data.table(readRDS(p)), error = function(e) NULL)
+  if (is.null(DC) || !nrow(DC) || !all(c("pos_abb", "pos_rank", "team", "player_name", "dt") %in% names(DC))) return(NULL)
+  Q <- DC[pos_abb == "QB"]; Q <- Q[dt == max(dt)]                # latest snapshot only
+  starters <- Q[pos_rank == 1, unique(norm_name(player_name))]
+  if (!length(starters)) return(NULL)
+  starters
+}
+
 # DK points from nflverse components (reuses the tested nfl_dk_scoring contract).
 .nfl_dk_points <- function(D) {
   z <- function(col) { v <- if (col %in% names(D)) as.numeric(D[[col]]) else 0; fifelse(is.na(v), 0, v) }
