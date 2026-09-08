@@ -243,8 +243,11 @@ build_sport_card <- function(sport, date, slate = "main", n_lineups = 8L,
       message = sprintf("%s plugin is in development — live for the 2026 season (kickoff September). The spine, optimizer, sim and reporting are ready; only the %s projection plugin remains.", disp, disp))))
 
   # golf (+golf_m80) pull from DataGolf/your model; others auto-detect today's DK slate
+  # unless a specific layout was chosen upstream (extra$override_slate — see
+  # build_sport_cards_multi(), the layout-picker path for nfl/ncaaf).
   if (psport != "golf") {
-    ms <- tryCatch(dk_main_slate(sport), error = function(e) NULL)
+    ms <- if (!is.null(extra$override_slate)) extra$override_slate
+          else tryCatch(dk_main_slate(sport), error = function(e) NULL)
     if (is.null(ms))
       return(c(base, list(status = "no_slate",
         message = sprintf("No live %s slate on DraftKings for %s yet. DK posts slates a few hours before lock — re-run closer to game time.", disp, date))))
@@ -255,6 +258,7 @@ build_sport_card <- function(sport, date, slate = "main", n_lineups = 8L,
       if (is.null(card)) return(c(base, list(status = "no_slate",
         message = sprintf("%s Showdown slate detected but not draftable yet (%s). Re-run closer to lock.", disp, ms$name))))
       card$sport <- sport; card$name <- paste0(disp, " (Showdown)")
+      card$slate_label <- ms$layout_label %||% "Showdown"
       return(card)
     }
     if (!dk_salary_csv_ready(dk_salary_path(sport, date, slate), date)) {  # classic: scrape detected group
@@ -271,7 +275,8 @@ build_sport_card <- function(sport, date, slate = "main", n_lineups = 8L,
   # 20-max GPP is the user's format across ALL sports -> use the backtest-tuned 20-entry
   # build (proj-ranked, ~0.5 exposure) with a 20-lineup set on every classic card.
   n_lineups <- 20L
-  r <- tryCatch(run_slate(psport, date = date, slate = slate, n_lineups = n_lineups, extra = extra,
+  extra_run <- extra; extra_run$override_slate <- NULL  # internal marker; don't leak into slate_obj
+  r <- tryCatch(run_slate(psport, date = date, slate = slate, n_lineups = n_lineups, extra = extra_run,
                           n_sims = 4000L, field_n = 1200L, n_cand = 300L, gpp_mode = "gpp20"),
                 error = function(e) e)
   if (inherits(r, "error"))
@@ -307,6 +312,7 @@ build_sport_card <- function(sport, date, slate = "main", n_lineups = 8L,
                                      error = function(e) NULL)
 
   c(base, list(status = "ready", slate_id = r$slate_id,
+    slate_label = extra$override_slate$layout_label %||% NULL,
     gates = list(cash = isTRUE(r$gates$cash_enabled), gpp = isTRUE(r$gates$gpp_enabled),
                  validated_on = r$gates$validated_on %||% NA),
     bankroll = opts$bankroll, daily_budget = round(attr(plan, "daily_budget"), 2),
@@ -500,7 +506,10 @@ publish_pools <- function(cards, date, site = "draftkings") {
     sdate <- sub("^.*-dk-(\\d{4}-\\d{2}-\\d{2})-.*$", "\\1", sid)
     if (!grepl("^\\d{4}-\\d{2}-\\d{2}$", sdate)) sdate <- as.character(date)
     s <- sub("^.*-\\d{4}-\\d{2}-\\d{2}-", "", sid)
-    slabel <- if (!nchar(s) || s == sid) "Main" else paste0(toupper(substr(s, 1, 1)), substr(s, 2, nchar(s)))
+    # Prefer the layout picker's human label (card$slate_label, e.g. "Full Slate (16
+    # games)") when set; else fall back to deriving one from the slate_id suffix.
+    slabel <- card$slate_label %||%
+      (if (!nchar(s) || s == sid) "Main" else paste0(toupper(substr(s, 1, 1)), substr(s, 2, nchar(s))))
     round <- NULL
     if (identical(m$slate_type, "single_round")) {
       rm <- regmatches(card$name %||% "", regexpr("Round\\s*\\d", card$name %||% ""))
@@ -513,8 +522,15 @@ publish_pools <- function(cards, date, site = "draftkings") {
       slate_type = if (is.na(m$slate_type)) NULL else m$slate_type, round = round,
       event = card$name, generated_at = now_iso))
     out <- c(meta, card$sim)
+    # Distinct layouts of the same sport+date (e.g. Full Slate / Alt Slate / Showdown,
+    # see build_sport_cards_multi()) must not overwrite each other's file — slug the
+    # slate tag (from the slate_id, which carries build_sport_card()'s `slate` param)
+    # into the filename whenever it's not the single-slate default "main".
+    stag <- sub("^.*-\\d{4}-\\d{2}-\\d{2}-", "", sid)
+    slug <- if (nchar(stag) && !identical(stag, sid) && !identical(stag, "main"))
+      paste0("_", gsub("[^a-z0-9]+", "", tolower(stag))) else ""
     fn <- if (!is.null(round)) sprintf("pool_%s_%s_%s_r%d.json", m$sport, sdate, site, round)
-          else sprintf("pool_%s_%s_%s.json", m$sport, sdate, site)
+          else sprintf("pool_%s_%s_%s%s.json", m$sport, sdate, site, slug)
     txt <- as.character(toJSON(out, auto_unbox = TRUE, na = "null", null = "null", digits = 4))
     writeLines(txt, file.path(outdir, fn), useBytes = TRUE)
     n <- n + 1L
@@ -524,16 +540,59 @@ publish_pools <- function(cards, date, site = "draftkings") {
   invisible(n)
 }
 
+# Team sports where DK routinely runs multiple concurrent, meaningfully-different
+# classic slates (e.g. tonight's smaller slate + a bigger later one) plus a Showdown —
+# build ALL of them instead of silently picking one, so the site can offer a layout
+# picker (Full Slate / Alt Slate / Showdown). Golf/wnba/tennis stay single-slate: they
+# don't have this ambiguity (one live slate at a time) and have their own dispatch
+# (DASH_GOLF_MAP, round detection, etc.) that a blanket multi-layout pass would fight.
+MULTI_LAYOUT_SPORTS <- c("nfl", "ncaaf")
+
+# Build one card per curated live layout for a multi-layout sport (see dk_slate_options()).
+# Falls back to a single no_slate/placeholder card (build_dashboard()'s normal shape)
+# when nothing is live, so callers never need to special-case an empty result.
+build_sport_cards_multi <- function(sport, date, n_lineups = 8L, opts = load_bankroll_opts(), extra = list()) {
+  disp <- DASH_SPORT_NAMES[[sport]] %||% toupper(sport)
+  opts_dt <- tryCatch(dk_slate_options(sport), error = function(e) NULL)
+  if (is.null(opts_dt) || !nrow(opts_dt))
+    return(list(list(sport = sport, name = disp, status = "no_slate",
+      message = sprintf("No live %s slate on DraftKings for %s yet. DK posts slates a few hours before lock — re-run closer to game time.", disp, date))))
+  lapply(seq_len(nrow(opts_dt)), function(i) {
+    o <- opts_dt[i]
+    ov <- list(draft_group_id = o$dg, contest_id = o$top_contest_id, name = o$top_name,
+               game_count = o$GameCount, is_showdown = isTRUE(o$is_showdown),
+               fee = o$top_fee, field = o$top_field, prize = o$top_prize,
+               layout_label = o$layout_label)
+    card <- tryCatch(
+      build_sport_card(sport, date, slate = o$slate_tag, n_lineups = n_lineups, opts = opts,
+                       extra = c(extra, list(override_slate = ov))),
+      error = function(e) list(sport = sport, name = paste0(disp, " — ", o$layout_label),
+                               status = "error", message = conditionMessage(e)))
+    if (identical(card$status, "ready") || is.null(card$status)) {
+      card$name <- paste0(disp, " — ", o$layout_label)
+      card$slate_label <- o$layout_label
+    }
+    card
+  })
+}
+
 build_dashboard <- function(sports = c("wnba","tennis","golf","golf_round","golf_m80","golf_opp","golf_opp_m80","nfl","ncaaf"),
                             contests = NULL, date = Sys.Date(), bankroll = NULL,
                             n_lineups = 8L, extra = list()) {
   opts <- load_bankroll_opts(); if (!is.null(bankroll)) opts$bankroll <- as.numeric(bankroll)
-  cards <- lapply(sports, function(s) {
-    msg("dashboard: building", s)
-    tryCatch(build_sport_card(s, date, n_lineups = n_lineups, opts = opts, extra = extra),
-             error = function(e) list(sport = s, name = DASH_SPORT_NAMES[[s]] %||% toupper(s),
-                                      status = "error", message = conditionMessage(e)))
-  })
+  cards <- unlist(lapply(sports, function(s) {
+    if (s %in% MULTI_LAYOUT_SPORTS) {
+      msg("dashboard: building", s, "(all live layouts)")
+      tryCatch(build_sport_cards_multi(s, date, n_lineups = n_lineups, opts = opts, extra = extra),
+               error = function(e) list(list(sport = s, name = DASH_SPORT_NAMES[[s]] %||% toupper(s),
+                                        status = "error", message = conditionMessage(e))))
+    } else {
+      msg("dashboard: building", s)
+      list(tryCatch(build_sport_card(s, date, n_lineups = n_lineups, opts = opts, extra = extra),
+               error = function(e) list(sport = s, name = DASH_SPORT_NAMES[[s]] %||% toupper(s),
+                                        status = "error", message = conditionMessage(e))))
+    }
+  }), recursive = FALSE)
   for (cid in (contests %||% character(0))) {
     msg("dashboard: building contest", cid)
     card <- tryCatch(build_contest_card(cid, date = date, n_lineups = min(n_lineups, 6L), opts = opts),

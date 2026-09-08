@@ -44,6 +44,11 @@ DK_SPORT_MATCH <- list(
   tennis= function(n, lg) grepl("\\bten\\b|tennis", n, ignore.case = TRUE) | toupper(lg) %in% c("TEN","TENNIS"),
   golf  = function(n, lg) grepl("pga|golf", n, ignore.case = TRUE) | toupper(lg) %in% c("GOLF","PGA"))
 
+# Non-standard formats that technically have GameCount > 1 but are NOT real salary-cap
+# classic slates (draft-and-hold, feeder/satellite contests, slow-draft sit-and-go) —
+# a draft group whose only real contests are these must never be offered as a slate.
+JUNK_SLATE_RE <- "satellite|madden stream|best ball|sit\\s*[&+]\\s*go"
+
 # Find a sport's available slates today by scanning the Contests list (robust to the
 # WNBA-under-NBA quirk). Per draft group, returns a representative guaranteed GPP
 # (for the real payout) + game count. Sorted: classic multi-game first, then prize.
@@ -67,8 +72,58 @@ dk_find_slates <- function(sport) {
     .(top_contest_id = g$id[1], top_name = g$n[1], top_fee = g$fee[1],
       top_field = g$field[1], top_prize = g$prize[1], n_contests = .N) }, by = dg]
   slates <- merge(slates, dgm, by = "dg", all.x = TRUE)
+  # a draft group's REPRESENTATIVE contest can still be a satellite/Best Ball/etc. even
+  # with the gpp filter above (if that's the only contest that draft group has) — drop
+  # the whole slate in that case, not just deprioritize it.
+  slates <- slates[!grepl(JUNK_SLATE_RE, top_name, ignore.case = TRUE)]
+  if (!nrow(slates)) return(NULL)
   setorder(slates, -GameCount, -top_prize)
   slates[]
+}
+
+# Curated "layout" choices for a team sport: distinct classic slates (by game count,
+# soonest calendar day first — DK often runs tonight's smaller slate alongside a
+# bigger slate for a later day, so soonest-day wins over biggest-overall) plus the
+# single live Showdown, each tagged with a stable slate_tag (for salary-CSV caching,
+# so multiple layouts' scrapes don't clobber each other) and a human layout_label
+# (shown in the site's slate picker). Returns NULL if nothing is live.
+dk_slate_options <- function(sport, max_classic = 2L) {
+  s <- dk_find_slates(sport)
+  if (is.null(s) || !nrow(s)) return(NULL)
+
+  classic <- s[GameCount > 1 & !grepl("showdown|captain", top_name, ignore.case = TRUE)]
+  out <- data.table()
+  if (nrow(classic)) {
+    classic[, day := as.Date(substr(StartDateEst, 1, 10))]
+    setorder(classic, day, -GameCount, -top_field)
+    keep <- classic[, .I[1], by = GameCount]$V1        # soonest+biggest rep per distinct game count
+    reps <- classic[sort(keep)]
+    setorder(reps, day, -GameCount)
+    reps <- head(reps, max_classic)
+    reps[, is_showdown := FALSE]
+    reps[, slate_tag := paste0("main", .I)]
+    reps[, layout_label := ifelse(
+      .I == 1, sprintf("Full Slate (%d games)", GameCount),
+      sprintf("Alt Slate (%d games, %s)", GameCount, format(day, "%a %b %d")))]
+    out <- rbind(out, reps, fill = TRUE)
+  }
+  single <- s[GameCount == 1]
+  if (nrow(single)) {
+    setorder(single, StartDateEst)
+    pick <- single[1]
+    is_sd <- tryCatch({
+      j <- .dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", pick$dg))
+      uniqueN(as.data.table(j$draftables)$rosterSlotId) == 2
+    }, error = function(e) TRUE)
+    if (isTRUE(is_sd)) {
+      matchup <- sub("^.*\\((.*)\\)\\s*$", "\\1", pick$top_name)
+      pick[, is_showdown := TRUE]; pick[, slate_tag := "showdown"]
+      pick[, layout_label := sprintf("Showdown (%s)", matchup)]
+      out <- rbind(out, pick, fill = TRUE)
+    }
+  }
+  if (!nrow(out)) return(NULL)
+  out[]
 }
 
 # The main slate to play for a sport: classic multi-game if available, else the
