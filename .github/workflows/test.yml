@@ -45,6 +45,7 @@ jobs:
           Rscript tests/test_scoring_roster.R
           Rscript tests/test_regime_correlation.R
           Rscript tests/test_nfl_qb_starters.R
+          Rscript tests/test_nfl_active_roster.R
       - name: Simulator/engine parity
         working-directory: dfs-engine
         run: |
