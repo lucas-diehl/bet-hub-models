@@ -87,7 +87,7 @@ dk_find_slates <- function(sport) {
 # single live Showdown, each tagged with a stable slate_tag (for salary-CSV caching,
 # so multiple layouts' scrapes don't clobber each other) and a human layout_label
 # (shown in the site's slate picker). Returns NULL if nothing is live.
-dk_slate_options <- function(sport, max_classic = 2L) {
+dk_slate_options <- function(sport, max_classic = 2L, max_showdown = 4L) {
   s <- dk_find_slates(sport)
   if (is.null(s) || !nrow(s)) return(NULL)
 
@@ -107,20 +107,34 @@ dk_slate_options <- function(sport, max_classic = 2L) {
       sprintf("Alt Slate (%d games, %s)", GameCount, format(day, "%a %b %d")))]
     out <- rbind(out, reps, fill = TRUE)
   }
-  single <- s[GameCount == 1]
+  # ALL live single-game slates, not just the earliest kickoff — DK commonly runs
+  # SEVERAL simultaneous Showdown/Captain-Mode contests at once (one per marquee
+  # matchup: TNF, SNF, MNF, a featured Sunday game, etc), each its own draft group
+  # (dk_find_slates() groups by `dg`, so they already arrive as separate rows here).
+  # Picking only single[1] silently dropped every showdown but the soonest one.
+  # exclude formats the roster/scoring logic doesn't support: Snake draft (4-player
+  # snake, not CPT+FLEX — same exclusion pattern as golf's round detection) and
+  # in-game/live contests (start mid-game, a different product entirely, not a
+  # pre-game builder). A rosterSlotId count alone can't reliably distinguish these.
+  single <- s[GameCount == 1 & !grepl("snake|in-game|2nd half|1st half|live", top_name, ignore.case = TRUE)]
   if (nrow(single)) {
     setorder(single, StartDateEst)
-    pick <- single[1]
-    is_sd <- tryCatch({
-      j <- .dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", pick$dg))
-      uniqueN(as.data.table(j$draftables)$rosterSlotId) == 2
-    }, error = function(e) TRUE)
-    if (isTRUE(is_sd)) {
-      matchup <- sub("^.*\\((.*)\\)\\s*$", "\\1", pick$top_name)
-      pick[, is_showdown := TRUE]; pick[, slate_tag := "showdown"]
-      pick[, layout_label := sprintf("Showdown (%s)", matchup)]
-      out <- rbind(out, pick, fill = TRUE)
+    single <- head(single, max_showdown)
+    sd_rows <- data.table()
+    for (i in seq_len(nrow(single))) {
+      pick <- single[i]
+      is_sd <- tryCatch({
+        j <- .dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", pick$dg))
+        uniqueN(as.data.table(j$draftables)$rosterSlotId) == 2
+      }, error = function(e) TRUE)
+      if (isTRUE(is_sd)) {
+        matchup <- sub("^.*\\((.*)\\)\\s*$", "\\1", pick$top_name)
+        pick[, is_showdown := TRUE]; pick[, slate_tag := paste0("showdown", i)]
+        pick[, layout_label := sprintf("Showdown (%s)", matchup)]
+        sd_rows <- rbind(sd_rows, pick, fill = TRUE)
+      }
     }
+    if (nrow(sd_rows)) out <- rbind(out, sd_rows, fill = TRUE)
   }
   if (!nrow(out)) return(NULL)
   out[]
