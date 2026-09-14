@@ -104,7 +104,24 @@ sync_ownership <- function(extra_ids = NULL) {
   # watchlist are added so a just-entered contest is retried until it settles.
   ids <- unique(c(dk_settled_contests(), dk_my_contests(), dk_watchlist(), extra_ids))
   if (!length(ids)) { msg("No entered/tracked contests found to sync."); return(invisible(0L)) }
-  already <- tryCatch(unique(db_query("SELECT contest_id FROM ownership WHERE actual_pct IS NOT NULL")$contest_id),
+  # "Already logged" must mean logged USEFULLY — i.e. with resolved player ids. Rows whose
+  # player_id never resolved (cold DB: the players table is filled by the slate scrape,
+  # which runs AFTER the import) join to nothing, and counting them as done would skip the
+  # contest forever and strand the capture.
+  #
+  # But only RETRY recent ones. Plenty of old captures are unresolvable by nature — Best
+  # Ball uses a different standings shape, and mma/nas/soc/nba have no player mapping at
+  # all — so treating every unresolved row as retryable re-downloads ~110 dead contests
+  # from DK on every run for nothing. Past the window we accept them as done.
+  retry_days <- as.integer(Sys.getenv("DK_RESOLVE_RETRY_DAYS", "7"))
+  if (is.na(retry_days) || retry_days < 0L) retry_days <- 7L
+  # captured_ts is a "%Y-%m-%d %H:%M:%S" string, so compare lexically against a cutoff
+  # computed here (CURRENT_DATE/INTERVAL need DuckDB's icu extension, not always loaded).
+  cutoff <- format(Sys.Date() - retry_days, "%Y-%m-%d")
+  already <- tryCatch(unique(db_query(sprintf("
+    SELECT contest_id FROM ownership
+    WHERE actual_pct IS NOT NULL
+      AND (player_id > 0 OR captured_ts < '%s')", cutoff))$contest_id),
                       error = function(e) character(0))
   ids <- setdiff(ids, as.character(already))
   n <- 0L

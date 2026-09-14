@@ -93,6 +93,17 @@ log_ownership_csv <- function(csv, sport, date, slate = "main", contest = NULL,
          file.path(land, paste0(gsub("[^A-Za-z0-9]+", "_", contest), ".csv")))
 
   d <- resolve_player_ids(d, sport)
+  # A standings file we CAN parse but whose players we can't resolve yet is retryable,
+  # and must NOT be written: db_upsert would store rows with NA player_id, and
+  # sync_ownership()'s "already logged" check (actual_pct IS NOT NULL) would then skip
+  # that contest forever — the capture would be permanently stuck unresolved. This is the
+  # normal state on a cold DB (the players table is populated by the slate scrape, which
+  # runs AFTER the import in run_all.R), so throw and leave the file in the inbox; the
+  # next run resolves it once the player table has that slate. Parsed-but-empty files
+  # (e.g. Best Ball, a different CSV shape) are NOT retryable and fall through below.
+  if (nrow(d) > 0 && sum(d$player_id > 0, na.rm = TRUE) == 0)
+    stop(sprintf("no player ids resolved for %s yet (%d parsed) - leaving in inbox to retry",
+                 sport, nrow(d)))
   # re-point at the layout our projections/salaries actually used (see above); the raw
   # landing CSV above keeps the as-requested id, this only affects the joinable table
   slate_id <- .resolve_logged_slate(sport, date, slate, site, d$player_id)
