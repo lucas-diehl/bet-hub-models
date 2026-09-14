@@ -1,0 +1,33 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-09-11",
+  "graded_at": "2026-09-14T15:35:22Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk2-rutgers-bostoncollege-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": 1.82,
+      "actual": {
+        "actual_margin": 7,
+        "cover_line": -3,
+        "closing_line": -3
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk2-missouri-kansas-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.034,
+      "pnl_units": 0.45,
+      "actual": {
+        "actual_margin": -17,
+        "cover_line": -5.5,
+        "closing_line": -4
+      }
+    }
+  ]
+}
