@@ -49,6 +49,36 @@ resolve_player_ids <- function(d, sport) {
   d
 }
 
+# Which slate_id for (sport, date) do our PROJECTIONS actually live under? Multi-layout
+# sports (nfl, ncaaf) no longer have a slate tagged plain "main" — dk_slate_options()
+# tags them main1/main2/showdown<n> — so logging actuals against "main" produced an
+# orphan slate_id that joins to nothing. That silently starved the NFL/NCAAF ownership
+# models: ownership_training_data() inner-joins actuals to projections+salaries, so every
+# captured %Drafted row was discarded and predict_ownership() fell back to the value-rank
+# heuristic forever. Pick the layout whose player pool best matches this contest's CSV.
+.resolve_logged_slate <- function(sport, date, slate, site, player_ids) {
+  want <- make_slate_id(sport, site, date, slate)
+  cand <- tryCatch(as.data.table(db_query(sprintf(
+    "SELECT DISTINCT slate_id FROM salaries WHERE slate_id LIKE '%s-%s-%s-%%'",
+    sport, site, format(as.Date(date), "%Y-%m-%d")))), error = function(e) NULL)
+  if (is.null(cand) || !nrow(cand)) return(want)
+  if (want %in% cand$slate_id) return(want)                  # single-layout sport: unchanged
+  pid <- unique(player_ids[!is.na(player_ids)])
+  if (!length(pid)) return(want)
+  best <- NULL; best_n <- -1L
+  for (sid in cand$slate_id) {
+    have <- tryCatch(db_query(sprintf(
+      "SELECT DISTINCT player_id FROM salaries WHERE slate_id='%s'", sid))$player_id,
+      error = function(e) NULL)
+    n <- length(intersect(pid, have))
+    if (n > best_n) { best_n <- n; best <- sid }
+  }
+  if (is.null(best) || best_n <= 0) return(want)
+  msg(sprintf("  ownership: '%s' has no slate; attaching to %s (%d/%d players matched)",
+              slate, best, best_n, length(pid)))
+  best
+}
+
 # Log one DK standings CSV -> raw landing (always) + ownership table (resolved).
 log_ownership_csv <- function(csv, sport, date, slate = "main", contest = NULL,
                               type = NA, fee = NA, field = NA, site = "dk") {
@@ -63,6 +93,9 @@ log_ownership_csv <- function(csv, sport, date, slate = "main", contest = NULL,
          file.path(land, paste0(gsub("[^A-Za-z0-9]+", "_", contest), ".csv")))
 
   d <- resolve_player_ids(d, sport)
+  # re-point at the layout our projections/salaries actually used (see above); the raw
+  # landing CSV above keeps the as-requested id, this only affects the joinable table
+  slate_id <- .resolve_logged_slate(sport, date, slate, site, d$player_id)
   own <- as.data.table(data.frame(slate_id = slate_id, sport = sport, player_id = d$player_id,
            contest_id = as.character(contest), projected_pct = NA_real_,
            actual_pct = d$pct_drafted, captured_ts = cap))[
