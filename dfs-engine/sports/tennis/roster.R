@@ -1,16 +1,26 @@
 # ==============================================================================
 # Tennis plugin — roster rules + DK scoring + registration
 #
-# !!! VERIFY against a live DK Tennis slate before trusting validity/scoring. !!!
-# DK Tennis Classic (as encoded): 6 players, $50,000 cap, flat (no positions).
-# Both sides of a match ARE rosterable on DK; max_per_game left NULL. The scoring
-# below is the best-of-3 structure (set the bonuses per the current DK rules).
+# Roster rules VERIFIED against live DK 2026-09-14 (gametype 106 "Single Match",
+# draft group 153423): 6 players, $50,000 cap, flat (no positions), salaryCap
+# minValue = 0 (i.e. NO salary floor). Both sides of a match ARE rosterable on DK;
+# max_per_game left NULL. The scoring below is the best-of-3 structure.
+#
+# NOTE — DK also runs a "Short Slate" tennis gametype (201) with a genuinely
+# different shape: a 3-player roster drawing from THREE price tiers of the same
+# pool (one player priced differently per slot). These flat rules cannot express
+# that; the engine builds only the main/Single-Match slate. See DFS_MODEL_HANDOFF §22.
 # ==============================================================================
 
 TENNIS_ROSTER <- list(
   n          = 6L,
   cap        = 50000L,
-  floor      = 47000L,
+  # DK sets no minimum salary here (verified: salaryCap.minValue = 0). The previous
+  # 47000 floor was invented, not a DK rule, and it was binding hard: the pool spans
+  # 30000 (cheapest 6) to 60200 (priciest 6), so a 47000 floor admitted only the top
+  # sliver of the legal range and collapsed candidate generation (97 candidates vs
+  # thousands). NULL matches DK and matches nfl/ncaaf, which never used a floor.
+  floor      = NULL,
   slots      = NULL,                 # flat-n
   slot_labels= paste0("P", 1:6),
   team_limit = NULL,
