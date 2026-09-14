@@ -72,7 +72,13 @@ dk_my_contests <- function() {
 # for actual ownership: the live /mycontests page only embeds upcoming/live contests,
 # but standings (with %Drafted) only exist AFTER settlement. The history feed lists the
 # settled ones, so syncing from here reliably captures every contest you entered.
-dk_settled_contests <- function(max_ids = 60L) {
+# max_ids defaults to 60 for the routine daily sync; raise it (or set DK_HISTORY_MAX) to
+# reach further back when BACKFILLING past slates. Note the hard limit on backfilling:
+# DK serves exportfullstandingscsv only to a contest's ENTRANTS, so history can only be
+# recovered for contests you actually entered — there is no public ownership endpoint for
+# a slate you sat out. This feed is the list of those contests.
+dk_settled_contests <- function(max_ids = as.integer(Sys.getenv("DK_HISTORY_MAX", "60"))) {
+  if (is.na(max_ids) || max_ids < 1L) max_ids <- 60L
   resp <- tryCatch(httr2::req_perform(.dk_auth_req("https://www.draftkings.com/mycontests/history")),
                    error = function(e) NULL)
   if (is.null(resp) || httr2::resp_status(resp) != 200) return(character(0))

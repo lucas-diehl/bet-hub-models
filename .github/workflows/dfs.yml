@@ -29,6 +29,12 @@ jobs:
       DATAGOLF_API_KEY: ${{ secrets.DATAGOLF_API_KEY }}
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
       CFB_API_KEY: ${{ secrets.CFB_API_KEY }}
+      # Actual %Drafted is only downloadable by a logged-in ENTRANT, so this cookie is
+      # what turns on real ownership capture. run_all.R already calls sync_ownership() +
+      # auto_import_ownership(); without the cookie those no-op silently, which is why
+      # every NFL/NCAAF ownership row to date has been our own projection, never an actual.
+      # Optional: if the secret is unset the engine behaves exactly as before.
+      DK_COOKIE: ${{ secrets.DK_COOKIE }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,10 +55,20 @@ jobs:
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb","lpSolve"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
+      # The DuckDB is where logged ownership + projections + salaries ACCUMULATE, and the
+      # ownership model needs >=5 slates of history before it will train. A fresh empty db
+      # each run meant every captured %Drafted row was thrown away at job end, so no sport
+      # could ever cross that threshold from CI. Rolling key: restore newest, save every run.
+      - name: Restore DFS DuckDB
+        uses: actions/cache/restore@v4
+        with:
+          path: dfs-engine/data/dfs.duckdb
+          key: dfs-duckdb-${{ github.run_id }}
+          restore-keys: dfs-duckdb-
+
       - name: Init DuckDB schema
-        # The DuckDB (data/dfs.duckdb) is gitignored, so CI starts with an empty db and
-        # every scrape fails ("Table 'slates'/'salaries' does not exist"). db_bootstrap()
-        # creates the schema (idempotent) so the scrape can store salaries -> pools build.
+        # db_bootstrap() is idempotent: it creates the schema on a cold runner (no cache
+        # yet) and is a no-op once the restored db already has the tables.
         working-directory: dfs-engine
         run: Rscript -e 'source("bootstrap.R"); dfs_load_spine(); invisible(db_bootstrap()); cat("duckdb schema ready\n")'
 
@@ -71,3 +87,10 @@ jobs:
         with:
           database-url: ${{ secrets.DATABASE_URL }}
           feed-dir: ${{ github.workspace }}/_feed
+
+      - name: Save DFS DuckDB
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: dfs-engine/data/dfs.duckdb
+          key: dfs-duckdb-${{ github.run_id }}
