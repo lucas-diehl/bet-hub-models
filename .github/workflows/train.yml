@@ -1,15 +1,20 @@
 name: train
 
-# WEEKLY model retrain — the missing piece. dfs.yml and golf.yml only PROJECT from
+# DAILY model retrain — the missing piece. dfs.yml and golf.yml only PROJECT from
 # committed artifacts; they never retrain them, so:
 #   • golf v2_master / v2_elo / v2_bundle were frozen (Elo never moved on the site)
 #   • tennis/wnba/nfl trained models are gitignored (data/models/), so the runner never
 #     had them and projected on BASELINE instead of the trained model.
 # This job rebuilds everything and COMMITS the refreshed .rds back so the daily runs use
 # them. data/models is gitignored, so those are force-added.
+#
+# Runs DAILY at 05:00 ET — deliberately ahead of every downstream cron (dfs 07:00 ET,
+# golf/cfb 09:00 ET) so each day's projections are built on models that already include
+# last night's results. Weekly was wrong for sports that play every day: tennis and WNBA
+# results landed up to 6 days before the model that projected them was refreshed.
 on:
   schedule:
-    - cron: "0 12 * * 2"    # Tuesday ~08:00 ET — after weekend/Monday-finish events settle
+    - cron: "0 9 * * *"    # daily ~05:00 ET — before dfs/golf/cfb runs pick up the artifacts
   workflow_dispatch:
     inputs:
       scope:
@@ -81,6 +86,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "no model changes to commit"
           else
-            git commit -m "weekly model refresh: golf master/elo/bundle + tennis/wnba/nfl [skip ci]"
+            git commit -m "daily model refresh: golf master/elo/bundle + tennis/wnba/nfl/ncaaf [skip ci]"
             git push
           fi

@@ -70,7 +70,7 @@ jobs:
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
-          Rscript -e 'p<-c("cfbfastR","dplyr","tidyr","stringr","lubridate","zoo","purrr","readr","tibble","jsonlite","xgboost","httr2"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+          Rscript -e 'p<-c("cfbfastR","dplyr","tidyr","stringr","lubridate","zoo","purrr","readr","tibble","jsonlite","xgboost","httr2","httr"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
       - name: Run cfb (full daily rebuild + manual; opening-line capture only on the extra Sun/Mon crons)
         working-directory: cfb-modeling
