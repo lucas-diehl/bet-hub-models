@@ -25,12 +25,13 @@ d <- read.csv("ppp_backtest_results.csv") %>%
     p_under  = 1 - A_totals_prob,                              # model P(under)
     dog_ats  = (!is.na(spread) & spread > 0 & (proj_margin_A + spread) > 0) |
                (!is.na(spread) & spread < 0 & (proj_margin_A + spread) < 0),
-    result   = if_else(over_hit == 0, "WIN", "LOSS"),          # UNDER wins when total stays under
-    correct  = 1L - over_hit)
+    push     = total_points == over_under,                    # landed on the number = no decision
+    result   = if_else(push, "PUSH", if_else(over_hit == 0, "WIN", "LOSS")),
+    correct  = 1L - over_hit)                                 # only read on non-push rows
 
-# ---- select bets for a strategy --------------------------------------------
+# ---- select bets for a strategy (pushes excluded: they return the stake) ----
 select_bets <- function(edge, require_dog) {
-  b <- d %>% filter(edge_pts >= edge)
+  b <- d %>% filter(edge_pts >= edge, !push)
   if (require_dog) b <- b %>% filter(dog_ats)
   b %>% arrange(season, week, game_id)
 }

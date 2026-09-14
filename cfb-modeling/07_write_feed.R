@@ -36,6 +36,17 @@ ODDS      <- -110L
 MKT_PROB  <- round(110/210, 4)
 UNDER_EDGE <- 4.0; DOG_EDGE <- 3.0; AGG_GAP <- 0.10; N4_MIN <- 20; EARLY_WEEKS <- 1:4
 ATS_OPEN_EDGE_MIN <- as.numeric(Sys.getenv("PPP_ATS_OPEN_EDGE_MIN", "3"))
+# Arm O v2 (2026-09-09): require a majority of independently-built DVOA-style ratings
+# to agree with the PPD projection on the side. k>=3 of 5 chosen A PRIORI (simple
+# majority), NOT for its score — see 10_build_dvoa_ratings.R header.
+DVOA_VARIANTS     <- c("v3","v4","v5","v6","v7")
+ATS_CONSENSUS_MIN <- as.integer(Sys.getenv("PPP_ATS_CONSENSUS_MIN", "3"))
+ATS_OPEN_PROB     <- as.numeric(Sys.getenv("PPP_ATS_OPEN_PROB", "0.58"))  # shrunk cross-variant est.
+# Confidence-tiered stake: votes 3/4/5 -> 1u/2u/3u. See the note at the assignment below —
+# the tiers are a risk-appetite choice, NOT a measured win-rate difference. Revert to flat
+# staking with PPP_ATS_STAKE_MIN=PPP_ATS_STAKE_MAX (e.g. both 1).
+ATS_STAKE_MIN     <- as.numeric(Sys.getenv("PPP_ATS_STAKE_MIN", "1"))
+ATS_STAKE_MAX     <- as.numeric(Sys.getenv("PPP_ATS_STAKE_MAX", "3"))
 
 slug     <- function(x) gsub("[^a-z0-9]", "", tolower(x))
 compact  <- function(l) l[!vapply(l, is.null, logical(1))]
@@ -64,9 +75,32 @@ md <- attach_ratings(build_model_data(bl, gd, include_upcoming = TRUE), asof, fb
   left_join(book_lines(bl), by = "game_id") %>%              # DK/FD lines
   left_join(start_map, by = "game_id")
 
+# ---- DVOA consensus ratings (10_build_dvoa_ratings.R) for the OPEN_ATS filter --
+# Arm O requires >=ATS_CONSENSUS_MIN of these independently-built ratings to agree
+# with our PPD projection on the SIDE. See 10_build_dvoa_ratings.R header for why
+# consensus (not a single variant) and why we expect ~58%, not the raw best number.
+dvoa_path <- file.path(CACHE, "dvoa_asof_variants.rds")
+HAVE_DVOA <- file.exists(dvoa_path)
+if (HAVE_DVOA) {
+  dvr <- read_rds_retry(dvoa_path)
+  dvh <- dvr %>% rename_with(~paste0("h_", .x), -c(season, as_of_week, team)) %>% rename(home_team = team)
+  dva <- dvr %>% rename_with(~paste0("a_", .x), -c(season, as_of_week, team)) %>% rename(away_team = team)
+  md <- md %>% left_join(dvh, by = c("season", "week" = "as_of_week", "home_team")) %>%
+               left_join(dva, by = c("season", "week" = "as_of_week", "away_team"))
+  for (v in DVOA_VARIANTS)   # defense ratings are on an "allowed" scale -> ADD the opponent's
+    md[[paste0("dvoa_", v)]] <- (md[[paste0("h_aoff_", v)]] + md[[paste0("a_adef_", v)]]) -
+                                (md[[paste0("a_aoff_", v)]] + md[[paste0("h_adef_", v)]])
+} else cat("  WARN: dvoa_asof_variants.rds missing -> OPEN_ATS consensus filter cannot run\n")
+
 hist <- md %>% filter(!is.na(actual_margin), season < TS | (season == TS & week < TW))
 if (nrow(hist) < 500) stop("Not enough completed history to calibrate.")
 cal_t <- lm(total_points ~ proj_total_A, data = hist); cal_m <- lm(actual_margin ~ proj_margin_A, data = hist)
+# per-variant calibration: DVOA ratings are in EPA/play units -> convert to points, as-of
+cal_dvoa <- list()
+if (HAVE_DVOA) for (v in DVOA_VARIANTS) {
+  h2 <- hist[!is.na(hist[[paste0("dvoa_", v)]]), ]
+  cal_dvoa[[v]] <- if (nrow(h2) >= 300) lm(as.formula(paste0("actual_margin ~ dvoa_", v)), data = h2) else NULL
+}
 sig_t <- sd(hist$total_points  - predict(cal_t, hist), na.rm = TRUE)
 sig_m <- sd(hist$actual_margin - predict(cal_m, hist), na.rm = TRUE)
 agg   <- build_asof_aggressiveness()   # game_id-keyed (completed games)
@@ -150,13 +184,34 @@ if (file.exists(ledger_path)) {
            pick_home = ats_open_edge > 0, pick_team = if_else(pick_home, home_team, away_team),
            pick_side = if_else(pick_home, "home", "away"), pick_line = if_else(pick_home, open_spread, -open_spread),
            is_dog = pick_line > 0,
-           # deliberately modest & shrunk toward breakeven (0.524) — backtest was 53.4%/53.6% at these
-           # thresholds, not the 57%+ that got the OLD ats arm removed for overclaiming; see registry.
-           mp = if_else(mag>=6, 0.535, 0.525), stake = 0.5) %>%
-    filter(mag >= ATS_OPEN_EDGE_MIN)
+           # shrunk cross-variant estimate (58%), NOT the best single-variant number (61.2% =
+           # winner's curse). Sizing on the higher figure over-stakes by ~57% under Kelly.
+           mp = ATS_OPEN_PROB)   # stake assigned AFTER the vote count exists (see below)
+  # --- consensus vote: how many DVOA variants independently back the same side? ---
+  if (nrow(ats_open) > 0 && HAVE_DVOA) {
+    vote_mat <- vapply(DVOA_VARIANTS, function(v) {
+      if (is.null(cal_dvoa[[v]])) return(rep(0L, nrow(ats_open)))
+      pv <- suppressWarnings(predict(cal_dvoa[[v]], ats_open))   # DVOA projection, points scale
+      e  <- pv - ats_open$open_margin                            # its edge vs the FROZEN open
+      as.integer(!is.na(e) & abs(e) >= ATS_OPEN_EDGE_MIN & sign(e) == sign(ats_open$ats_open_edge))
+    }, integer(nrow(ats_open)))
+    ats_open$votes <- if (is.null(dim(vote_mat))) sum(vote_mat) else rowSums(vote_mat)
+  } else ats_open$votes <- 0L
+  ats_open <- ats_open %>% filter(mag >= ATS_OPEN_EDGE_MIN, votes >= ATS_CONSENSUS_MIN)
+  # --- confidence-tiered stake (2026-09-09, user-directed) -------------------------
+  # 1u / 2u / 3u by consensus strength. IMPORTANT CAVEAT, recorded so this is not later
+  # mistaken for a measured effect: the tiers are NOT statistically distinguishable.
+  # Marginal win rates are ==3 55.6%, ==4 52.0%, ==5 61.9% (non-monotonic — ==4 is BELOW
+  # ==3), the k=3..5 trend test gives p=0.123, and EB shrinkage returns tau2=0, collapsing
+  # all three tiers to the 58.6% grand mean. The ladder is therefore a risk-appetite
+  # choice, not an edge: expected win rate is the same 0.58 on every tier, which is why
+  # `mp` stays flat at ATS_OPEN_PROB and only the stake moves.
+  ats_open$stake <- pmin(ATS_STAKE_MAX,
+                         pmax(ATS_STAKE_MIN, ats_open$votes - (ATS_CONSENSUS_MIN - ATS_STAKE_MIN)))
 } else { ats_open <- slate[0, ] %>% mutate(open_book=character(), open_spread=numeric(), open_total=numeric(),
     captured_at=character(), open_margin=numeric(), ats_open_edge=numeric(), mag=numeric(), pick_home=logical(),
-    pick_team=character(), pick_side=character(), pick_line=numeric(), is_dog=logical(), mp=numeric(), stake=numeric()) }
+    pick_team=character(), pick_side=character(), pick_line=numeric(), is_dog=logical(), mp=numeric(),
+    stake=numeric(), votes=integer()) }
 
 mk_total_obj <- function(r) { tags <- c("UNDER", r$strategy); if (isTRUE(r$dog_ats)) tags <- c(tags,"dog")
   compact(list(bet_id=sprintf("cfb-modeling-%d-wk%d-%s-%s-under", TS, TW, slug(r$away_team), slug(r$home_team)),
@@ -183,11 +238,15 @@ mk_ats_open_obj <- function(r) { tags <- c("OPEN_ATS", if(isTRUE(r$is_dog))"dog"
     event=r$event, event_start=if(is.na(r$event_start)) NULL else r$event_start, market="spread",
     selection=r$pick_team, side=r$pick_side, line=round(r$pick_line,1), odds_american=ODDS, book=r$open_book,
     model_prob=r$mp, market_prob=MKT_PROB, edge=round(r$mp-MKT_PROB,4), ev_pct=amer_ev(r$mp),
-    stake_units=r$stake, confidence=if(r$mag>=6)"medium" else "low", tags=as.list(tags),
+    stake_units=r$stake,
+    # confidence mirrors the stake tier so the board badge and the slip never disagree;
+    # it labels consensus strength, NOT a calibrated probability (model_prob is flat 0.58).
+    confidence=if(r$votes>=5)"high" else if(r$votes>=4)"medium" else "low", tags=as.list(tags),
     details=list(proj_margin=round(r$proj_margin,1), open_spread=round(r$open_spread,1), edge_pts=round(r$mag,1),
+                 dvoa_consensus=sprintf("%d/%d", r$votes, length(DVOA_VARIANTS)),
                  opened=r$captured_at, week=TW,
-                 status="paper", prob_source="empirical_insample",   # 0.525/0.535 shrunk near breakeven; see FEATURE_REGISTRY proj_vs_open
-                 mechanism="beats the OPENING line only (encompassed by the true close); regime-dependent (post-2023), monitor decay",
+                 status="paper", prob_source="empirical_insample",   # 0.58 = shrunk cross-variant estimate; see FEATURE_REGISTRY
+                 mechanism="PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
                  posted_spread=round(r$pick_line,1), min_line=round(r$pick_line - 2, 1)))) }  # don't chase >2pts worse than posted
 
 # ATS is REMOVED from the live feed (2026-09): the encompassing test showed the market

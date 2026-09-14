@@ -31,20 +31,30 @@ chk(bad == 0, sprintf("200 sampled ratings: %d mismatches between n_games_to_dat
 chk(all(asof$as_of_week[asof$n_games_to_date == 0] >= 1),
     "preseason ratings (n=0) exist for opening weeks")
 
-cat("\nVERIFY 3: leak-free totals result is in the honest breakeven band\n")
-# After removing the SP+ same-season leak, the totals model is ~breakeven. This
-# check guards against a REGRESSION TO THE LEAKY STATE: if the win rate jumps
-# back above ~56%, a leak has likely been reintroduced. It also flags if the
-# model somehow degraded far below breakeven. Expected honest range ~50-55%.
+cat("\nVERIFY 3: STRUCTURAL leakage guards (not outcome-based — a real edge must NOT trip these)\n")
+# The prior for season s must use PRIOR-year SP+ (s-1). cfbd_ratings_sp(year=Y)
+# returns END-OF-SEASON ratings, so same-season SP+ in the prior is lookahead that
+# contaminates every week (K=5 shrinkage holds the prior ~30% all season). This is
+# the leak that faked a 6pt totals edge; assert it by code, as a named regression test.
+src2 <- paste(readLines("02_build_asof_ratings.R"), collapse = "\n")
+chk(grepl("filter\\(season == s - 1\\)", src2),
+    "02 build_priors blends PRIOR-year SP+ (filter(season == s - 1))")
+chk(!grepl("sp_dev\\s*%>%\\s*filter\\(season == s\\)", src2),
+    "02 does NOT use same-season SP+ in the prior")
+# The as-of invariant (features at week w use only games with week<w) is asserted
+# structurally in VERIFY 2 above (n_games_to_date == games-before-week).
+
+cat("\nVERIFY 4: deployed-strategy diagnostics (REPORTED, informational — not a leak gate)\n")
+# Push handling: grade a landed total (total == line) as a PUSH, not an UNDER win.
 if (file.exists("ppp_backtest_results.csv")) {
-  d <- read.csv("ppp_backtest_results.csv")
-  r <- d %>% filter(!is.na(proj_total_A), !is.na(over_hit)) %>%
-    mutate(e = proj_total_A - over_under, correct = ifelse(e > 0, over_hit, 1 - over_hit)) %>%
-    filter(abs(e) >= 4)
-  wr <- mean(r$correct)
-  cat(sprintf("       Approach A totals >=4pt: %.1f%% over %d bets (breakeven=52.4%%)\n", 100*wr, nrow(r)))
-  chk(wr >= 0.48 && wr <= 0.56,
-      sprintf("win rate %.1f%% within honest leak-free band [48%%,56%%] (>56%% suggests leakage returned)", 100*wr))
+  d <- read.csv("ppp_backtest_results.csv") %>%
+    filter(!is.na(proj_total_A), !is.na(over_hit), !is.na(over_under), total_points != over_under)
+  u4 <- d %>% filter(over_under - proj_total_A >= 4)
+  bs <- d %>% mutate(e = proj_total_A - over_under, c = ifelse(e > 0, over_hit, 1L - over_hit)) %>% filter(abs(e) >= 4)
+  cat(sprintf("       deployed UNDER>=4:  %.1f%% / %d bets (push-excluded)\n", 100*mean(u4$over_hit == 0), nrow(u4)))
+  cat(sprintf("       both-sides >=4:     %.1f%% / %d bets\n", 100*mean(bs$c), nrow(bs)))
+  # very loose sanity only — a real edge sits ~54-57%; >62% means a bug/leak, investigate.
+  chk(mean(u4$over_hit == 0) <= 0.62, "UNDER>=4 win rate not implausibly high (<=62%; else investigate)")
 } else chk(FALSE, "ppp_backtest_results.csv missing — run 03 first")
 
 cat(sprintf("\n%s (%d failures)\n", if (fail == 0) "ALL CHECKS PASSED" else "CHECKS FAILED", fail))

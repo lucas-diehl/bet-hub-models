@@ -222,10 +222,19 @@ preseason_base <- function(teams, priors) {
 # Pass 2: as-of ratings for every (season, week), games strictly before week
 # ----------------------------------------------------------------------------
 asof_list <- list()
+CUR_SEASON <- max(sort(unique(tg$season)))   # the in-progress season
 for (s in sort(unique(tg$season))) {
   rs <- tg %>% filter(season == s)
   priors <- build_priors(s)
   wks <- sort(unique(rs$week[!is.na(rs$week)]))
+  # IN-PROGRESS SEASON LOOK-AHEAD (bug fix 2026-09-09): `tg` (team_game_ppp) holds
+  # PLAYED games only, so `wks` stops at the last COMPLETED week. Without this, the
+  # active season has no as-of ratings for the upcoming week — proj_margin/proj_total
+  # come back all-NA and 07_write_feed.R silently writes ZERO picks every week for the
+  # rest of the season. (The preseason-seed block below only covers the NEXT season,
+  # so it does not help once the current season has started.) Emitting the next 4
+  # unplayed weeks reuses the same leak-free path: to_date = all games with week < w.
+  if (s == CUR_SEASON && length(wks)) wks <- sort(unique(c(wks, max(wks) + 1:4)))
   for (w in wks) {
     to_date <- rs %>% filter(week < w)                 # LEAK-FREE: strictly before
     stopifnot(nrow(to_date) == 0 || max(to_date$week) < w)  # leakage assertion

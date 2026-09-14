@@ -1,0 +1,80 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-09-11",
+  "generated_at": "2026-09-10T04:53:15.000Z",
+  "model_version": "ppp-ppd-2026",
+  "mode": "PAPER",
+  "event_context": "Week 2",
+  "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
+  "bets": [
+    {
+      "bet_id": "cfb-modeling-2026-wk2-rutgers-bostoncollege-atsopen",
+      "event": "Rutgers @ Boston College",
+      "event_start": "2026-09-11T23:30:00.000Z",
+      "market": "spread",
+      "selection": "Boston College",
+      "side": "home",
+      "line": -3,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.58,
+      "market_prob": 0.5238,
+      "edge": 0.0562,
+      "ev_pct": 0.1072,
+      "stake_units": 2,
+      "confidence": "medium",
+      "tags": [
+        "OPEN_ATS",
+        "fav"
+      ],
+      "details": {
+        "week": 2,
+        "opened": "2026-09-08T04:16:22Z",
+        "status": "paper",
+        "edge_pts": 21.8,
+        "min_line": -5,
+        "mechanism": "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
+        "open_spread": -3,
+        "prob_source": "empirical_insample",
+        "proj_margin": 24.8,
+        "posted_spread": -3,
+        "dvoa_consensus": "4/5"
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk2-missouri-kansas-atsopen",
+      "event": "Missouri @ Kansas",
+      "event_start": "2026-09-12T00:00:00.000Z",
+      "market": "spread",
+      "selection": "Missouri",
+      "side": "away",
+      "line": -5.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.535,
+      "market_prob": 0.5238,
+      "edge": 0.0112,
+      "ev_pct": 0.0213,
+      "stake_units": 0.5,
+      "confidence": "medium",
+      "tags": [
+        "OPEN_ATS",
+        "fav"
+      ],
+      "details": {
+        "week": 2,
+        "opened": "2026-09-08T04:16:22Z",
+        "status": "paper",
+        "edge_pts": 6.9,
+        "min_line": -7.5,
+        "mechanism": "beats the OPENING line only (encompassed by the true close); regime-dependent (post-2023), monitor decay",
+        "open_spread": 5.5,
+        "prob_source": "empirical_insample",
+        "proj_margin": -12.4,
+        "posted_spread": -5.5
+      }
+    }
+  ]
+}

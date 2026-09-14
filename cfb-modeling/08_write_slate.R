@@ -89,7 +89,23 @@ slate <- md %>% filter(season == TS, week == TW) %>%
 # a game is a "play" if it clears a deployed threshold (shown as a badge)
 mkconf <- function(m) ifelse(m>=6,"high", ifelse(m>=3,"medium","low"))
 
-mk_game <- function(r) compact(list(
+# ---- read the posted picks back so the board and the bet slip CANNOT disagree ----
+# 07_write_feed.R runs before 08 for the same week (weekly_update.R), so its output is
+# the single source of truth for what we actually bet. Re-deriving the gate here was a
+# bug on both markets: ATS badges were hard-disabled (the comment below dated from before
+# Arm O went live, so 19 posted bets showed 0 plays), and the UNDER badge tested only
+# `tot_edge <= -4` so it silently missed every UNDER3_DOG bet 07 emits at the 3.0
+# threshold. Reading the feed means a threshold change in 07 can never desync the board.
+posted <- list()
+for (d in unique(slate$slate_date)) {
+  pf <- file.path(outdir, sprintf("picks_%s.json", d))
+  if (!file.exists(pf)) next
+  pj <- tryCatch(fromJSON(pf, simplifyDataFrame = FALSE), error = function(e) NULL)
+  for (b in pj$bets) posted[[paste(d, b$event, b$market, sep = "|")]] <- b
+}
+pget <- function(r, mkt) posted[[paste(r$slate_date, r$event, mkt, sep = "|")]]
+
+mk_game <- function(r) { pb <- pget(r, "spread"); tb <- pget(r, "total"); compact(list(
   game_id    = as.character(r$game_id),
   event      = r$event,
   event_start= if (is.na(r$event_start)) NULL else r$event_start,
@@ -102,19 +118,26 @@ mk_game <- function(r) compact(list(
   proj_margin= if (MARGIN_OK) round(r$proj_margin,1) else NULL,           # home perspective
   proj_home_score = if (MARGIN_OK) round(r$proj_home,1) else NULL,
   proj_away_score = if (MARGIN_OK) round(r$proj_away,1) else NULL,
-  ats_pick   = if (MARGIN_OK && !is.na(r$bk_spread)) r$ats_pick else NULL,
-  ats_line   = if (MARGIN_OK && !is.na(r$bk_spread)) round(r$ats_line,1) else NULL,
-  ats_edge   = if (MARGIN_OK && !is.na(r$bk_spread)) round(r$ats_mag,1) else NULL,
-  ats_conf   = if (MARGIN_OK && !is.na(r$bk_spread)) mkconf(r$ats_mag) else NULL,
-  # NB: ATS is informational (no close-line edge); the proj_vs_open edge is real only vs the
-  # OPENING line (captured Sun/Mon), not yet wired live. No ATS "play" badge is emitted.
-  total_pick = if (is.na(r$bk_total)) NULL else r$tot_pick,
+  # A POSTED bet always wins over the informational view and is always shown, even before
+  # MARGIN_MIN_WEEK: the week gate exists to hide our noisy raw margin projection, but a bet
+  # we actually placed must never be invisible on the board. Terms are the FROZEN OPENING
+  # line the bet was graded against, not the current market number shown in `spread` above.
+  ats_pick   = if (!is.null(pb)) pb$selection else if (MARGIN_OK && !is.na(r$bk_spread)) r$ats_pick else NULL,
+  ats_line   = if (!is.null(pb)) pb$line else if (MARGIN_OK && !is.na(r$bk_spread)) round(r$ats_line,1) else NULL,
+  ats_edge   = if (!is.null(pb)) pb$details$edge_pts else if (MARGIN_OK && !is.na(r$bk_spread)) round(r$ats_mag,1) else NULL,
+  ats_conf   = if (!is.null(pb)) pb$confidence else if (MARGIN_OK && !is.na(r$bk_spread)) mkconf(r$ats_mag) else NULL,
+  ats_play   = if (!is.null(pb)) TRUE else NULL,
+  ats_book   = if (!is.null(pb)) pb$book else NULL,
+  ats_stake  = if (!is.null(pb)) pb$stake_units else NULL,
+  ats_consensus = if (!is.null(pb)) pb$details$dvoa_consensus else NULL,
+  total_pick = if (!is.null(tb)) tb$selection else if (is.na(r$bk_total)) NULL else r$tot_pick,
   total_edge = if (is.na(r$bk_total)) NULL else round(r$tot_mag,1),
-  total_conf = if (is.na(r$bk_total)) NULL else mkconf(r$tot_mag),
-  total_play = if (!is.na(r$bk_total) && r$tot_edge <= -UNDER_EDGE) TRUE else NULL,   # deployed UNDER rule
+  total_conf = if (!is.null(tb)) tb$confidence else if (is.na(r$bk_total)) NULL else mkconf(r$tot_mag),
+  total_play = if (!is.null(tb)) TRUE else NULL,
+  total_stake = if (!is.null(tb)) tb$stake_units else NULL,
   completed  = r$completed,
   final_margin = if (isTRUE(r$completed)) r$actual_margin else NULL,
-  final_total  = if (isTRUE(r$completed)) r$total_points else NULL))
+  final_total  = if (isTRUE(r$completed)) r$total_points else NULL)) }
 
 games <- lapply(seq_len(nrow(slate)), function(i) { g <- mk_game(slate[i,]); g$.date <- slate$slate_date[i]; g })
 
