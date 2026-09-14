@@ -1,0 +1,57 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-09-05",
+  "graded_at": "2026-09-14T15:08:44Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk1-baylor-auburn-under",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0243,
+      "pnl_units": 0.91,
+      "actual": {
+        "total_points": 33,
+        "line": 59.5,
+        "closing_line": 58.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk1-kentstate-southcarolina-under",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0485,
+      "pnl_units": -1,
+      "actual": {
+        "total_points": 57,
+        "line": 54.5,
+        "closing_line": 52.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk1-oklahomastate-tulsa-under",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0485,
+      "pnl_units": 0.91,
+      "actual": {
+        "total_points": 34,
+        "line": 59.5,
+        "closing_line": 57.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk1-ballstate-ohiostate-under",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0243,
+      "pnl_units": -1,
+      "actual": {
+        "total_points": 59,
+        "line": 56.5,
+        "closing_line": 55.5
+      }
+    }
+  ]
+}

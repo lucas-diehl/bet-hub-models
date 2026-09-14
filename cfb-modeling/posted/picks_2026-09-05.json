@@ -1,0 +1,137 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-09-05",
+  "generated_at": "2026-09-03T05:11:43Z",
+  "model_version": "ppp-ppd-2026",
+  "mode": "PAPER",
+  "event_context": "Week 1",
+  "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
+  "bets": [
+    {
+      "bet_id": "cfb-modeling-2026-wk1-baylor-auburn-under",
+      "event": "Baylor @ Auburn",
+      "event_start": "2026-09-05T19:30:00Z",
+      "market": "total",
+      "selection": "Under 59.5",
+      "side": "under",
+      "line": 59.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.5813,
+      "market_prob": 0.5238,
+      "edge": 0.0575,
+      "ev_pct": 0.1097,
+      "stake_units": 1,
+      "confidence": "low",
+      "tags": [
+        "UNDER",
+        "UNDER3_DOG",
+        "dog"
+      ],
+      "details": {
+        "proj_total": 56.1,
+        "under_edge": 3.4,
+        "strategy": "UNDER3_DOG",
+        "status": "paper",
+        "prob_source": "modelled",
+        "posted_total": 59.5,
+        "min_total": 59.1
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk1-kentstate-southcarolina-under",
+      "event": "Kent State @ South Carolina",
+      "event_start": "2026-09-05T16:45:00Z",
+      "market": "total",
+      "selection": "Under 54.5",
+      "side": "under",
+      "line": 54.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.6111,
+      "market_prob": 0.5238,
+      "edge": 0.0873,
+      "ev_pct": 0.1666,
+      "stake_units": 1,
+      "confidence": "medium",
+      "tags": [
+        "UNDER",
+        "UNDER4+DOG",
+        "dog"
+      ],
+      "details": {
+        "proj_total": 49.9,
+        "under_edge": 4.6,
+        "strategy": "UNDER4+DOG",
+        "status": "paper",
+        "prob_source": "modelled",
+        "posted_total": 54.5,
+        "min_total": 53.9
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk1-oklahomastate-tulsa-under",
+      "event": "Oklahoma State @ Tulsa",
+      "event_start": "2026-09-05T19:45:00Z",
+      "market": "total",
+      "selection": "Under 59.5",
+      "side": "under",
+      "line": 59.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.681,
+      "market_prob": 0.5238,
+      "edge": 0.1572,
+      "ev_pct": 0.2999,
+      "stake_units": 1,
+      "confidence": "high",
+      "tags": [
+        "UNDER",
+        "UNDER4+DOG",
+        "dog"
+      ],
+      "details": {
+        "proj_total": 51.8,
+        "under_edge": 7.7,
+        "strategy": "UNDER4+DOG",
+        "status": "paper",
+        "prob_source": "modelled",
+        "posted_total": 59.5,
+        "min_total": 55.8
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk1-ballstate-ohiostate-under",
+      "event": "Ball State @ Ohio State",
+      "event_start": "2026-09-05T16:30:00Z",
+      "market": "total",
+      "selection": "Under 56.5",
+      "side": "under",
+      "line": 56.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.6525,
+      "market_prob": 0.5238,
+      "edge": 0.1287,
+      "ev_pct": 0.2456,
+      "stake_units": 1,
+      "confidence": "high",
+      "tags": [
+        "UNDER",
+        "UNDER4+DOG",
+        "dog"
+      ],
+      "details": {
+        "proj_total": 50.1,
+        "under_edge": 6.4,
+        "strategy": "UNDER4+DOG",
+        "status": "paper",
+        "prob_source": "modelled",
+        "posted_total": 56.5,
+        "min_total": 54.1
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-09-18",
+  "generated_at": "2026-09-14T15:09:05Z",
+  "model_version": "ppp-ppd-2026",
+  "mode": "PAPER",
+  "event_context": "Week 3",
+  "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
+  "bets": [
+    {
+      "bet_id": "cfb-modeling-2026-wk3-miami-wakeforest-atsopen",
+      "event": "Miami @ Wake Forest",
+      "event_start": "2026-09-18T23:30:00Z",
+      "market": "spread",
+      "selection": "Wake Forest",
+      "side": "home",
+      "line": 19.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.58,
+      "market_prob": 0.5238,
+      "edge": 0.0562,
+      "ev_pct": 0.1072,
+      "stake_units": 3,
+      "confidence": "high",
+      "tags": [
+        "OPEN_ATS",
+        "dog"
+      ],
+      "details": {
+        "proj_margin": 2.7,
+        "open_spread": 19.5,
+        "edge_pts": 22.2,
+        "dvoa_consensus": "5/5",
+        "opened": "2026-09-10T15:04:10Z",
+        "week": 3,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
+        "posted_spread": 19.5,
+        "min_line": 17.5
+      }
+    }
+  ]
+}

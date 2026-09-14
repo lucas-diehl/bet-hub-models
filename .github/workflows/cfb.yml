@@ -83,6 +83,22 @@ jobs:
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("cfbfastR","dplyr","tidyr","stringr","lubridate","zoo","purrr","readr","tibble","jsonlite","xgboost","httr2","httr"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
+      # 07_write_feed.R grades from the PREVIOUSLY-POSTED picks file on disk ("no backfill:
+      # a completed game is graded only if it was previously posted"), and FEED_DIR is a
+      # fresh temp dir on every runner. Without this seed step nothing ever looks posted,
+      # so NOTHING CAN EVER BE GRADED on Actions — and the posted terms we froze would be
+      # recomputed from scratch each run. The posted picks/results are ~36KB of JSON, so
+      # they live in the repo (committed back below) rather than a cache that can be evicted.
+      - name: Seed FEED_DIR with previously-posted picks
+        run: |
+          mkdir -p "$FEED_DIR/cfb-modeling/cfb"
+          if [ -d cfb-modeling/posted ]; then
+            cp -v cfb-modeling/posted/*.json "$FEED_DIR/cfb-modeling/cfb/" 2>/dev/null || true
+            echo "seeded $(ls -1 "$FEED_DIR/cfb-modeling/cfb" | wc -l) posted file(s)"
+          else
+            echo "no posted/ dir yet (first run)"
+          fi
+
       - name: Run cfb (full daily rebuild + manual; opening-line capture only on the extra Sun/Mon crons)
         working-directory: cfb-modeling
         run: |
@@ -109,19 +125,24 @@ jobs:
           path: cfb-modeling/data_cache/pbp_data.rds
           key: cfb-pbp-${{ github.run_id }}
 
-      # The opening-line ledger is append-only and must survive past any cache — it
-      # records the OPENING price we graded Arm O against, and is not refetchable once
-      # the line moves. Commit it back whenever a capture added rows.
-      - name: Persist opening-line ledger
+      # Two things must outlive the runner:
+      #   1. opening_lines.csv — append-only, records the OPENING price Arm O is graded
+      #      against, and is NOT refetchable once the line moves.
+      #   2. posted picks/results — the grading source of truth (see the seed step above)
+      #      and the frozen posted terms.
+      - name: Persist posted picks + opening-line ledger
         if: always()
         run: |
+          mkdir -p cfb-modeling/posted
+          cp "$FEED_DIR"/cfb-modeling/cfb/picks_*.json   cfb-modeling/posted/ 2>/dev/null || true
+          cp "$FEED_DIR"/cfb-modeling/cfb/results_*.json cfb-modeling/posted/ 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f cfb-modeling/data_cache/opening_lines.csv 2>/dev/null || true
+          git add -f cfb-modeling/data_cache/opening_lines.csv cfb-modeling/posted 2>/dev/null || true
           if git diff --cached --quiet; then
-            echo "ledger unchanged"
+            echo "nothing new to persist"
           else
-            git commit -m "cfb: opening-line ledger capture [skip ci]"
+            git commit -m "cfb: persist posted picks + opening-line ledger [skip ci]"
             git pull --rebase --autostash origin main || true
-            git push || echo "ledger push failed (non-fatal)"
+            git push || echo "persist push failed (non-fatal)"
           fi

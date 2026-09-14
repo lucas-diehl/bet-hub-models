@@ -1,0 +1,46 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-09-07",
+  "generated_at": "2026-09-08T04:50:11Z",
+  "model_version": "ppp-ppd-2026",
+  "mode": "PAPER",
+  "event_context": "Week 1",
+  "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
+  "bets": [
+    {
+      "bet_id": "cfb-modeling-2026-wk1-smu-floridastate-atsopen",
+      "event": "SMU @ Florida State",
+      "event_start": "2026-09-07T23:30:00Z",
+      "market": "spread",
+      "selection": "SMU",
+      "side": "away",
+      "line": -2.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.535,
+      "market_prob": 0.5238,
+      "edge": 0.0112,
+      "ev_pct": 0.0213,
+      "stake_units": 0.5,
+      "confidence": "medium",
+      "tags": [
+        "OPEN_ATS",
+        "fav"
+      ],
+      "details": {
+        "proj_margin": -9.4,
+        "open_spread": 2.5,
+        "edge_pts": 6.9,
+        "opened": "2026-09-08T04:16:22Z",
+        "week": 1,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "beats the OPENING line only (encompassed by the true close); regime-dependent (post-2023), monitor decay",
+        "posted_spread": -2.5,
+        "min_line": -4.5
+      }
+    }
+  ]
+}
