@@ -3,13 +3,13 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-09-07",
-  "graded_at": "2026-09-08T14:58:12Z",
+  "graded_at": "2026-09-14T15:16:53Z",
   "results": [
     {
       "bet_id": "cfb-modeling-2026-wk1-smu-floridastate-atsopen",
       "result": "win",
       "closing_odds_american": -110,
-      "clv_pct": 0.0115,
+      "clv_pct": 0.0114,
       "pnl_units": 0.45,
       "actual": {
         "actual_margin": -3,
