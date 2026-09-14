@@ -154,6 +154,24 @@ for (nm in names(tgs)) {
   res <- if (is.null(res)) a else full_join(res, a, by = c("team", "season", "as_of_week"))
   cat(sprintf("  %s: %d as-of rows\n", nm, nrow(a)))
 }
-saveRDS(res, file.path(CACHE, "dvoa_asof_variants.rds"))
-cat(sprintf("✓ saved %s (%d rows, seasons %s)\n", file.path(CACHE, "dvoa_asof_variants.rds"),
+# MERGE, don't clobber — same reason as 01_build_possessions.R. This is built from
+# pbp, which on a CI runner only ever holds the CURRENT season, so a wholesale
+# overwrite drops 2019-2025 and leaves ~1.5k single-season rows. 07's per-variant
+# calibration needs >=300 completed rows PER VARIANT, so the DVOA consensus filter
+# silently stops gating and Arm O emits ZERO OPEN_ATS bets (observed: week 3 built
+# 0 ATS plays on Actions vs 18 locally). Keep seasons this pbp pull didn't rebuild.
+dvoa_path <- file.path(CACHE, "dvoa_asof_variants.rds")
+if (file.exists(dvoa_path) && "season" %in% names(res)) {
+  old <- tryCatch(readRDS(dvoa_path), error = function(e) NULL)
+  if (!is.null(old) && "season" %in% names(old)) {
+    keep <- old %>% filter(!season %in% unique(res$season))
+    if (nrow(keep) > 0) {
+      cat(sprintf("  keeping %d rows from seasons %s not in this pbp pull\n",
+                  nrow(keep), paste(sort(unique(keep$season)), collapse = ",")))
+      res <- bind_rows(keep, res) %>% arrange(season, as_of_week)
+    }
+  }
+}
+saveRDS(res, dvoa_path)
+cat(sprintf("✓ saved %s (%d rows, seasons %s)\n", dvoa_path,
             nrow(res), paste(range(res$season), collapse = "-")))
