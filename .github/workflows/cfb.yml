@@ -30,6 +30,9 @@ concurrency:
   group: cfb
   cancel-in-progress: false
 
+permissions:
+  contents: write   # commit the append-only opening-line ledger back
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -56,16 +59,24 @@ jobs:
           key: rlib-cfb-${{ runner.os }}-${{ hashFiles('.github/workflows/cfb.yml') }}
           restore-keys: rlib-cfb-${{ runner.os }}-
 
-      # Rolling key (restore newest, save every run): data_cache now holds BOTH the
-      # rebuildable CFBD pull AND opening_lines.csv, a frozen append-only ledger that
-      # must accumulate across runs — a static cache key would restore it once and then
-      # never save new captures (the ledger would silently stop growing).
-      - name: Restore CFBD data_cache
+      # Cache ONLY pbp_data.rds — the one artifact that is huge (529MB local) and slow
+      # to refetch. Everything else in data_cache is small and now COMMITTED to the repo
+      # (drive_data / team_game_ppp / asof_ratings / features / dvoa / game_info /
+      # betting_lines / opening_lines.csv), so the runner starts from known-good history
+      # instead of whatever a cache happened to hold.
+      #
+      # Why this changed: caching the whole data_cache directory meant the runner only
+      # ever had the CURRENT season (pbp is refreshed one season at a time, and the cache
+      # was ~19MB — no historical pbp at all). 01 then rebuilt drive_data from that single
+      # season and overwrote the multi-season file, so calibration in 07/08 (needs >=500
+      # completed games) failed EVERY run with "Not enough completed history to calibrate".
+      # The workflow still reported success, so CFB silently published nothing for days.
+      - name: Restore pbp cache
         uses: actions/cache/restore@v4
         with:
-          path: cfb-modeling/data_cache
-          key: cfb-datacache-${{ github.run_id }}
-          restore-keys: cfb-datacache-
+          path: cfb-modeling/data_cache/pbp_data.rds
+          key: cfb-pbp-${{ github.run_id }}
+          restore-keys: cfb-pbp-
 
       - name: Install R packages
         run: |
@@ -91,9 +102,26 @@ jobs:
           database-url: ${{ secrets.DATABASE_URL }}
           feed-dir: ${{ github.workspace }}/_feed
 
-      - name: Save CFBD data_cache (persist opening_lines.csv + rebuildable cache)
+      - name: Save pbp cache
         if: always()
         uses: actions/cache/save@v4
         with:
-          path: cfb-modeling/data_cache
-          key: cfb-datacache-${{ github.run_id }}
+          path: cfb-modeling/data_cache/pbp_data.rds
+          key: cfb-pbp-${{ github.run_id }}
+
+      # The opening-line ledger is append-only and must survive past any cache — it
+      # records the OPENING price we graded Arm O against, and is not refetchable once
+      # the line moves. Commit it back whenever a capture added rows.
+      - name: Persist opening-line ledger
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f cfb-modeling/data_cache/opening_lines.csv 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "ledger unchanged"
+          else
+            git commit -m "cfb: opening-line ledger capture [skip ci]"
+            git pull --rebase --autostash origin main || true
+            git push || echo "ledger push failed (non-fatal)"
+          fi

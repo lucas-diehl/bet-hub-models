@@ -104,7 +104,9 @@ if (need_rebuild) {
   log("new data (", n_final, "final games; prev '", prev, "') -> refresh pbp + rebuild")
   if (!SKIP_REFRESH) tryCatch(refresh(season, heavy = TRUE), error = function(e) log("pbp refresh error:", conditionMessage(e)))
   ok <- TRUE
-  for (s in c("01_build_possessions.R","02_build_asof_ratings.R","05_build_features.R"))
+  # 10_build_dvoa_ratings.R feeds Arm O's consensus-agreement filter; it reads pbp
+  # directly so it belongs in the heavy-rebuild block (only when pbp changes).
+  for (s in c("01_build_possessions.R","02_build_asof_ratings.R","05_build_features.R","10_build_dvoa_ratings.R"))
     if (run_step(s) != 0) ok <- FALSE
   if (ok) writeLines(key_now, STATE_FILE) else log("rebuild had failures; state not advanced (will retry)")
 } else log(if (SKIP_REBUILD) "SKIP_REBUILD" else paste("no new completed games (", n_final, ") — skip rebuild"))
@@ -124,14 +126,29 @@ grade_weeks <- gs %>% distinct(week) %>%
 weeks <- sort(unique(c(grade_weeks, pick_week))); weeks <- weeks[is.finite(weeks)]
 log("pick week", pick_week, "| grade weeks", if (length(grade_weeks)) paste(grade_weeks, collapse=",") else "none")
 
+feed_fail <- 0L
 for (w in weeks)
-  run_step("07_write_feed.R", setenv = list(PPP_SEASON = as.character(season), PPP_WEEK = as.character(w), PPP_MODE = "PAPER"))
+  feed_fail <- feed_fail + (run_step("07_write_feed.R", setenv = list(PPP_SEASON = as.character(season), PPP_WEEK = as.character(w), PPP_MODE = "PAPER")) != 0)
 
 # full-slate model board for the Extras tab (every game + model numbers). Loop the
 # same `weeks` as 07 above (not just pick_week) — otherwise a past week's board file
 # never gets refreshed once a game in it finishes, so the site's board grading
 # (completed/final_margin/final_total) stays stale even after results are graded.
+board_fail <- 0L
 for (w in weeks)
-  run_step("08_write_slate.R", setenv = list(PPP_SEASON = as.character(season), PPP_WEEK = as.character(w), PPP_MODE = "PAPER"))
+  board_fail <- board_fail + (run_step("08_write_slate.R", setenv = list(PPP_SEASON = as.character(season), PPP_WEEK = as.character(w), PPP_MODE = "PAPER")) != 0)
 
 log("=== weekly_update done ===")
+
+# Propagate failure. run_step() deliberately never throws (so one bad week can't abort
+# the rest), but that also meant a run where EVERY write failed still exited 0 and the
+# GitHub workflow went green while publishing nothing — CFB silently posted no picks and
+# graded nothing for days before anyone noticed. The feed writer is the whole point of
+# this job: if no week of it succeeded, this run failed.
+if (feed_fail >= length(weeks)) {
+  log("FATAL: 07_write_feed.R failed for all", length(weeks), "week(s) — nothing was published.")
+  quit(save = "no", status = 1)
+}
+if (feed_fail > 0 || board_fail > 0)
+  log("WARN: partial failure —", feed_fail, "of", length(weeks), "feed writes and",
+      board_fail, "of", length(weeks), "board writes failed.")

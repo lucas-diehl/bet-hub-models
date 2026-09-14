@@ -256,8 +256,32 @@ print(team_game_ppp %>% group_by(season) %>%
                   n = n(), .groups="drop"))
 
 # ----------------------------------------------------------------------------
-# 9. Save
+# 9. Save  (MERGE, don't clobber)
 # ----------------------------------------------------------------------------
+# These two derived tables are the ONLY history downstream needs (02/05/07/08 never
+# re-read the 529MB pbp). pbp_data.rds, by contrast, is refreshed one season at a
+# time, so on a machine that only ever pulled the CURRENT season — every GitHub
+# Actions runner, where the cache holds ~19MB and no historical pbp — a wholesale
+# overwrite here replaced multi-season history with a single season. Calibration in
+# 04/07/08 needs >=500 completed games, so the feed writer then died with "Not enough
+# completed history to calibrate" and the workflow published nothing while still
+# reporting success. Keep any season we did NOT just rebuild from pbp.
+merge_seasons <- function(new, path, label) {
+  p <- file.path(CACHE, path)
+  if (!file.exists(p) || !"season" %in% names(new)) return(new)
+  old <- tryCatch(read_rds_retry(p), error = function(e) NULL)
+  if (is.null(old) || !"season" %in% names(old)) return(new)
+  keep <- old %>% filter(!season %in% unique(new$season))
+  if (nrow(keep) == 0) return(new)
+  cat(sprintf("  %s: keeping %d rows from seasons %s not in this pbp pull\n",
+              label, nrow(keep), paste(sort(unique(keep$season)), collapse = ",")))
+  bind_rows(keep, new) %>% arrange(season)
+}
+drives        <- merge_seasons(drives,        "drive_data.rds",    "drive_data")
+team_game_ppp <- merge_seasons(team_game_ppp, "team_game_ppp.rds", "team_game_ppp")
+
 saveRDS(drives,        file.path(CACHE, "drive_data.rds"))
 saveRDS(team_game_ppp, file.path(CACHE, "team_game_ppp.rds"))
-cat("\n✓ saved data_cache/drive_data.rds and data_cache/team_game_ppp.rds\n")
+cat(sprintf("\n✓ saved data_cache/drive_data.rds (%d rows, seasons %s)\n",
+            nrow(drives), paste(range(drives$season), collapse = "-")))
+cat("✓ saved data_cache/team_game_ppp.rds\n")
