@@ -23,10 +23,14 @@ parse_args <- function(args = commandArgs(TRUE)) { out <- list(); i <- 1L
 if (!interactive()) {
   a <- parse_args()
   msg("=== DFS ENGINE — daily run ===")
-  # actual ownership: download standings for your entered+settled contests (if DK
-  # session configured), then import everything in the inbox.
+  # actual ownership: download standings for your entered+settled contests (if DK session
+  # configured). The IMPORT is deliberately deferred until after build_dashboard() below —
+  # attributing a capture to the right slate layout (main1/main2/showdown) needs that
+  # day's salaries to already be in the DB, and the scrape that writes them happens in
+  # build_dashboard(). Importing here attributed same-day contests to a plain "-main"
+  # slate_id that joins to no projections, which is exactly what starved the NFL/NCAAF
+  # ownership models. Downloading early is still fine: it only fills the inbox.
   tryCatch(sync_ownership(), error = function(e) msg("ownership sync error:", conditionMessage(e)))
-  tryCatch(auto_import_ownership(), error = function(e) msg("ownership import error:", conditionMessage(e)))
   # P&L: log the user's own settled entries (rank/points/prize -> profit) into the ledger
   tryCatch(ingest_all_results(), error = function(e) msg("results ingest error:", conditionMessage(e)))
   # accuracy: how close projections were to actuals per sport (the north-star scorecard)
@@ -37,6 +41,10 @@ if (!interactive()) {
   # dashboard build below is slow / fails / hits a DB lock.
   tryCatch(log_projections(date = Sys.Date()), error = function(e) msg("projection log error:", conditionMessage(e)))
   f <- build_dashboard(sports = sports, contests = contests, bankroll = a$bankroll)
+  # NOW import the standings downloaded above — today's salaries exist, so
+  # .resolve_logged_slate() can attach each capture to the layout our projections used.
+  # Anything that still fails stays in the inbox and is retried on the next run.
+  tryCatch(auto_import_ownership(), error = function(e) msg("ownership import error:", conditionMessage(e)))
   # publish the interactive simulator to the bet-site feed (served behind a password, auto-rebuilt)
   tryCatch(publish_simulator(f), error = function(e) msg("simulator publish error:", conditionMessage(e)))
   # golf betting: refresh the H2H matchup picks feed the bet site reads (no-op if no live event)
