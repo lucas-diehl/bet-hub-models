@@ -44,6 +44,8 @@ suppressPackageStartupMessages({ library(data.table) })
                projected_rushing_tds = g(cc$rush_td), projected_receptions = g(cc$receptions),
                projected_receiving_yards = g(cc$rec_yds), projected_receiving_tds = g(cc$rec_td),
                projected_fumbles_lost = g(cc$fumbles_lost), projected_two_point_conversions = g(cc$two_pt),
+               p_zero = g(p$p_zero), injury_status = s(p$injury_status),
+               sim_sd = g(p$sim_sd),
                projection_status = s(p$status), role_status = s(p$role_status)) }), fill = TRUE)
   if (!nrow(d)) return(NULL)
   d[, norm := norm_name(player)]
@@ -103,11 +105,29 @@ nfl_project_players <- function(slate) {
                    two_pt = projected_two_point_conversions, fumbles_lost = projected_fumbles_lost)]
     ext[, e_proj := as.numeric(score_fn(box))]
     ext[, k := e_proj / pmax(projected_ppr, 1)]             # scale the PPR-scale bands to the site scale
+    # Prefer the external model's own sim_sd when supplied. Its ppr_low/ppr_high
+    # are now player-specific (previously one fixed width per position, which
+    # covered only ~67% of stud outcomes), and sim_sd is derived from that same
+    # span - so deriving it here would duplicate the arithmetic and drift if the
+    # producer changes its interval definition. Scaled by k to this site's
+    # scoring, same as the bands. Falls back to the derived value when absent.
+    if (!"sim_sd" %in% names(ext)) ext[, sim_sd := NA_real_]
     ext[, `:=`(e_floor = pmax(k * ppr_low, 0),
                e_ceil  = pmax(k * ppr_high, e_proj),
-               e_sd    = pmax(k * (ppr_high - ppr_low) / 2.563, 4))]  # p10..p90 span ~2.563 sd
+               e_sd    = pmax(fifelse(is.finite(sim_sd) & sim_sd > 0,
+                                      k * sim_sd,
+                                      k * (ppr_high - ppr_low) / 2.563), 4))]
+    # p_zero: prefer the external model's per-player inactive probability when it
+    # supplies one. It is graded off the current injury report (Out ~0.97,
+    # Doubtful ~0.68, Questionable ~0.24, healthy 0.03) rather than the flat 0.03
+    # this line used to hardcode, which priced a Questionable back identically to
+    # an ironman starter. Falls back to 0.03 per row when the field is absent or
+    # unusable, so an older projection file still behaves exactly as before.
+    if (!"p_zero" %in% names(ext)) ext[, p_zero := NA_real_]
+    ext[, e_pzero := fifelse(is.finite(p_zero) & p_zero >= 0 & p_zero <= 0.99,
+                             p_zero, 0.03)]
     pool[ext, on = "norm", `:=`(proj = i.e_proj, sim_sd = i.e_sd, ceil = i.e_ceil,
-                                floor = i.e_floor, p_zero = 0.03)]
+                                floor = i.e_floor, p_zero = i.e_pzero)]
     msg(sprintf("  NFL: external model [%s] projected %d of %d (site %s); %d -> built-in/baseline",
                 attr(ext, "file") %||% "ext", sum(!is.na(pool$proj)), nrow(pool),
                 toupper(slate$site %||% "dk"), sum(is.na(pool$proj))))

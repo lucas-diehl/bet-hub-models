@@ -11,6 +11,9 @@
 # Requires the pool to carry `team` + `game_id` (from the DK slate).
 #
 # NOTE (2026-09, honest disclosure, not fixed here — out of today's scope): these
+# [SUPERSEDED 2026-09-15] game_ld/team_ld are now calibrated from measured
+# residual correlations - see the block above them. The note below described the
+# pre-calibration state and is kept for context on what changed.
 # game_ld/team_ld values are hand-set DFS-community assumptions, never calibrated
 # against real data. Checking them against real nflverse box scores (same method as
 # below) shows the EXISTING game_ld implies opponent correlation of 0.12-0.25, while
@@ -51,15 +54,49 @@ nfl_correlation <- function(pool) {
   pool <- as.data.table(pool)
   if (!"game_id" %in% names(pool)) return(NULL)
   pos <- toupper(as.character(pool$position))
-  game_ld <- fifelse(pos == "QB", 0.50,
-             fifelse(pos %in% c("WR", "TE"), 0.45,
-             fifelse(pos == "RB", 0.42,
-             fifelse(pos == "DST", 0.35, 0.40))))                  # shootout: all positive
-  team_ld <- fifelse(pos == "QB", 0.58,                            # stack anchor
-             fifelse(pos == "WR", 0.50,
-             fifelse(pos == "TE", 0.44,
-             fifelse(pos == "RB", -0.28,                           # game-script: decouple from QB
-             fifelse(pos == "DST", 0.20, 0.0)))))
+  # CALIBRATED 2026-09-15 against 2023-2025 residuals (NFL repo
+  # scripts/85_calibrate_correlations.R). These replace hand-set DFS-community
+  # values that this header used to flag as "never calibrated". Fitted by
+  # weighted least squares to measured within-game correlations of standardised
+  # residuals, restricted to ROSTERABLE players (projection >= 5 pts) - the full
+  # roster universe dilutes a real stack with QB-to-WR5 pairs and understates it.
+  #
+  # Weighted mean abs error vs measured correlations: 0.185 -> 0.028.
+  #
+  # What the old numbers got wrong, measured vs implied:
+  #   QB-WR same team   0.265 measured, 0.515 implied   (overstated ~2x)
+  #   QB-TE same team   0.234 measured, 0.480 implied   (overstated ~2x)
+  #   WR-WR same team   0.020 measured, 0.452 implied   (overstated ~23x)
+  #   QB-QB opposing    0.123 measured, 0.250 implied
+  #
+  # WR-WR is the consequential one: two receivers on a team COMPETE for the same
+  # targets, so their residuals are essentially uncorrelated. Modelling them at
+  # 0.45 told the optimizer a same-team WR pair was nearly one doubled-up bet,
+  # distorting both stacking and diversification.
+  #
+  # RB team load is now 0.000, not -0.28. The old negative encoded a game-script
+  # assumption (teams run when ahead, so RB decouples from QB); measured
+  # same-team QB-RB residual correlation is mildly POSITIVE (+0.042), so the
+  # data does not support it. Left at zero rather than fitted slightly positive
+  # because the constraint boundary is where the fit put it.
+  #
+  # DST is NOT calibrated - the NFL repo does not project team defenses (its own
+  # analysis found DST scoring ~97% luck), so there are no residuals to fit.
+  # Left at the original hand-set values and flagged as such.
+  # Refreshed after snap-share features were added to the projection model.
+  # The loadings barely moved (QB game .376->.408, WR .177->.175, TE .215->.228),
+  # which is the reassuring outcome: the correlation STRUCTURE is a property of
+  # football, not of whichever point model happens to be current.
+  game_ld <- fifelse(pos == "QB", 0.408,
+             fifelse(pos == "WR", 0.175,
+             fifelse(pos == "TE", 0.228,
+             fifelse(pos == "RB", 0.062,
+             fifelse(pos == "DST", 0.35, 0.15)))))                 # DST/other: uncalibrated
+  team_ld <- fifelse(pos == "QB", 0.619,                           # stack anchor
+             fifelse(pos == "WR", 0.229,
+             fifelse(pos == "TE", 0.180,
+             fifelse(pos == "RB", -0.011,                          # measured: no decoupling
+             fifelse(pos == "DST", 0.20, 0.0)))))                  # DST: uncalibrated
   em <- if ("exp_margin" %in% names(pool)) pool$exp_margin else rep(11.1, nrow(pool))
   em[!is.finite(em)] <- 11.1
   blowout_shrink <- sqrt(0.009 / 0.038)                            # measured blowout/close ratio, on the LOAD
