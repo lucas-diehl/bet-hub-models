@@ -3,7 +3,7 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-09-19",
-  "generated_at": "2026-09-17T17:24:23Z",
+  "generated_at": "2026-09-18T16:51:30Z",
   "model_version": "ppp-ppd-2026",
   "mode": "PAPER",
   "event_context": "Week 3",
@@ -45,30 +45,30 @@
       "event": "LSU @ Ole Miss",
       "event_start": "2026-09-19T23:30:00Z",
       "market": "total",
-      "selection": "Under 59.5",
+      "selection": "Under 58.5",
       "side": "under",
-      "line": 59.5,
+      "line": 58.5,
       "odds_american": -110,
       "book": "DraftKings",
-      "model_prob": 0.6068,
+      "model_prob": 0.5831,
       "market_prob": 0.5238,
-      "edge": 0.083,
-      "ev_pct": 0.1584,
+      "edge": 0.0593,
+      "ev_pct": 0.1132,
       "stake_units": 1,
-      "confidence": "medium",
+      "confidence": "low",
       "tags": [
         "UNDER",
-        "UNDER4+DOG",
+        "UNDER3_DOG",
         "dog"
       ],
       "details": {
         "proj_total": 55.1,
-        "under_edge": 4.4,
-        "strategy": "UNDER4+DOG",
+        "under_edge": 3.4,
+        "strategy": "UNDER3_DOG",
         "status": "paper",
         "prob_source": "modelled",
-        "posted_total": 59.5,
-        "min_total": 59.1
+        "posted_total": 58.5,
+        "min_total": 58.1
       }
     },
     {
@@ -99,6 +99,36 @@
         "prob_source": "modelled",
         "posted_total": 58.5,
         "min_total": 57.1
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk3-kennesawstate-tennessee-under",
+      "event": "Kennesaw State @ Tennessee",
+      "event_start": "2026-09-19T23:45:00Z",
+      "market": "total",
+      "selection": "Under 60.5",
+      "side": "under",
+      "line": 60.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.5975,
+      "market_prob": 0.5238,
+      "edge": 0.0737,
+      "ev_pct": 0.1406,
+      "stake_units": 1,
+      "confidence": "medium",
+      "tags": [
+        "UNDER",
+        "UNDER4"
+      ],
+      "details": {
+        "proj_total": 56.5,
+        "under_edge": 4,
+        "strategy": "UNDER4",
+        "status": "paper",
+        "prob_source": "modelled",
+        "posted_total": 60.5,
+        "min_total": 60.5
       }
     },
     {
@@ -137,29 +167,28 @@
       "event": "Northern Illinois @ Arizona",
       "event_start": "2026-09-20T02:30:00Z",
       "market": "total",
-      "selection": "Under 49.5",
+      "selection": "Under 50.5",
       "side": "under",
-      "line": 49.5,
+      "line": 50.5,
       "odds_american": -110,
       "book": "DraftKings",
-      "model_prob": 0.6158,
+      "model_prob": 0.639,
       "market_prob": 0.5238,
-      "edge": 0.092,
-      "ev_pct": 0.1756,
+      "edge": 0.1152,
+      "ev_pct": 0.2198,
       "stake_units": 1,
       "confidence": "medium",
       "tags": [
         "UNDER",
-        "UNDER4+DOG",
-        "dog"
+        "UNDER4"
       ],
       "details": {
         "proj_total": 44.7,
-        "under_edge": 4.8,
-        "strategy": "UNDER4+DOG",
+        "under_edge": 5.8,
+        "strategy": "UNDER4",
         "status": "paper",
         "prob_source": "modelled",
-        "posted_total": 49.5,
+        "posted_total": 50.5,
         "min_total": 48.7
       }
     },
