@@ -73,6 +73,11 @@ jobs:
         with:
           database-url: ${{ secrets.DATABASE_URL }}
           feed-dir: ${{ github.workspace }}/_feed
+          post-to-x: "true"
+          x-api-key: ${{ secrets.X_API_KEY }}
+          x-api-secret: ${{ secrets.X_API_SECRET }}
+          x-access-token: ${{ secrets.X_ACCESS_TOKEN }}
+          x-access-token-secret: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
 
       - name: Save cumulative golf feed
         if: always()

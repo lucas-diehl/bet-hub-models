@@ -9,6 +9,20 @@ inputs:
   feed-dir:
     description: Absolute path the model wrote its feed JSON to
     required: true
+  post-to-x:
+    description: >
+      Set 'true' to also announce newly-ingested picks/results on X after this ingest.
+      Opt-in per caller — dfs.yml does not set this, so DFS lineups never post.
+    required: false
+    default: "false"
+  x-api-key:
+    required: false
+  x-api-secret:
+    required: false
+  x-access-token:
+    required: false
+  x-access-token-secret:
+    required: false
 runs:
   using: composite
   steps:
@@ -35,3 +49,19 @@ runs:
         mkdir -p "$FEED_DIR"   # ensure it exists so an empty feed (e.g. preseason) is a clean no-op
         pnpm install --frozen-lockfile
         pnpm --filter @bet/ingest start
+
+    # Batches whatever's newly-posted/newly-graded since the last successful run into at
+    # most 2 tweets (see apps/ingest/src/tweet.ts). Reuses the checkout above rather than
+    # a separate step needing its own clone. Silently no-ops if the X secrets aren't
+    # passed (post-to-x defaults false) — dfs.yml just never sets these inputs.
+    - name: Post new picks/results to X
+      if: inputs.post-to-x == 'true'
+      shell: bash
+      working-directory: _site
+      env:
+        DATABASE_URL: ${{ inputs.database-url }}
+        X_API_KEY: ${{ inputs.x-api-key }}
+        X_API_SECRET: ${{ inputs.x-api-secret }}
+        X_ACCESS_TOKEN: ${{ inputs.x-access-token }}
+        X_ACCESS_TOKEN_SECRET: ${{ inputs.x-access-token-secret }}
+      run: pnpm --filter @bet/ingest tweet

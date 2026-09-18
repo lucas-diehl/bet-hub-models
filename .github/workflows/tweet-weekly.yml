@@ -1,0 +1,48 @@
+name: tweet-weekly
+
+# Weekly recap tweet — independent of any model run, so it's its own workflow rather
+# than a step tacked onto one sport's schedule. Summarizes results graded in the
+# trailing 7 days across every sport (apps/ingest/src/weekly-tweet.ts in bet-dashboard).
+# Runs Tuesday late-morning ET, after nfl.yml's Tuesday ~09:00 ET grading run finishes,
+# so the recap includes the just-graded weekend NFL results alongside CFB/golf.
+
+on:
+  schedule:
+    - cron: "0 16 * * 2"   # Tuesday ~11:00-12:00 ET
+  workflow_dispatch:
+
+concurrency:
+  group: tweet-weekly
+  cancel-in-progress: false
+
+jobs:
+  tweet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bet-dashboard (tweet script lives here)
+        uses: actions/checkout@v4
+        with:
+          repository: lucas-diehl/bet-dashboard
+          path: _site
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: _site/pnpm-lock.yaml
+
+      - name: Post weekly recap
+        working-directory: _site
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @bet/ingest tweet:weekly
