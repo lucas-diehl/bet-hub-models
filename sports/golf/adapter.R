@@ -1,5 +1,5 @@
 # ==============================================================================
-# Golf plugin â€” adapter onto the existing DataGolf engine
+# Golf plugin — adapter onto the existing DataGolf engine
 # Your mature golf engine lives in golf-modeling/ (R targets pipeline). Rather than
 # move a working pipeline, this adapter exposes golf through the SAME plugin
 # contract the spine uses for every sport, so the spine never depends on golf's
@@ -102,7 +102,7 @@ golf_event_name <- function(tournament = "main") {
 .golf_run_export <- function(dir) {
   if (!file.exists(file.path(dir, "dfs_export.R"))) return(FALSE)
   rscript <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
-  msg("  golf: (re)generating today's model projections via dfs_export.R â€” trains the model, ~1-2 min...")
+  msg("  golf: (re)generating today's model projections via dfs_export.R — trains the model, ~1-2 min...")
   old <- getwd(); on.exit(setwd(old)); setwd(dir)
   code <- tryCatch(system2(rscript, "dfs_export.R", stdout = FALSE, stderr = FALSE),
                    error = function(e) 1L)
@@ -112,7 +112,7 @@ golf_event_name <- function(tournament = "main") {
 # Estimate DK ownership from projection + value when the feed provides none (common for
 # opposite-field events, where DataGolf publishes no ownership). Shape mirrors a real golf
 # slate: chalk concentrates on studs + value, long tail, normalized so ownership fractions
-# sum to the roster size (6) â€” the same total a real DK single-entry field produces.
+# sum to the roster size (6) — the same total a real DK single-entry field produces.
 .golf_synth_own <- function(proj, salary, n_roster = 6L) {
   ok <- is.finite(proj) & is.finite(salary) & salary > 0
   if (sum(ok) < 2) return(rep(n_roster / max(length(proj), 1), length(proj)))
@@ -146,7 +146,7 @@ golf_event_name <- function(tournament = "main") {
         salary, proj, sim_sd, ceil, floor, p_zero, own)]
 }
 
-# DataGolf DFS defaults â€” the FALLBACK when the user's model isn't available.
+# DataGolf DFS defaults — the FALLBACK when the user's model isn't available.
 .golf_datagolf_pool <- function(slate) {
   raw <- .golf_dg_get("preds/fantasy-projection-defaults",
                       list(tour = "pga", site = "draftkings", slate = "main"))
@@ -169,8 +169,8 @@ golf_event_name <- function(tournament = "main") {
         salary, proj, sim_sd, ceil, floor, p_zero, own)]
 }
 
-# â”€â”€ SINGLE-ROUND (Round 2/3/4) support â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-# A 1-day golf contest scores ONLY that round â€” no tournament finish/placement bonus and
+# ── SINGLE-ROUND (Round 2/3/4) support ────────────────────────────────────────
+# A 1-day golf contest scores ONLY that round — no tournament finish/placement bonus and
 # its own DK salary structure (split by tee wave). DK posts "Round N PGA TOUR" (classic
 # gameTypeId 85) + a "Late Round N" wave. Find the classic single-round draft group.
 golf_dk_round_group <- function(round = 2L, late = FALSE) {
@@ -184,12 +184,12 @@ golf_dk_round_group <- function(round = 2L, late = FALSE) {
   d2 <- if ("ContestStartTimeSuffix" %in% names(g)) g$ContestStartTimeSuffix else rep("", nrow(g))
   d1[is.na(d1)] <- ""; d2[is.na(d2)] <- ""; desc <- trimws(paste(d1, d2))
   # DK single-round golf = a FLAT 6-golfer "Round N PGA TOUR" slate. Its GameTypeId VARIES
-  # by round/wave (seen 84, 85, 86, Late 153...), so don't whitelist IDs â€” match the name,
+  # by round/wave (seen 84, 85, 86, Late 153...), so don't whitelist IDs — match the name,
   # exclude the Snake (191) + Birdies/Single-Stat/other-tour formats. Late waves handled via
   # the `late` flag. DK has DROPPED the literal "PGA TOUR" text from the description some
   # weeks (seen desc = "(Round 2)" with no tour name at all, and the GameType got renamed to
-  # generic "Showdown" the same week â€” same instability class already handled for the
-  # captain detector) â€” so don't require "PGA TOUR"; rely on exclusion instead, and confirm
+  # generic "Showdown" the same week — same instability class already handled for the
+  # captain detector) — so don't require "PGA TOUR"; rely on exclusion instead, and confirm
   # PGA TOUR structurally below (single rosterSlotId = classic, not CPT/FLEX captain mode).
   keep <- grepl(sprintf("Round %d\\b", round), desc, ignore.case = TRUE) &
           !grepl("Birdies|Snake|Single Stat", desc, ignore.case = TRUE) &
@@ -200,7 +200,7 @@ golf_dk_round_group <- function(round = 2L, late = FALSE) {
   cand <- which(keep)
   # structural confirmation: classic single-round golf is ONE flat roster slot (players
   # listed once). If a candidate is actually 2-slot CPT/FLEX captain mode (mislabeled into
-  # matching here), skip it â€” that's golf_dk_captain_group()'s job, not this one's.
+  # matching here), skip it — that's golf_dk_captain_group()'s job, not this one's.
   for (i in cand) {
     dgid <- as.character(g$DraftGroupId[i])
     dj <- tryCatch(.dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", dgid)),
@@ -237,8 +237,8 @@ golf_dk_captain_group <- function() {
   d2 <- if ("ContestStartTimeSuffix" %in% names(g)) g$ContestStartTimeSuffix else rep("", nrow(g))
   d2[is.na(d2)] <- ""
   # DK's GameType NAME for the captain/showdown slate isn't stable ("Captain Mode
-  # Showdown" some weeks, plain "Showdown" others â€” same instability already handled
-  # for the classic round detector) â€” match broadly on showdown/captain, then rely on
+  # Showdown" some weeks, plain "Showdown" others — same instability already handled
+  # for the classic round detector) — match broadly on showdown/captain, then rely on
   # EXCLUSION for tour/format disambiguation rather than requiring "PGA TOUR" text,
   # since the real PGA showdown contest doesn't always include that literal string
   # (confirmed live: "(Round 2)" with no tour name at all). Exclude other tours (DP
@@ -251,12 +251,12 @@ golf_dk_captain_group <- function() {
   rnd <- suppressWarnings(as.integer(sub(".*Round\\s+(\\d+).*", "\\1", d2[keep])))
   late <- grepl("late", d2[keep], ignore.case = TRUE)
   # prefer the latest ROUND posted (R4 over R3), then the non-late wave within that
-  # round â€” same precedent as golf_live_round()'s late=FALSE preference.
+  # round — same precedent as golf_live_round()'s late=FALSE preference.
   ord <- order(-fcoalesce(rnd, 0L), late)
   cand <- which(keep)[ord]
   # DK has REUSED the "Showdown" GameType name for the plain classic single-round slate
   # some weeks (confirmed live: a "Showdown"-named group with only ONE rosterSlotId, i.e.
-  # every golfer listed once at one price â€” that's the classic flat format golf_dk_round_
+  # every golfer listed once at one price — that's the classic flat format golf_dk_round_
   # group() handles, NOT true CPT/FLEX captain mode). Require the real captain-mode
   # structural signature (players listed under 2 distinct rosterSlotIds: CPT @1.5x + FLEX
   # @base) before accepting a candidate, so a mislabeled classic slate isn't misbuilt as
@@ -330,7 +330,7 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
 .golf_run_round_export <- function(dir, round, late = FALSE) {
   rsim <- file.path(dir, "engine", "round_sim.R"); if (!file.exists(rsim)) return(FALSE)
   rscript <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
-  msg(sprintf("  golf: exporting v2-round projection (round %d) â€” per-tee-time wind, ~30s...", round))
+  msg(sprintf("  golf: exporting v2-round projection (round %d) — per-tee-time wind, ~30s...", round))
   old <- getwd(); on.exit(setwd(old)); setwd(dir)
   code <- tryCatch(system2(rscript, c(shQuote(rsim), "--round", round, "--export",
                                        if (late) "--late" else character(0)), stdout = FALSE, stderr = FALSE),
@@ -345,7 +345,7 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
 .golf_round_model_pool <- function(draft_group_id, slate, round = 2L) {
   dir <- golf_model_dir(); if (is.na(dir)) return(NULL)
   # EVERY round uses its own ROUND-SCORING model (round_sim, per-tee-time wind, modest form
-  # fold) as the PRIMARY driver â€” so the board is NOT just the current standings leaders.
+  # fold) as the PRIMARY driver — so the board is NOT just the current standings leaders.
   f <- file.path(dir, "golf_picks", "dfs_round_projections.rds")
   if (!file.exists(f)) return(NULL)
   x <- tryCatch(readRDS(f), error = function(e) NULL)
@@ -373,7 +373,7 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
            own = pmax(as.numeric(own), 0.001), p_zero = 0.01)]
   if (max(d$own) <= 0.0015 || sum(d$own) < 0.5 * GOLF_ROSTER$n)
     d[, own := .golf_synth_own(proj, salary, GOLF_ROSTER$n)]
-  msg(sprintf("  golf: single-round (Round %d) using YOUR v2-round model (%s) â€” %d golfers, per-tee-time wind%s",
+  msg(sprintf("  golf: single-round (Round %d) using YOUR v2-round model (%s) — %d golfers, per-tee-time wind%s",
               round, x$meta$event %||% "slate", nrow(d), if (round == 1L) " + FRL" else ""))
   persist_salaries(d, slate$slate_id, "golf")
   d[, .(player_id, player_name, dk_id, team, game_id, position, salary, proj, sim_sd, ceil, floor, p_zero, own)]
@@ -383,17 +383,17 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
 # live in-play feed. Golfers who beat the field in the rounds already played get a modest,
 # REGRESSED boost (hot form + revealed course fit); laggards a small discount. For R3/R4 we
 # also drop anyone who missed the cut / withdrew. The R1->R2 signal is weak, so the weight is
-# deliberately small and capped Â±20%. Best-effort: any schema/feed miss leaves the
+# deliberately small and capped ±20%. Best-effort: any schema/feed miss leaves the
 # pre-tournament projection untouched (falls back to talent-only scoring).
 .golf_round_form_adjust <- function(d, round) {
   if (round < 2L) return(d)
   ip  <- tryCatch(.golf_dg_get("preds/in-play", list(tour = "pga")), error = function(e) NULL)
   ipd <- tryCatch(as.data.table(ip$data), error = function(e) NULL)
-  if (is.null(ipd) || !nrow(ipd) || !"player_name" %in% names(ipd)) { msg("  golf: no in-play feed â€” completed-round form NOT applied"); return(d) }
+  if (is.null(ipd) || !nrow(ipd) || !"player_name" %in% names(ipd)) { msg("  golf: no in-play feed — completed-round form NOT applied"); return(d) }
   ipd[, norm := norm_name(player_name)]
   score_col <- intersect(c("current_score", "total", "score"), names(ipd))[1]
   pos_col   <- intersect(c("current_pos", "position", "pos"), names(ipd))[1]
-  if (is.na(score_col)) { msg("  golf: in-play feed missing score column â€” form NOT applied"); return(d) }
+  if (is.na(score_col)) { msg("  golf: in-play feed missing score column — form NOT applied"); return(d) }
   ipd[, par := suppressWarnings(as.numeric(get(score_col)))]
   ipd[, posx := if (!is.na(pos_col)) toupper(as.character(get(pos_col))) else NA_character_]
   d <- merge(d, ipd[, .(norm, par, posx)], by = "norm", all.x = TRUE)
@@ -401,14 +401,14 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
   fld <- mean(d$par, na.rm = TRUE)
   if (!is.finite(fld) || sum(!is.na(d$par)) < 10L) { d[, c("par", "posx") := NULL]; return(d) }
   d[, form := fcoalesce(par - fld, 0)]                                    # strokes vs field so far (neg = beating field)
-  W <- 0.04                                                               # ~4% proj swing per stroke, capped Â±20%
+  W <- 0.04                                                               # ~4% proj swing per stroke, capped ±20%
   d[, proj := round(pmax(proj * (1 - pmax(pmin(W * form, 0.20), -0.20)), 0.5), 2)]
   msg(sprintf("  golf: applied completed-round form (through R%d) to %d golfers from in-play feed", round - 1L, sum(!is.na(d$par))))
   d[, c("par", "posx", "form") := NULL]; d[]
 }
 
 # Build the single-round pool: DK single-round SALARIES (from the round draft group) +
-# per-round projection from DataGolf's SCORING points (proj_points_scoring / 4 â€” no finish
+# per-round projection from DataGolf's SCORING points (proj_points_scoring / 4 — no finish
 # bonus). One round is boom/bust, so relative variance is higher than the full tournament.
 .golf_round_pool <- function(draft_group_id, slate, round = 2L) {
   j <- tryCatch(.dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", draft_group_id)),
@@ -431,7 +431,7 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
   # feed had no per-round ownership -> synthesize if degenerate (same guard as opp events)
   if (nrow(d) && (max(d$own) <= 0.0015 || sum(d$own) < 0.5 * GOLF_ROSTER$n))
     d[, own := .golf_synth_own(proj, salary, GOLF_ROSTER$n)]
-  msg(sprintf("  golf: single-round (Round %d) slate â€” %d golfers, DK single-round salaries", round, nrow(d)))
+  msg(sprintf("  golf: single-round (Round %d) slate — %d golfers, DK single-round salaries", round, nrow(d)))
   persist_salaries(d, slate$slate_id, "golf")
   d[, .(player_id, player_name, dk_id, team, game_id, position, salary, proj, sim_sd, ceil, floor, p_zero, own)]
 }
@@ -440,7 +440,7 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
 # blend); regenerate today's file if stale; fall back to DataGolf defaults if the model
 # can't be produced. Set GOLF_MODEL_AUTORUN=0 to skip the auto-regeneration subprocess.
 golf_project_players <- function(slate) {
-  # single-round (Round 2/3/4) 1-day contest â€” its own DK salaries + per-round projection
+  # single-round (Round 2/3/4) 1-day contest — its own DK salaries + per-round projection
   if (isTRUE(slate$single_round)) {
     rg <- if (!is.null(slate$draft_group_id)) list(draft_group_id = slate$draft_group_id)
           else golf_dk_round_group(slate$round %||% 2L, late = isTRUE(slate$late))
@@ -476,19 +476,19 @@ golf_project_players <- function(slate) {
   if (!is.null(m) && nrow(m)) {
     if (fd) {                                            # swap DataGolf DK salaries for FD prices
       sm <- .golf_fd_salary_map(slate)
-      if (is.null(sm)) { msg("  golf(FanDuel): no ingested FD salary CSV for this slate â€” run fd_ingest_latest('golf')"); return(NULL) }
+      if (is.null(sm)) { msg("  golf(FanDuel): no ingested FD salary CSV for this slate — run fd_ingest_latest('golf')"); return(NULL) }
       m <- as.data.table(copy(m)); m[, norm := norm_name(player_name)]
       m <- merge(m[, setdiff(names(m), "salary"), with = FALSE], sm, by = "norm")[, norm := NULL]
       if (!nrow(m)) { msg("  golf(FanDuel): no projection<->FD-salary name matches"); return(NULL) }
     }
-    msg(sprintf("  golf: using YOUR DFS model [%s/%s/%s] â€” %s, %d players (%s)",
+    msg(sprintf("  golf: using YOUR DFS model [%s/%s/%s] — %s, %d players (%s)",
                 tournament, variant, if (fd) "FanDuel" else "DraftKings",
                 attr(m, "event") %||% "slate", nrow(m),
                 if (fd) (if (fd_scored) "FD-scored" else "DK-scored proxy") else "DK-scored"))
     return(.golf_model_pool(m, slate))
   }
   # DataGolf fallback: only the MAIN PGA event is available via the default endpoint.
-  if (identical(tournament, "opp")) { msg("  golf(opp): no opposite-field model file yet â€” skipping"); return(NULL) }
+  if (identical(tournament, "opp")) { msg("  golf(opp): no opposite-field model file yet — skipping"); return(NULL) }
   msg("  golf: model projections unavailable -> DataGolf defaults (fallback)")
   .golf_datagolf_pool(slate)
 }
