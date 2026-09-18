@@ -219,11 +219,24 @@ golf_dk_captain_group <- function() {
   gtname[is.na(gtname)] <- ""
   d2 <- if ("ContestStartTimeSuffix" %in% names(g)) g$ContestStartTimeSuffix else rep("", nrow(g))
   d2[is.na(d2)] <- ""
-  keep <- grepl("captain", gtname, ignore.case = TRUE) & grepl("PGA TOUR", d2, ignore.case = TRUE)
+  # DK's GameType NAME for the captain/showdown slate isn't stable ("Captain Mode
+  # Showdown" some weeks, plain "Showdown" others — same instability already handled
+  # for the classic round detector) — match broadly on showdown/captain, then rely on
+  # EXCLUSION for tour/format disambiguation rather than requiring "PGA TOUR" text,
+  # since the real PGA showdown contest doesn't always include that literal string
+  # (confirmed live: "(Round 2)" with no tour name at all). Exclude other tours (DP
+  # World/LPGA/Champions/Korn Ferry) and non-CPT+FLEX formats (Snake, Birdies/Single
+  # Stat) by name, matching the existing round-detector's exclusion pattern.
+  keep <- grepl("showdown|captain", gtname, ignore.case = TRUE) &
+          !grepl("snake|birdies|single stat", gtname, ignore.case = TRUE) &
+          !grepl("DP World|LPGA|Champions Tour|Korn Ferry", d2, ignore.case = TRUE)
   if (!any(keep)) return(NULL)
-  # prefer the latest round posted (R4 over R3 when both live)
   rnd <- suppressWarnings(as.integer(sub(".*Round\\s+(\\d+).*", "\\1", d2[keep])))
-  ord <- order(-fcoalesce(rnd, 0L)); i <- which(keep)[ord][1]
+  late <- grepl("late", d2[keep], ignore.case = TRUE)
+  # prefer the latest ROUND posted (R4 over R3), then the non-late wave within that
+  # round — same precedent as golf_live_round()'s late=FALSE preference.
+  ord <- order(-fcoalesce(rnd, 0L), late)
+  i <- which(keep)[ord][1]
   list(draft_group_id = as.character(g$DraftGroupId[i]),
        round = suppressWarnings(as.integer(sub(".*Round\\s+(\\d+).*", "\\1", d2[i]))) %||% 4L,
        name = trimws(d2[i]))
