@@ -185,16 +185,33 @@ golf_dk_round_group <- function(round = 2L, late = FALSE) {
   d1[is.na(d1)] <- ""; d2[is.na(d2)] <- ""; desc <- trimws(paste(d1, d2))
   # DK single-round golf = a FLAT 6-golfer "Round N PGA TOUR" slate. Its GameTypeId VARIES
   # by round/wave (seen 84, 85, 86, Late 153...), so don't whitelist IDs — match the name,
-  # REQUIRE "PGA TOUR" (not DP World / LPGA / LIV), and exclude the Snake (191) + Birdies /
-  # Single-Stat formats. Late waves handled via the `late` flag.
+  # exclude the Snake (191) + Birdies/Single-Stat/other-tour formats. Late waves handled via
+  # the `late` flag. DK has DROPPED the literal "PGA TOUR" text from the description some
+  # weeks (seen desc = "(Round 2)" with no tour name at all, and the GameType got renamed to
+  # generic "Showdown" the same week — same instability class already handled for the
+  # captain detector) — so don't require "PGA TOUR"; rely on exclusion instead, and confirm
+  # PGA TOUR structurally below (single rosterSlotId = classic, not CPT/FLEX captain mode).
   keep <- grepl(sprintf("Round %d\\b", round), desc, ignore.case = TRUE) &
-          grepl("PGA TOUR", desc, ignore.case = TRUE) &
           !grepl("Birdies|Snake|Single Stat", desc, ignore.case = TRUE) &
+          !grepl("DP World|LPGA|Champions Tour|Korn Ferry", desc, ignore.case = TRUE) &
           (as.integer(g$GameTypeId) != 191L) &
           (grepl("Late", desc, ignore.case = TRUE) == late)
   if (!any(keep)) return(NULL)
-  nm <- if (nzchar(d2[keep][1])) d2[keep][1] else d1[keep][1]
-  list(draft_group_id = as.character(g$DraftGroupId[keep][1]), name = trimws(nm))
+  cand <- which(keep)
+  # structural confirmation: classic single-round golf is ONE flat roster slot (players
+  # listed once). If a candidate is actually 2-slot CPT/FLEX captain mode (mislabeled into
+  # matching here), skip it — that's golf_dk_captain_group()'s job, not this one's.
+  for (i in cand) {
+    dgid <- as.character(g$DraftGroupId[i])
+    dj <- tryCatch(.dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", dgid)),
+                   error = function(e) NULL)
+    slots <- tryCatch(uniqueN(as.data.table(dj$draftables)$rosterSlotId), error = function(e) NA_integer_)
+    if (is.na(slots) || slots == 1L) {
+      nm <- if (nzchar(d2[i])) d2[i] else d1[i]
+      return(list(draft_group_id = dgid, name = trimws(nm)))
+    }
+  }
+  NULL
 }
 
 # Auto-detect the live DK single-round slate (the round feed uses this): the only
@@ -236,18 +253,33 @@ golf_dk_captain_group <- function() {
   # prefer the latest ROUND posted (R4 over R3), then the non-late wave within that
   # round — same precedent as golf_live_round()'s late=FALSE preference.
   ord <- order(-fcoalesce(rnd, 0L), late)
-  i <- which(keep)[ord][1]
-  list(draft_group_id = as.character(g$DraftGroupId[i]),
-       round = suppressWarnings(as.integer(sub(".*Round\\s+(\\d+).*", "\\1", d2[i]))) %||% 4L,
-       name = trimws(d2[i]))
+  cand <- which(keep)[ord]
+  # DK has REUSED the "Showdown" GameType name for the plain classic single-round slate
+  # some weeks (confirmed live: a "Showdown"-named group with only ONE rosterSlotId, i.e.
+  # every golfer listed once at one price — that's the classic flat format golf_dk_round_
+  # group() handles, NOT true CPT/FLEX captain mode). Require the real captain-mode
+  # structural signature (players listed under 2 distinct rosterSlotIds: CPT @1.5x + FLEX
+  # @base) before accepting a candidate, so a mislabeled classic slate isn't misbuilt as
+  # a captain contest.
+  for (i in cand) {
+    dgid <- as.character(g$DraftGroupId[i])
+    dj <- tryCatch(.dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", dgid)),
+                   error = function(e) NULL)
+    slots <- tryCatch(uniqueN(as.data.table(dj$draftables)$rosterSlotId), error = function(e) NA_integer_)
+    if (isTRUE(slots == 2L)) {
+      return(list(draft_group_id = dgid,
+                  round = suppressWarnings(as.integer(sub(".*Round\\s+(\\d+).*", "\\1", d2[i]))) %||% 4L,
+                  name = trimws(d2[i])))
+    }
+  }
+  NULL
 }
 
 # Base (UTIL) salaries from a captain-mode draftables feed: each golfer is listed twice
 # (CPT row @1.5x + UTIL row @base) -> take the LOWER salary per player = the base price.
 .golf_captain_util_salaries <- function(draft_group_id) {
-  j <- tryCatch(httr2::request(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", draft_group_id)) |>
-        httr2::req_user_agent("Mozilla/5.0") |> httr2::req_timeout(30) |> httr2::req_perform() |>
-        httr2::resp_body_json(simplifyVector = TRUE), error = function(e) NULL)
+  j <- tryCatch(.dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", draft_group_id)),
+                error = function(e) NULL)
   if (is.null(j) || is.null(j$draftables) || !nrow(as.data.table(j$draftables))) return(NULL)
   d <- as.data.table(j$draftables)[!is.na(salary) & salary > 0]
   s <- d[, .(salary = as.integer(min(salary))), by = .(player_name = displayName)]
@@ -284,9 +316,8 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
 
 # DK single-round salaries for a round draft group -> data.table(player_name, salary, norm).
 .golf_round_dk_salaries <- function(draft_group_id) {
-  j <- tryCatch(httr2::request(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", draft_group_id)) |>
-        httr2::req_user_agent("Mozilla/5.0") |> httr2::req_timeout(30) |> httr2::req_perform() |>
-        httr2::resp_body_json(simplifyVector = TRUE), error = function(e) NULL)
+  j <- tryCatch(.dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", draft_group_id)),
+                error = function(e) NULL)
   if (is.null(j) || is.null(j$draftables) || !nrow(as.data.table(j$draftables))) return(NULL)
   d <- unique(as.data.table(j$draftables)[!is.na(salary) & salary > 0,
         .(player_name = displayName, salary = as.integer(salary))], by = "player_name")
@@ -380,9 +411,8 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
 # per-round projection from DataGolf's SCORING points (proj_points_scoring / 4 — no finish
 # bonus). One round is boom/bust, so relative variance is higher than the full tournament.
 .golf_round_pool <- function(draft_group_id, slate, round = 2L) {
-  j <- tryCatch(httr2::request(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", draft_group_id)) |>
-        httr2::req_user_agent("Mozilla/5.0") |> httr2::req_timeout(30) |> httr2::req_perform() |>
-        httr2::resp_body_json(simplifyVector = TRUE), error = function(e) NULL)
+  j <- tryCatch(.dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", draft_group_id)),
+                error = function(e) NULL)
   if (is.null(j) || is.null(j$draftables) || !nrow(as.data.table(j$draftables))) stop("no DK draftables for round group ", draft_group_id)
   d <- unique(as.data.table(j$draftables)[!is.na(salary) & salary > 0,
         .(player_name = displayName, salary = as.integer(salary))], by = "player_name")
