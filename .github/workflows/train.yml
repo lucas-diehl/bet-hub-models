@@ -1,4 +1,4 @@
-name: train
+﻿name: train
 
 # DAILY model retrain — the missing piece. dfs.yml and golf.yml only PROJECT from
 # committed artifacts; they never retrain them, so:
@@ -7,6 +7,15 @@ name: train
 #     had them and projected on BASELINE instead of the trained model.
 # This job rebuilds everything and COMMITS the refreshed .rds back so the daily runs use
 # them. data/models is gitignored, so those are force-added.
+#
+# golf's engine/data.R + engine/elo.R only REDERIVE from golf_picks/rich_rounds_long.rds
+# + rich_snapshots.rds — they don't fetch anything themselves. Those two inputs were only
+# ever built by scripts that lived in claude/ (gitignored wholesale because ~18 OTHER
+# scripts there hardcode the DataGolf key), so they were frozen at their one-time
+# 2026-09-01 commit: every daily run rebuilt v2_master/v2_elo from the SAME unchanged
+# input and reported "success" while producing byte-identical output. Fixed by moving the
+# two key-safe scripts that actually need to run (neither ever hardcoded a key) into
+# engine/ and running them first.
 #
 # Runs DAILY at 05:00 ET — deliberately ahead of every downstream cron (dfs 07:00 ET,
 # golf/cfb 09:00 ET) so each day's projections are built on models that already include
@@ -56,12 +65,14 @@ jobs:
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
-          Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb","nnet"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+          Rscript -e 'p<-c("data.table","jsonlite","httr2","curl","xgboost","openxlsx","DBI","duckdb","nnet"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
       - name: Retrain golf (master -> elo -> bundle)
         if: ${{ github.event.inputs.scope != 'dfs' }}
         working-directory: golf-modeling
         run: |
+          Rscript engine/fetch_rich_rounds.R    # pull newly-completed events from DataGolf (resumable per-event cache)
+          Rscript engine/rich_features.R        # rebuild leakage-free feature snapshots from the fresh rounds
           Rscript engine/data.R                 # rebuild v2_master + round_shapes from fresh results
           Rscript engine/elo.R                  # recompute personalized Elo from the new master
           Rscript engine/data.R                 # 2nd pass: refresh the leak-free Elo feature in master
@@ -81,6 +92,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f golf-modeling/golf_picks/v2_master.rds golf-modeling/golf_picks/v2_elo.rds golf-modeling/golf_picks/v2_round_shapes.rds golf-modeling/golf_picks/v2_bundle.rds 2>/dev/null || true
+          git add -f golf-modeling/golf_picks/rich_rounds_long.rds golf-modeling/golf_picks/rich_snapshots.rds golf-modeling/golf_picks/rich_rounds_cache/*.rds 2>/dev/null || true
           git add -f dfs-engine/data/models/*.rds 2>/dev/null || true
           git add -f dfs-engine/data/raw/ncaaf_weekly.rds 2>/dev/null || true
           if git diff --cached --quiet; then
@@ -89,3 +101,4 @@ jobs:
             git commit -m "daily model refresh: golf master/elo/bundle + tennis/wnba/nfl/ncaaf [skip ci]"
             git push
           fi
+
