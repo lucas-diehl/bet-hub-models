@@ -3,13 +3,13 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-09-18",
-  "graded_at": "2026-09-19T16:11:34Z",
+  "graded_at": "2026-09-20T16:40:16Z",
   "results": [
     {
       "bet_id": "cfb-modeling-2026-wk3-miami-wakeforest-atsopen",
       "result": "win",
       "closing_odds_american": -110,
-      "clv_pct": -0.0227,
+      "clv_pct": -0.0226,
       "pnl_units": 2.73,
       "actual": {
         "actual_margin": -13,
