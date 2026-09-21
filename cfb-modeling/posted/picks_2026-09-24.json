@@ -3,7 +3,7 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-09-24",
-  "generated_at": "2026-09-20T16:40:20Z",
+  "generated_at": "2026-09-21T18:25:37Z",
   "model_version": "ppp-ppd-2026",
   "mode": "PAPER",
   "event_context": "Week 4",
@@ -30,9 +30,9 @@
         "fav"
       ],
       "details": {
-        "proj_margin": 14.7,
+        "proj_margin": 15.2,
         "open_spread": -1.5,
-        "edge_pts": 13.2,
+        "edge_pts": 13.7,
         "dvoa_consensus": "3/5",
         "opened": "2026-09-20T16:39:31Z",
         "week": 4,
