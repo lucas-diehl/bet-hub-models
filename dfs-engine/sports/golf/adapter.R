@@ -357,6 +357,109 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
   base[]
 }
 
+# ── PRESIDENTS CUP / RYDER CUP MATCH PLAY support ──────────────────────────────
+# DK's Presidents Cup contest (confirmed live 2026-09-22: DraftGroup 153817,
+# GameTypeId 129, GameType name "Cup", "Presidents Cup" in the competition
+# description) is STRUCTURALLY the same CPT(1.5x salary+points)+FLEX $50k format
+# as golf_dk_captain_group()'s showdown -- reuse .golf_captain_util_salaries()
+# for salaries -- but its SCORING is entirely different (hole-by-hole match play,
+# not stroke play/finish position) and it runs across the WHOLE multi-day event,
+# not one round. See sports/golf/matchplay.R (point table) and golf-modeling's
+# engine/matchplay_sim.R (the per-hole Monte Carlo simulator) for the actual
+# scoring/projection engine; this section only detects the DK slate + builds the
+# pool in the spine's standard shape.
+
+# Detect the live DK Presidents Cup (match play) draft group. Matches broadly on
+# GameTypeId 129 OR a GameType name containing "Cup" OR "Presidents Cup"/"Ryder
+# Cup" text in the competition description -- same defensive, name-drift-tolerant
+# posture as golf_dk_captain_group()/golf_dk_round_group() above, since DK's
+# labels for a once-a-year contest type are unverified across future years.
+# Returns list(draft_group_id, game_type_id, name) or NULL.
+golf_dk_presidents_cup_group <- function() {
+  j <- tryCatch(httr2::request("https://www.draftkings.com/lobby/getcontests?sport=GOLF") |>
+        httr2::req_user_agent("Mozilla/5.0") |> httr2::req_timeout(30) |> httr2::req_perform() |>
+        httr2::resp_body_json(simplifyVector = TRUE), error = function(e) NULL)
+  if (is.null(j) || is.null(j$DraftGroups) || !nrow(as.data.table(j$DraftGroups))) return(NULL)
+  g <- as.data.table(j$DraftGroups)
+  gt <- if (!is.null(j$GameTypes)) as.data.table(j$GameTypes) else NULL
+  gtid <- suppressWarnings(as.integer(g$GameTypeId))
+  gtname <- if (!is.null(gt) && all(c("GameTypeId", "Name") %in% names(gt)))
+    gt$Name[match(gtid, suppressWarnings(as.integer(gt$GameTypeId)))] else rep("", nrow(g))
+  gtname[is.na(gtname)] <- ""
+  d1 <- if ("DraftGroupSeriesDescription" %in% names(g)) g$DraftGroupSeriesDescription else rep("", nrow(g))
+  d2 <- if ("ContestStartTimeSuffix" %in% names(g)) g$ContestStartTimeSuffix else rep("", nrow(g))
+  d1[is.na(d1)] <- ""; d2[is.na(d2)] <- ""
+  desc <- trimws(paste(d1, d2))
+  keep <- fcoalesce(gtid == 129L, FALSE) | grepl("\\bcup\\b", gtname, ignore.case = TRUE) |
+          grepl("presidents cup|ryder cup", desc, ignore.case = TRUE)
+  if (!any(keep)) return(NULL)
+  cand <- which(keep)
+  # structural confirmation, same signature as captain mode: CPT(1.5x)+FLEX = 2
+  # distinct rosterSlotIds (a plain classic/flat slate would be 1).
+  for (i in cand) {
+    dgid <- as.character(g$DraftGroupId[i])
+    dj <- tryCatch(.dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", dgid)),
+                   error = function(e) NULL)
+    slots <- tryCatch(uniqueN(as.data.table(dj$draftables)$rosterSlotId), error = function(e) NA_integer_)
+    if (isTRUE(slots == 2L))
+      return(list(draft_group_id = dgid, game_type_id = gtid[i], name = trimws(if (nzchar(d2[i])) d2[i] else d1[i])))
+  }
+  NULL
+}
+
+# (Re)generate the Presidents Cup match-play projection export via golf-modeling's
+# engine/matchplay_sim.R --export (sums each of the 24 rostered players' simulated
+# DK points across every confirmed pairing + a fallback for not-yet-announced
+# sessions -- see golf-modeling/config/presidents_cup_pairings.R). Best-effort
+# subprocess; a few seconds (Monte Carlo, not model training).
+.golf_run_presidents_cup_export <- function(dir) {
+  f <- file.path(dir, "engine", "matchplay_sim.R"); if (!file.exists(f)) return(FALSE)
+  rscript <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
+  msg("  golf: exporting Presidents Cup match-play projection (Monte Carlo across all confirmed pairings)...")
+  old <- getwd(); on.exit(setwd(old)); setwd(dir)
+  code <- tryCatch(system2(rscript, c(shQuote(f), "--export"), stdout = FALSE, stderr = FALSE),
+                   error = function(e) 1L)
+  identical(as.integer(code), 0L)
+}
+
+# Build the Presidents Cup pool: DK captain-style base salaries (CPT+FLEX, reused
+# via .golf_captain_util_salaries) joined to the week-long match-play SIMULATED
+# projection (golf-modeling's dfs_presidents_cup_projections.rds bridge file --
+# mirrors .golf_round_model_pool's export-then-read pattern). All 24 rostered USA
+# + International players should match the DK pool; anyone missing a name match
+# is dropped with a logged warning rather than silently producing a short pool.
+golf_presidents_cup_pool <- function(pg, slate) {
+  dir <- golf_model_dir(); if (is.na(dir)) { msg("  golf: no golf-modeling dir found for Presidents Cup sim"); return(NULL) }
+  f <- file.path(dir, "golf_picks", "dfs_presidents_cup_projections.rds")
+  x <- if (file.exists(f)) tryCatch(readRDS(f), error = function(e) NULL) else NULL
+  stale <- is.null(x) || is.null(x$projections) || !identical(x$meta$date, as.character(Sys.Date()))
+  if (stale && !identical(Sys.getenv("GOLF_MODEL_AUTORUN"), "0")) {
+    if (.golf_run_presidents_cup_export(dir))
+      x <- tryCatch(readRDS(f), error = function(e) NULL)
+  }
+  if (is.null(x) || is.null(x$projections) || !nrow(x$projections)) {
+    msg("  golf: Presidents Cup projection unavailable (matchplay_sim export missing/failed -- check golf-modeling/config/presidents_cup_pairings.R exists)")
+    return(NULL)
+  }
+  p <- as.data.table(x$projections)
+  cs <- .golf_captain_util_salaries(pg$draft_group_id)
+  if (is.null(cs) || !nrow(cs)) { msg("  golf: no DK Presidents Cup draftables/salaries yet"); return(NULL) }
+  p[, norm := norm_name(player_name)]; cs2 <- copy(cs)[, norm := norm_name(player_name)]
+  d <- merge(cs2[, .(norm, salary)], p, by = "norm", all.x = FALSE)
+  if (!nrow(d)) { msg("  golf: no name matches between DK Presidents Cup pool and matchplay_sim projections"); return(NULL) }
+  d[, `:=`(player_id = surrogate_player_id(norm), dk_id = NA_character_, team = NA_character_,
+           game_id = NA_character_, position = "G",
+           proj = as.numeric(proj), sim_sd = pmax(as.numeric(sim_sd), 2),
+           ceil = as.numeric(ceil), floor = pmax(as.numeric(floor), 0), p_zero = 0.01)]
+  d[, own := .golf_synth_own(proj, salary, GOLF_ROSTER$n)]    # no DK ownership feed exists for this format
+  msg(sprintf("  golf: Presidents Cup pool -- %d/24 rostered players matched to DK salaries (avg %.1f/5 sessions confirmed, %.1f fallback)",
+              nrow(d), mean(d$sessions_confirmed, na.rm = TRUE), mean(d$sessions_fallback, na.rm = TRUE)))
+  persist_salaries(d, slate$slate_id, "golf")
+  out <- d[, .(player_id, player_name, dk_id, team, game_id, position, salary, proj, sim_sd, ceil, floor, p_zero, own)]
+  attr(out, "proj_source") <- "presidents_cup"
+  out
+}
+
 # DK single-round salaries for a round draft group -> data.table(player_name, salary, norm).
 .golf_round_dk_salaries <- function(draft_group_id) {
   j <- tryCatch(.dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", draft_group_id)),
@@ -487,6 +590,17 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
 # blend); regenerate today's file if stale; fall back to DataGolf defaults if the model
 # can't be produced. Set GOLF_MODEL_AUTORUN=0 to skip the auto-regeneration subprocess.
 golf_project_players <- function(slate) {
+  # Presidents Cup / Ryder Cup match play — its own DK slate (CPT+FLEX salary
+  # structure reused, but hole-by-hole match-play scoring, summed across the
+  # WHOLE multi-day event, not one round). Opt-in via slate$presidents_cup
+  # (analogous to slate$single_round above) since auto-detecting it unconditionally
+  # on every golf build would be wasted work outside Presidents/Ryder Cup weeks.
+  if (isTRUE(slate$presidents_cup)) {
+    pg <- if (!is.null(slate$draft_group_id)) list(draft_group_id = slate$draft_group_id)
+          else golf_dk_presidents_cup_group()
+    if (is.null(pg)) { msg("  golf: no live DK Presidents Cup slate posted yet"); return(NULL) }
+    return(golf_presidents_cup_pool(pg, slate))
+  }
   # single-round (Round 2/3/4) 1-day contest — its own DK salaries + per-round projection
   if (isTRUE(slate$single_round)) {
     rg <- if (!is.null(slate$draft_group_id)) list(draft_group_id = slate$draft_group_id)
