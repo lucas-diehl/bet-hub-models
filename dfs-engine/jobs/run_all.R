@@ -35,7 +35,7 @@ if (!interactive()) {
   tryCatch(ingest_all_results(), error = function(e) msg("results ingest error:", conditionMessage(e)))
   # accuracy: how close projections were to actuals per sport (the north-star scorecard)
   tryCatch(projection_accuracy(), error = function(e) msg("accuracy error:", conditionMessage(e)))
-  sports   <- if (!is.null(a$sports)) strsplit(a$sports, ",")[[1]] else c("wnba","tennis","golf","golf_round","golf_captain","golf_m80","golf_opp","golf_opp_m80","nfl","ncaaf")
+  sports   <- if (!is.null(a$sports)) strsplit(a$sports, ",")[[1]] else c("wnba","tennis","golf","golf_round","golf_captain","presidents_cup","golf_m80","golf_opp","golf_opp_m80","nfl","ncaaf")
   contests <- if (!is.null(a$contests)) strsplit(a$contests, ",")[[1]] else NULL
   # log today's projections FIRST (fast) so accuracy grading has them even if the heavy
   # dashboard build below is slow / fails / hits a DB lock.
