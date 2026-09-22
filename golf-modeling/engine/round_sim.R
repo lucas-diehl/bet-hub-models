@@ -128,6 +128,21 @@ get_live_round_sg <- function(tour = "pga", round = 1L) {
   q <- function(m,p) apply(m,1L,stats::quantile,probs=p,names=FALSE)
   Pm[, `:=`(proj=rowMeans(dk), ceil=q(dk,0.90), floor=pmax(q(dk,0.10),0),
             sim_sd=apply(dk,1L,sd))]
+  # ROUND-LEVEL LEVEL CALIBRATION: proj_final = a + b*sim_proj, mirroring project.R's
+  # .fit_level() for the full-tournament path but fit against REAL SETTLED round-level
+  # DK points (hole_pts + 3*bogey-free + 3*E[3+ birdie streak runs | real birdie count]
+  # from v2_round_shapes.rds real outcome counts, via the SAME dk_hole_pts()/
+  # calibrate_dk() scoring already used elsewhere in this codebase -- NOT tournament
+  # total_pts, since single-round DK contests carry no cut/finish/all-4-under-70 bonus).
+  # Fit on 270 historical events / 105k real player-rounds (5-fold CV: bias -0.70 -> 0.00,
+  # RMSE 6.46 -> 6.42). Cached in golf_picks/v2_round_level.rds; refit only when that
+  # file is regenerated (see engine/fit_round_level.R), not on every run.
+  rl <- tryCatch(readRDS(file.path(OUT,"v2_round_level.rds")), error=function(e) list(a=0,b=1))
+  if (!is.finite(rl$a %||% NA) || !is.finite(rl$b %||% NA)) rl <- list(a=0,b=1)
+  Pm[, `:=`(proj = rl$a + rl$b*proj, floor = rl$a + rl$b*floor, ceil = rl$a + rl$b*ceil,
+            sim_sd = rl$b*sim_sd)]
+  Pm[, floor := pmax(floor, 0)]
+  Pm[, ceil  := pmax(ceil, proj)]
   # FRL / round-1 selector: P(this golfer posts the LOW round of the field) from the sim
   if (round == 1L) { cm <- apply(SG, 2L, max); Pm[, p_frl := rowMeans(SG == matrix(cm, P, S, byrow=TRUE))] }
   # round 1 has no completed-round fold -> ensure the columns the merge/print expect exist
