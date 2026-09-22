@@ -74,6 +74,12 @@ parse_standings_entrants <- function(csv_path) {
   if (grepl("\\bten\\b|tennis", nm) || s == "ten") return("tennis")
   if (grepl("soccer|\\bepl\\b|\\bucl\\b|premier", nm) || s == "soc") return("soccer")
   if (grepl("nascar", nm)) return("nascar")
+  # DK's raw sport label for college football is "CFB" -- unlike every other branch here,
+  # that raw label was falling through to the nzchar(s) fallback below, permanently
+  # fragmenting NCAAF/CFB results into a separate "cfb" bucket from the "ncaaf" label
+  # every other table (ownership/projections/salaries) already normalizes to, via the
+  # matching branch in infer_sport_from_contest() (spine/R/showdown.R).
+  if (grepl("ncaaf|cfb|college foot", nm) || s %in% c("ncaaf", "cfb")) return("ncaaf")
   if (grepl("\\bnfl\\b", nm) || s == "nfl") return("nfl")
   if (grepl("\\bnba\\b", nm) || s == "nba") return("nba")
   if (nzchar(s)) s else "other"
