@@ -7,12 +7,20 @@
 suppressPackageStartupMessages({ library(data.table) })
 
 # Persist the slate's projections (versioned) so the web app + audits have history.
+# A pool builder can tag itself via attr(pool, "proj_source") (e.g. golf's adapter
+# distinguishes "model"/"datagolf_fallback"/"round_model"/"round_fallback") when a sport
+# has more than one code path that can produce a projection -- without that, every path
+# silently persisted as the same "model" label, making it impossible to later tell which
+# path actually produced a given historical row (this masked which of golf's 4 pool
+# paths was responsible for a measured accuracy bias). Falls back to the `source` arg
+# when the pool doesn't set one, so existing callers are unaffected.
 persist_projections <- function(pool, slate_id, sport, source = "model") {
+  psrc <- attr(pool, "proj_source") %||% source
   pool <- as.data.table(pool)
   if (!"player_id" %in% names(pool) || !nrow(pool)) return(invisible(0L))
   g <- function(col, default = NA_real_) if (col %in% names(pool)) pool[[col]] else rep(default, nrow(pool))
   df <- data.frame(slate_id = slate_id, sport = sport, player_id = pool$player_id,
-    version_ts = format(Sys.time(), "%Y-%m-%d %H:%M:%S"), source = source,
+    version_ts = format(Sys.time(), "%Y-%m-%d %H:%M:%S"), source = psrc,
     proj_mean = g("proj"), sim_sd = g("sim_sd"), ceil = g("ceil"),
     floor = g("floor"), p_zero = g("p_zero"))
   db_upsert("projections", df, keys = c("slate_id", "player_id", "version_ts", "source"))
