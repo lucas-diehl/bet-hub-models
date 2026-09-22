@@ -56,6 +56,36 @@ golf_model_dir <- function() {
   if (dir.exists(cand)) return(normalizePath(cand)) else NA_character_
 }
 
+# Rough bias correction for the raw DataGolf fallback (.golf_datagolf_pool, only used
+# when YOUR model export is stale/unavailable): DataGolf's own proj_points_total runs
+# measurably hot -- confirmed live (Biltmore Championship field, 131 players) against
+# YOUR calibrated model's own output: field-mean ratio 0.87, a linear fit of
+# model_proj ~ a + b*dg_proj gives a=5.9, b=0.77 (R^2=0.84). A first attempt at this
+# reused the bundle's own "unbiased in DK points" affine correction directly -- WRONG:
+# that correction nudges golf-modeling's OWN (slightly conservative) raw sim UP
+# (b=1.095), so applying it to DataGolf's ALREADY-hot feed pushed it up further,
+# making the bias worse, not better. This instead regresses YOUR most recent model
+# file's proj directly against DataGolf's CURRENT raw feed for their overlapping
+# players -- even if that file is a few days stale, the aggregate BIAS RELATIONSHIP
+# between the two feeds is far more stable than either's absolute per-player level, so
+# this self-updates every time a recent model file exists rather than baking in one
+# day's snapshot as a permanent constant. Falls back to NULL (no correction) if no
+# model file exists at all or too few players overlap to fit a meaningful line.
+.golf_datagolf_bias_fit <- function(dir, dg_pool) {
+  f <- file.path(dir, "golf_picks", "dfs_projections.rds")
+  if (!file.exists(f)) return(NULL)
+  x <- tryCatch(readRDS(f), error = function(e) NULL)
+  if (is.null(x) || is.null(x$projections)) return(NULL)
+  m <- as.data.table(x$projections)[, .(dg_id, model_proj = as.numeric(proj))]
+  d <- dg_pool[, .(dg_id, dg_proj = proj)]
+  z <- merge(m, d, by = "dg_id")
+  z <- z[is.finite(model_proj) & is.finite(dg_proj) & model_proj > 0 & dg_proj > 0]
+  if (nrow(z) < 20L) return(NULL)
+  fit <- tryCatch(lm(model_proj ~ dg_proj, data = z), error = function(e) NULL)
+  if (is.null(fit)) return(NULL)
+  list(a = unname(coef(fit)[1]), b = unname(coef(fit)[2]))
+}
+
 # Projection file name for a (tournament, variant, site): tournament "main" = the PGA
 # event, "opp" = the opposite-field event; variant "default" = backtest-tuned blend,
 # "m80" = 80% model / 20% DataGolf; site "fd" appends _fd (FanDuel-scored). e.g.
@@ -142,8 +172,10 @@ golf_event_name <- function(tournament = "main") {
                 100 * max(p$own)))
   }
   persist_salaries(p, slate$slate_id, "golf")
-  p[, .(player_id, player_name, dk_id, team, game_id, position,
-        salary, proj, sim_sd, ceil, floor, p_zero, own)]
+  out <- p[, .(player_id, player_name, dk_id, team, game_id, position,
+               salary, proj, sim_sd, ceil, floor, p_zero, own)]
+  attr(out, "proj_source") <- "model"
+  out
 }
 
 # DataGolf DFS defaults — the FALLBACK when the user's model isn't available.
@@ -161,12 +193,23 @@ golf_event_name <- function(tournament = "main") {
     sim_sd      = pmax(as.numeric(std_dev), 4),
     own         = pmax(fcoalesce(as.numeric(proj_ownership), 0.1), 0.1) / 100)]
   p <- p[!is.na(salary) & salary > 0 & !is.na(proj)]
-  p[, ceil  := proj + 0.84 * sim_sd]
-  p[, floor := pmax(proj - 1.2 * sim_sd, 0)]
+  # DataGolf's raw proj_points_total is NOT calibrated by us and runs measurably hot
+  # (confirmed live ~15% high vs the calibrated model on the same field) -- fit a rough
+  # bias correction against YOUR most recent model file (see .golf_datagolf_bias_fit()).
+  dir <- golf_model_dir()
+  fit <- if (!is.na(dir)) .golf_datagolf_bias_fit(dir, p[, .(dg_id, proj)]) else NULL
+  if (!is.null(fit)) {
+    p[, `:=`(proj = fit$a + fit$b * proj, floor = pmax(fit$a + fit$b * (proj - 1.2 * sim_sd), 0),
+             ceil = fit$a + fit$b * (proj + 0.84 * sim_sd), sim_sd = fit$b * sim_sd)]
+  } else {
+    p[, `:=`(ceil = proj + 0.84 * sim_sd, floor = pmax(proj - 1.2 * sim_sd, 0))]
+  }
   p[, p_zero := 0.01]
   persist_salaries(p, slate$slate_id, "golf")
-  p[, .(player_id, player_name, dk_id, team, game_id, position,
-        salary, proj, sim_sd, ceil, floor, p_zero, own)]
+  out <- p[, .(player_id, player_name, dk_id, team, game_id, position,
+               salary, proj, sim_sd, ceil, floor, p_zero, own)]
+  attr(out, "proj_source") <- if (!is.null(fit)) "datagolf_fallback_calibrated" else "datagolf_fallback"
+  out
 }
 
 # ── SINGLE-ROUND (Round 2/3/4) support ────────────────────────────────────────
@@ -376,7 +419,9 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
   msg(sprintf("  golf: single-round (Round %d) using YOUR v2-round model (%s) — %d golfers, per-tee-time wind%s",
               round, x$meta$event %||% "slate", nrow(d), if (round == 1L) " + FRL" else ""))
   persist_salaries(d, slate$slate_id, "golf")
-  d[, .(player_id, player_name, dk_id, team, game_id, position, salary, proj, sim_sd, ceil, floor, p_zero, own)]
+  out <- d[, .(player_id, player_name, dk_id, team, game_id, position, salary, proj, sim_sd, ceil, floor, p_zero, own)]
+  attr(out, "proj_source") <- "round_model"
+  out
 }
 
 # Round >= 2: fold COMPLETED-round results into the per-round projection using DataGolf's
@@ -433,7 +478,9 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
     d[, own := .golf_synth_own(proj, salary, GOLF_ROSTER$n)]
   msg(sprintf("  golf: single-round (Round %d) slate — %d golfers, DK single-round salaries", round, nrow(d)))
   persist_salaries(d, slate$slate_id, "golf")
-  d[, .(player_id, player_name, dk_id, team, game_id, position, salary, proj, sim_sd, ceil, floor, p_zero, own)]
+  out <- d[, .(player_id, player_name, dk_id, team, game_id, position, salary, proj, sim_sd, ceil, floor, p_zero, own)]
+  attr(out, "proj_source") <- "round_fallback"
+  out
 }
 
 # Projections: prefer the USER'S golf-modeling DFS model (its backtest-tuned model+DG
