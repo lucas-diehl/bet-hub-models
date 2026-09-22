@@ -39,7 +39,12 @@ if (!interactive()) {
   contests <- if (!is.null(a$contests)) strsplit(a$contests, ",")[[1]] else NULL
   # log today's projections FIRST (fast) so accuracy grading has them even if the heavy
   # dashboard build below is slow / fails / hits a DB lock.
-  tryCatch(log_projections(date = Sys.Date()), error = function(e) msg("projection log error:", conditionMessage(e)))
+  # sports= was omitted here, so this always fell back to log_projections()'s own
+  # default (wnba/tennis/golf/golf_opp only) even though `sports` above already lists
+  # nfl/ncaaf/golf_round/etc. — the accuracy scorecard silently never had NFL/NCAAF's
+  # daily projection snapshot to grade against (they're still separately archived by
+  # build_dashboard()'s persist_projections(), so this only affects the fast/early log).
+  tryCatch(log_projections(sports = sports, date = Sys.Date()), error = function(e) msg("projection log error:", conditionMessage(e)))
   f <- build_dashboard(sports = sports, contests = contests, bankroll = a$bankroll)
   # NOW import the standings downloaded above — today's salaries exist, so
   # .resolve_logged_slate() can attach each capture to the layout our projections used.
