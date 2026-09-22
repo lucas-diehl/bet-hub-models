@@ -12,7 +12,9 @@ suppressPackageStartupMessages({ library(data.table); library(jsonlite) })
 DASH_SPORT_NAMES <- c(wnba="WNBA", tennis="Tennis", golf="Golf", `golf_m80`="Golf (80% Model)",
                       `golf_opp`="Golf — 2nd Event", `golf_opp_m80`="Golf 2nd (80% Model)",
                       `golf_round`="Golf — Live Round (20-max GPP)",
-                      `golf_captain`="Golf — Captain Showdown (20-max GPP)", nfl="NFL", ncaaf="NCAAF", nba="NBA")
+                      `golf_captain`="Golf — Captain Showdown (20-max GPP)",
+                      `presidents_cup`="Presidents Cup — Match Play (20-max GPP)",
+                      nfl="NFL", ncaaf="NCAAF", nba="NBA")
 DASH_PLACEHOLDER <- c("nba")   # plugins not built yet (NFL + NCAAF now live via sports/{nfl,ncaaf}/project.R)
 # golf TABS -> the extra args passed to the golf plugin. "main" = the PGA event, "opp" =
 # opposite-field; golf_round = the LIVE single-round (R1..R4, auto-detected) 1-day contest
@@ -219,6 +221,7 @@ log_projections <- function(sports = c("wnba", "tennis", "golf", "golf_opp"), da
 build_sport_card <- function(sport, date, slate = "main", n_lineups = 8L,
                              opts = load_bankroll_opts(), extra = list()) {
   if (identical(sport, "golf_captain")) return(build_golf_captain_card(date, opts))
+  if (identical(sport, "presidents_cup")) return(build_golf_presidents_cup_card(date, opts))
   # golf tabs share the golf plugin; each maps to a (blend, tournament) with its own slate id
   psport <- if (sport %in% names(DASH_GOLF_MAP)) "golf" else sport
   gm <- if (sport %in% names(DASH_GOLF_MAP)) DASH_GOLF_MAP[[sport]] else NULL
@@ -425,6 +428,65 @@ build_golf_captain_card <- function(date = Sys.Date(), opts = load_bankroll_opts
 
   list(sport = "golf_captain", name = disp, title = cg$name, status = "ready", mode = "showdown",
        slate_id = make_slate_id("golf", "dk", date, paste0("captain_r", cg$round %||% "x")),
+       gates = list(cash = isTRUE(gates$cash_enabled), gpp = isTRUE(gates$gpp_enabled)),
+       bankroll = opts$bankroll, daily_budget = 0, live_total = 0, plan = list(),
+       captains = captains, lineups = lineups, players = players)
+}
+
+# Presidents/Ryder Cup captain-mode card -- same generic showdown machinery as
+# build_golf_captain_card() (expand_showdown_pool/showdown_sim/captain_board), just
+# fed from golf_presidents_cup_pool()'s week-long match-play simulated projection
+# instead of golf_captain_base()'s single-round one. golf_presidents_cup_pool()
+# already returns the same column shape golf_captain_base() does, so it's a direct
+# substitute. Opt-in card (only reachable when a live Presidents/Ryder Cup DK slate
+# is actually posted) -- see golf_dk_presidents_cup_group() in sports/golf/adapter.R.
+build_golf_presidents_cup_card <- function(date = Sys.Date(), opts = load_bankroll_opts()) {
+  nm0 <- "Presidents Cup — Match Play"
+  tryCatch(dfs_load_sport("golf"), error = function(e) NULL)
+  pg <- tryCatch(golf_dk_presidents_cup_group(), error = function(e) NULL)
+  if (is.null(pg)) return(list(sport = "presidents_cup", name = nm0, status = "no_slate",
+    message = "No live DK Presidents/Ryder Cup slate posted yet."))
+  slate_id <- make_slate_id("golf", "dk", date, "presidents_cup")
+  slate <- list(sport = "golf", site = "dk", date = as.character(date), slate_id = slate_id)
+  base <- tryCatch(golf_presidents_cup_pool(pg, slate), error = function(e) { msg("  presidents cup base error:", conditionMessage(e)); NULL })
+  if (is.null(base) || nrow(base) < 6L) return(list(sport = "presidents_cup", name = nm0, status = "no_slate",
+    message = "Presidents Cup slate detected but projections/salaries not ready yet (check golf-modeling/config/presidents_cup_pairings.R has this session's pairings entered). Re-run once pairings are announced."))
+  set.seed(2026L); cpt_mult <- 1.5
+  rr <- showdown_roster_rules(50000L)
+  exp_pool <- expand_showdown_pool(base, cpt_mult)
+  bsim  <- slate_sim(base, get_loadings(base, "golf"), team_loadings = get_team_loadings(base, "golf"), n_sims = 4000L, seed = 2026L)
+  esim  <- showdown_sim(base, exp_pool, bsim, cpt_mult)
+  field <- simulate_field(exp_pool, rr, field_n = 1200L, own = exp_pool$own)
+  cands <- make_candidates(exp_pool, rr, n_cand = 300L)
+  res   <- grade_candidates(cands, esim, field, curve_gpp = make_gpp(), curve_cash = make_double_up())
+  gates <- tryCatch(load_gates("golf"), error = function(e) list(gpp_enabled = FALSE, cash_enabled = FALSE))
+  picks <- build_gpp20(res, gates, n = 20L, pool = exp_pool,
+                       caps = tryCatch(load_exposure_overrides("golf"), error = function(e) NULL))
+  cb <- captain_board(base, cpt_mult, n = 12L)
+  disp <- paste0(nm0, " (20-max GPP)")
+
+  P <- .player_table(base); ceilcol <- if ("ceil" %in% names(P)) P$ceil else P$proj
+  players <- data.frame(name = P$player_name, team = if ("team" %in% names(P)) P$team else NA,
+    pos = if ("position" %in% names(P)) P$position else NA, salary = as.integer(P$salary),
+    proj = round(P$proj, 1), ceil = round(ceilcol, 1),
+    floor = round(if ("floor" %in% names(P)) P$floor else P$proj, 1),
+    own = round(if ("own" %in% names(P)) P$own else 0, 4),
+    lev = round(P$lev, 3), value = round(P$value, 2), stringsAsFactors = FALSE)
+
+  EP <- as.data.table(exp_pool); epc <- if ("ceil" %in% names(EP)) EP$ceil else EP$proj
+  lineups <- lapply(seq_along(picks), function(i) { p <- picks[[i]]; ix <- p$idx[[1]]
+    cpt <- ix[EP$slot[ix] == "CPT"]; ord <- c(cpt, setdiff(ix, cpt))
+    list(n = i, role = p$role, live = isTRUE(p$live), salary = as.integer(p$salary),
+         proj = round(p$proj, 1), ceil = round(sum(epc[ix]), 1), own = round(p$avg_own %||% 0, 4),
+         captain = if (length(cpt)) EP$player_name[cpt[1]] else NA, reason = p$reason,
+         players = lapply(ord, function(j) list(name = EP$player_name[j], slot = EP$slot[j],
+           salary = as.integer(EP$salary[j]), proj = round(EP$proj[j], 1)))) })
+  captains <- lapply(seq_len(nrow(cb)), function(i) { x <- cb[i]
+    list(player = x$player, team = x$team, cpt_salary = x$cpt_salary, cpt_proj = x$cpt_proj,
+         cpt_ceil = x$cpt_ceil, cpt_own = x$cpt_own, leverage = x$leverage) })
+
+  list(sport = "presidents_cup", name = disp, title = pg$name %||% nm0, status = "ready", mode = "showdown",
+       slate_id = slate_id,
        gates = list(cash = isTRUE(gates$cash_enabled), gpp = isTRUE(gates$gpp_enabled)),
        bankroll = opts$bankroll, daily_budget = 0, live_total = 0, plan = list(),
        captains = captains, lineups = lineups, players = players)
