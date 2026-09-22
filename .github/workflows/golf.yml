@@ -11,10 +11,15 @@ on:
     - cron: "0 13 * * *"     # ~09:00 ET daily — live pull + price + merge picks
     - cron: "0 22 * * *"     # ~18:00 ET daily — refresh with closing-er lines
     - cron: "0 12 * * 1,2"   # Mon+Tue ~08:00 ET — grade the weekend/Monday-finish slate
+    - cron: "0 10 * * 4"     # Thu ~06:00 ET — capture the closing price for CLV, safely
+                              # before any Thursday tee time in any US course timezone
   workflow_dispatch:
     inputs:
       results_date:
         description: "Grade a settled slate (YYYY-MM-DD). Leave blank for a live picks run."
+        required: false
+      capture_close_date:
+        description: "Capture the closing price for CLV on this slate (YYYY-MM-DD). Leave blank unless testing — the Thursday cron does this automatically."
         required: false
 
 concurrency:
@@ -59,8 +64,13 @@ jobs:
         working-directory: golf-modeling
         run: |
           DATE="${{ github.event.inputs.results_date }}"
+          CC_DATE="${{ github.event.inputs.capture_close_date }}"
           if [ "${{ github.event.schedule }}" = "0 12 * * 1,2" ] && [ -z "$DATE" ]; then
             Rscript engine/bet_hub.R --results          # auto: grade the newest slate
+          elif [ "${{ github.event.schedule }}" = "0 10 * * 4" ] && [ -z "$DATE" ]; then
+            Rscript engine/bet_hub.R --capture-close    # auto: freeze the closing price for CLV
+          elif [ -n "$CC_DATE" ]; then
+            Rscript engine/bet_hub.R --capture-close "$CC_DATE"   # manual: capture a specific slate
           elif [ -n "$DATE" ]; then
             Rscript engine/bet_hub.R --results "$DATE"   # manual: grade a specific slate
           else

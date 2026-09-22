@@ -20,16 +20,15 @@
 #   Rscript engine/bet_hub.R --test 525   # offline sample from a historical event
 #   Rscript engine/bet_hub.R --results <slate_date>   # grade after settle (add --force
 #                                                     # to grade despite an event mismatch)
+#   Rscript engine/bet_hub.R --capture-close [slate_date]   # snapshot the closing price
+#     for every bet already on that slate's card (default: latest). Run this near
+#     Thursday's first tee (matchup markets settle to their final price and typically
+#     suspend once round 1 begins, so this is the closing snapshot, not a re-price).
+#     --results then reads it automatically to compute clv_pct, same as CFB/NFL.
 # ==============================================================================
 suppressWarnings(suppressPackageStartupMessages({ library(data.table); library(jsonlite); library(httr2) }))
-if (Sys.getenv("ENGINE_WD_SET") == "") local({
-  win <- "c:/Users/ljdie/OneDrive/Documents/golf-modeling"
-  if (dir.exists(win)) setwd(win) else {  # CI/Linux: find the golf root from --file
-    m <- grep("^--file=", commandArgs(FALSE), value = TRUE)
-    if (length(m)) { d <- dirname(normalizePath(sub("^--file=", "", m[1])))
-      while (!dir.exists(file.path(d, "golf_picks")) && dirname(d) != d) d <- dirname(d)
-      if (dir.exists(file.path(d, "golf_picks"))) setwd(d) } }
-})
+if (Sys.getenv("ENGINE_WD_SET") == "" && dir.exists("c:/Users/ljdie/OneDrive/Documents/golf-modeling"))
+  setwd("c:/Users/ljdie/OneDrive/Documents/golf-modeling")
 Sys.setenv(ENGINE_SOURCE_ONLY="1", SKILL_SOURCE_ONLY="1", COURSEFIT_SOURCE_ONLY="1",
            MARKET_SOURCE_ONLY="1", SIMULATE_SOURCE_ONLY="1", PROJECT_SOURCE_ONLY="1", OWNERSHIP_SOURCE_ONLY="1")
 if (!exists("project_mu")) source("engine/project.R")
@@ -188,6 +187,51 @@ build_top10_picks <- function(sim, od, event, event_start=NULL, sd=NULL,
       tags = list("outright","top_10"), details = list(matchup_type = "top_10"))
     if (!is.na(r$book) && nzchar(r$book)) b$book <- r$book
     b })
+}
+
+# ── closing-line capture: freeze each posted bet's price near tournament lock ──
+# CLV needs the price at CLOSE, and the LIVE grading path never had one (only the
+# --test/historical path did, from a cached odds file) — clv_pct was always NA on
+# every live PGA result. Re-fetches live matchups + outrights fresh and matches each
+# already-posted bet to its price on the SAME side we took (not whichever side is +EV
+# now — that can differ from what we bet). Written under FEED (not OUT/golf_picks) so
+# it rides the SAME cumulative-feed cache golf.yml already persists across runs;
+# capture and grading are on different crons, days apart, so it must survive a fresh
+# checkout on its own.
+capture_closing_odds <- function(sd) {
+  pf <- file.path(FEED, "golf-modeling", "pga", sprintf("picks_%s.json", sd))
+  if (!file.exists(pf)) { emsg("capture-close: no picks file for ", sd); return(invisible(NULL)) }
+  picks <- jsonlite::fromJSON(pf, simplifyVector = FALSE)
+  bets <- picks$bets
+  if (!length(bets)) { emsg("capture-close: no bets on ", sd); return(invisible(NULL)) }
+
+  lm <- tryCatch(dg_live_matchups("pga"), error = function(e) list(m = data.table()))
+  ot <- tryCatch(dg_live_outrights("pga", "top_10"), error = function(e) list(m = data.table()))
+  mm <- lm$m; om <- ot$m
+  if (nrow(mm)) mm[, `:=`(n1 = .norm(p1_name), n2 = .norm(p2_name))]
+  if (nrow(om)) om[, npn := .norm(player_name)]
+
+  closing <- list(); n_matched <- 0L
+  for (b in bets) {
+    sel_n <- .norm(b$selection); am <- NA_real_
+    if (identical(b$market, "matchup") && nrow(mm)) {
+      opp_n <- .norm(b$details$opponent %||% "")
+      hit <- mm[(n1 == sel_n & n2 == opp_n) | (n2 == sel_n & n1 == opp_n)]
+      if (nrow(hit)) am <- if (hit$n1[1] == sel_n) hit$p1_am[1] else hit$p2_am[1]
+    } else if (identical(b$market, "top_10") && nrow(om)) {
+      hit <- om[npn == sel_n]
+      if (nrow(hit)) am <- hit$am[1]
+    }
+    if (is.finite(am)) { closing[[b$bet_id]] <- .am2dec(am); n_matched <- n_matched + 1L }
+  }
+  emsg("capture-close: matched ", n_matched, " / ", length(bets), " bets on ", sd,
+       " (unmatched = market already suspended for round 1, or a name-match miss)")
+  if (!n_matched) return(invisible(NULL))
+  dir.create(file.path(FEED, "golf-modeling", "pga", "closing_odds"), recursive = TRUE, showWarnings = FALSE)
+  path <- file.path(FEED, "golf-modeling", "pga", "closing_odds", sprintf("%s.rds", sd))
+  saveRDS(closing, path)
+  emsg("capture-close: wrote ", path)
+  invisible(closing)
 }
 
 # ── bets you've struck off: golf_picks/excluded_bets.csv (bet_id,note) ────────
@@ -471,8 +515,19 @@ if (identical(environment(), globalenv()) && !nzchar(Sys.getenv("BETHUB_SOURCE_O
     } else {                                   # LIVE: in-play finishes for the current tournament
       lf <- dg_live_finishes("pga")
       if (!nrow(lf$fin)) emsg("in-play feed returned no leaderboard (between events / API hiccup)")
-      write_results_feed(sd, lf$fin, source_event=lf$event, force=fc)
+      cl <- tryCatch(readRDS(file.path(FEED,"golf-modeling","pga","closing_odds",sprintf("%s.rds", sd))),
+                     error=function(e) NULL)
+      if (is.null(cl)) emsg("--results: no closing-odds capture for ", sd, " -> clv_pct will be NA (run --capture-close near Thursday tee time)")
+      write_results_feed(sd, lf$fin, cl, source_event=lf$event, force=fc)
     }
+  } else if ("--capture-close" %in% a) {        # freeze each posted bet's near-lock price for CLV
+    ci <- which(a=="--capture-close"); sd <- a[ci+1]
+    if (is.na(sd) || !nzchar(sd) || startsWith(sd, "--")) {   # no date given -> latest slate
+      pfs <- list.files(file.path(FEED,"golf-modeling","pga"), pattern="^picks_.*\\.json$")
+      if (length(pfs)) { sd <- sub("^picks_(.*)\\.json$","\\1", sort(pfs, decreasing=TRUE)[1]); emsg("--capture-close: defaulting to latest slate ", sd) }
+    }
+    if (is.na(sd) || !nzchar(sd) || startsWith(sd, "--")) { emsg("--capture-close: no slate to capture"); quit() }
+    capture_closing_odds(sd)
   } else {                                     # LIVE
     lm <- dg_live_matchups("pga"); event <- lm$event
     sl <- assemble_live_slate("pga","main",M); pool <- as.data.table(sl$players)
