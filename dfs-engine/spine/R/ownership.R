@@ -12,10 +12,22 @@ suppressPackageStartupMessages({ library(data.table) })
 parse_dk_standings <- function(csv_path) {
   # DK standings have two side-by-side blocks (entrants | players). Plain fread stops
   # once the shorter (player) block ends — which is fine, every player row comes first
-  # so none are lost. (fill=TRUE is WRONG here: it reads the full 70k-row entrant list
-  # and mis-detects the header off the blank inter-block column.)
-  raw <- fread(csv_path, check.names = FALSE, na.strings = c("", "NA"))
-  nm  <- names(raw)
+  # so none are lost. (fill=TRUE is WRONG as the FIRST read here: it reads the full
+  # 70k-row entrant list and mis-detects the header off the blank inter-block column.)
+  #
+  # BUT on Showdown-format exports the entrant block's unquoted "Lineup" text column
+  # (e.g. "CPT Jaxon Smith-Njigba FLEX A.J. Brown FLEX ...") can make a row ragged well
+  # BEFORE the player block ends, which makes plain fread bail out early with "Stopped
+  # early on line N" and silently drop real player/FPTS rows past that point — the
+  # "player rows come first" assumption above doesn't hold for Showdown exports. Detect
+  # that via the warning and retry with fill=TRUE, reusing the header names the strict
+  # pass already found correctly (so the retry can't mis-detect the header either).
+  warned <- FALSE
+  raw <- withCallingHandlers(
+    fread(csv_path, check.names = FALSE, na.strings = c("", "NA")),
+    warning = function(w) { if (grepl("Stopped early", conditionMessage(w))) warned <<- TRUE; invokeRestart("muffleWarning") })
+  nm <- names(raw)
+  if (warned) raw <- fread(csv_path, check.names = FALSE, na.strings = c("", "NA"), fill = TRUE, col.names = nm)
   pick <- function(c) { hit <- nm[tolower(trimws(nm)) %in% c]; if (length(hit)) hit[1] else NA_character_ }
   col_player <- pick(c("player")); col_pct <- pick(c("%drafted", "drafted", "% drafted", "pct_drafted"))
   col_pos <- pick(c("roster position", "position", "roster_position"))
@@ -65,17 +77,28 @@ resolve_player_ids <- function(d, sport) {
   if (want %in% cand$slate_id) return(want)                  # single-layout sport: unchanged
   pid <- unique(player_ids[!is.na(player_ids)])
   if (!length(pid)) return(want)
-  best <- NULL; best_n <- -1L
+  # Score by the FRACTION OF THE CANDIDATE'S OWN POOL matched, not raw overlap count.
+  # Raw count always favors a big classic main slate over the true (small) Showdown
+  # slate for the SAME game, because the Showdown's players are a strict subset of the
+  # main slate's -- confirmed live: a DEN@KC Showdown CSV matched 49/50 players against
+  # a 725-player main slate (overlap count "wins") while the real DEN@KC Showdown slate,
+  # when it existed, matched on far fewer raw players but nearly its ENTIRE roster.
+  # Also require a minimum fraction before accepting at all, so a Showdown game that
+  # never got its own slate built stays correctly unresolved instead of being silently
+  # mis-attached to an unrelated main slate (which would corrupt accuracy/ownership
+  # calibration by comparing Showdown CPT-multiplied actuals against base-slate proj).
+  best <- NULL; best_frac <- -1; best_n <- 0L
   for (sid in cand$slate_id) {
     have <- tryCatch(db_query(sprintf(
       "SELECT DISTINCT player_id FROM salaries WHERE slate_id='%s'", sid))$player_id,
       error = function(e) NULL)
-    n <- length(intersect(pid, have))
-    if (n > best_n) { best_n <- n; best <- sid }
+    if (is.null(have) || !length(have)) next
+    n <- length(intersect(pid, have)); frac <- n / length(have)
+    if (frac > best_frac) { best_frac <- frac; best <- sid; best_n <- n }
   }
-  if (is.null(best) || best_n <= 0) return(want)
-  msg(sprintf("  ownership: '%s' has no slate; attaching to %s (%d/%d players matched)",
-              slate, best, best_n, length(pid)))
+  if (is.null(best) || best_n < 8L || best_frac < 0.5) return(want)
+  msg(sprintf("  ownership: '%s' has no slate; attaching to %s (%d/%d players matched, %.0f%% of its pool)",
+              slate, best, best_n, length(pid), 100 * best_frac))
   best
 }
 
