@@ -146,6 +146,28 @@ prepare_fantasy_player_features <- function(player_stats, game_context) {
       position_te = as.integer(.data$position == "TE")
     )
 
+  ## Snap share (scripts/86). Every other usage measure here is TARGET-derived,
+  ## so it only registers a player once the ball comes his way. Snap share says
+  ## whether he is on the field at all - the part of role that moves first when
+  ## a receiver is promoted, and the gap that target-based rolling means take
+  ## weeks to close. Added to rolling_measures below so the existing lagged
+  ## roll makes it leak-free exactly like everything else; the raw same-game
+  ## value is never a feature.
+  snap_path <- "data/processed/nfl_snap_features.rds"
+  if (file.exists(snap_path)) {
+    snaps <- readRDS(snap_path)
+    n_before_snap <- nrow(players)
+    players <- players |>
+      dplyr::left_join(snaps, by = c("season", "week", "player_id"))
+    if (nrow(players) != n_before_snap) {
+      stop("Snap join changed row count: ", n_before_snap, " -> ", nrow(players),
+           ". Duplicate (season, week, player_id) in nfl_snap_features.rds.",
+           call. = FALSE)
+    }
+  } else {
+    message("No ", snap_path, " (run scripts/86); snap features unavailable.")
+  }
+
   rolling_measures <- c(
     "completions", "attempts", "passing_yards", "passing_tds",
     "passing_interceptions", "passing_first_downs", "passing_air_yards",
@@ -154,7 +176,8 @@ prepare_fantasy_player_features <- function(player_stats, game_context) {
     "receiving_first_downs", "receiving_air_yards",
     "target_share", "air_yards_share", "wopr",
     "offensive_fumbles_lost", "two_point_conversions",
-    "opportunity", "fantasy_points_ppr", "ppr_points_actual"
+    "opportunity", "fantasy_points_ppr", "ppr_points_actual",
+    "snap_share", "offense_snaps"
   )
   rolling_measures <- intersect(rolling_measures, names(players))
 
@@ -163,16 +186,81 @@ prepare_fantasy_player_features <- function(player_stats, game_context) {
     dplyr::group_by(.data$player_id) |>
     dplyr::mutate(prior_games = dplyr::row_number() - 1L)
 
+  ## ROLLING WINDOWS: BLEND ACROSS SEASON BOUNDARIES, DON'T HARD-CUT.
+  ##
+  ## Confirmed bug (2026-09-23): the ORIGINAL code grouped these rolling means
+  ## by player_id only (no season), so an r8 window in week 2-3 of a new
+  ## season was still majority-composed of the tail of the PRIOR season. For a
+  ## player who changed teams/roles, this silently anchored his "recent usage"
+  ## features to the OLD context and made the model nearly unresponsive to
+  ## real in-season role change or decline for the first several weeks of
+  ## every season, every year. Verified live: 64% of fantasy-relevant players
+  ## had <0.5pt week-over-week projection movement regardless of actual
+  ## outcome, and the worst weekly misses in the league (e.g. a player scoring
+  ## 3 actual on a 15-point projection) saw next week's projection INCREASE.
+  ##
+  ## A first attempt just hard-reset the window at each season boundary
+  ## (group_by(player_id, season) only). That fixed the reactivity but
+  ## overcorrected the other way: verified live it also cut ~89% of
+  ## established, UNCHANGED starters' projections (mean -2.6pts) purely from
+  ## discarding a legitimate stabilizing prior -- 2 games below your career
+  ## norm is often just normal early-season variance, not decline, and a
+  ## proven starter's true talent didn't reset just because the calendar did.
+  ##
+  ## Fix: blend the within-season rolling mean with the player's PRIOR
+  ## season's per-game average for that measure, with the blend weight
+  ## shifting to the current season fast (fully in-season by 3 real current-
+  ## season games, independent of the window length) rather than only once the
+  ## window itself fills (which for r8 would take 8 games -- too slow for the
+  ## exact case this is meant to fix, e.g. a trade). This keeps real
+  ## responsiveness to genuine change while not treating early-season noise as
+  ## a level shift for players whose situation hasn't actually changed.
+  season_priors <- players |>
+    dplyr::group_by(.data$player_id, .data$season) |>
+    dplyr::summarise(
+      dplyr::across(
+        dplyr::all_of(rolling_measures),
+        ~ mean(.x, na.rm = TRUE),
+        .names = "{.col}_prior"
+      ),
+      .groups = "drop"
+    ) |>
+    dplyr::arrange(.data$player_id, .data$season) |>
+    dplyr::group_by(.data$player_id) |>
+    dplyr::mutate(
+      dplyr::across(dplyr::ends_with("_prior"), ~ dplyr::lag(.x))
+    ) |>
+    dplyr::ungroup()
+
+  players <- players |>
+    dplyr::left_join(season_priors, by = c("player_id", "season")) |>
+    dplyr::group_by(.data$player_id, .data$season) |>
+    dplyr::mutate(prior_games_season = dplyr::row_number() - 1L)
+
+  blend_convergence_games <- 3   # fully weighted to current season by this many current-season games
   for (window in c(3L, 5L, 8L)) {
     players <- players |>
       dplyr::mutate(
         dplyr::across(
           dplyr::all_of(rolling_measures),
           ~ fantasy_lagged_roll(.x, window, "mean"),
-          .names = "{.col}_r{window}"
+          .names = "{.col}_r{window}_within"
         )
       )
+    w <- pmin(players$prior_games_season / blend_convergence_games, 1)
+    for (measure in rolling_measures) {
+      within_col <- paste0(measure, "_r", window, "_within")
+      prior_col  <- paste0(measure, "_prior")
+      out_col    <- paste0(measure, "_r", window)
+      within_val <- dplyr::coalesce(players[[within_col]], 0)
+      prior_val  <- dplyr::coalesce(players[[prior_col]], players[[within_col]], 0)
+      players[[out_col]] <- w * within_val + (1 - w) * prior_val
+      players[[out_col]][players$prior_games == 0L] <- NA_real_  # true rookie debut: no prior at all
+      players[[within_col]] <- NULL
+    }
   }
+  players <- players |>
+    dplyr::select(-dplyr::ends_with("_prior"))
   volatility_measures <- intersect(
     c(
       "attempts", "passing_yards", "carries", "rushing_yards",
@@ -190,6 +278,59 @@ prepare_fantasy_player_features <- function(player_stats, game_context) {
     ) |>
     dplyr::ungroup()
 
+  ## ROLE-TREND features: short window minus long window, so a role that is
+  ## CHANGING is visible as a level rather than as a difference the booster has
+  ## to discover between two of 130+ columns.
+  ##
+  ## Motivated by a specific measured failure, not added speculatively. On WR
+  ## rows - 40% of the pool and the one position where the model loses to DK
+  ## salary - the error decomposition showed:
+  ##   - when salary disagrees with the model, salary is directionally right,
+  ##     monotonically (model bias -1.59 in the bucket where salary says lower,
+  ##     +1.01 where salary says higher)
+  ##   - the gap concentrates in players whose target share is RISING FAST, and
+  ##     in veterans, i.e. exactly where a trailing mean lags a role change
+  ##
+  ## Salary reprices weekly off the current depth chart; rolling means take
+  ## several games to catch up. These deltas are the cheapest way to hand the
+  ## model the same information, and unlike salary they exist for every player
+  ## whether or not he is on a DK main slate.
+  trend_measures <- intersect(
+    c("targets", "target_share", "receptions", "receiving_air_yards",
+      "air_yards_share", "wopr", "carries", "opportunity", "attempts",
+      "snap_share"),
+    names(players)
+  )
+  for (m in trend_measures) {
+    short <- paste0(m, "_r3")
+    long <- paste0(m, "_r8")
+    if (all(c(short, long) %in% names(players))) {
+      players[[paste0(m, "_trend")]] <-
+        dplyr::coalesce(players[[short]], 0) - dplyr::coalesce(players[[long]], 0)
+    }
+  }
+
+  ## NOT WIRED IN: add_fantasy_redzone_defense() and
+  ## add_fantasy_matchup_features() are defined below, validated, and
+  ## deliberately not called. Measured 2026-09-15 on 2023-2025 walk-forward:
+  ##
+  ##   aggregate PPR MAE  +0.16% / 0.00% / +0.13%   (2023/24/25)
+  ##   aggregate PPR R2   -0.0020 / -0.0016 / -0.0023
+  ##   rushing_yards      +0.06% MAE, R2 -0.00133
+  ##   passing_yards      +0.45% MAE, R2 -0.00817
+  ##
+  ## This was not a plumbing failure. The models ranked the features highly
+  ## (matchup_rush_volume_x_def #8 by gain for rushing_yards) and the effect is
+  ## real in the raw data - RB-weeks at matched volume (~15 carries) against
+  ## the weakest vs strongest run defenses averaged 66.0 vs 56.8 actual rushing
+  ## yards. The information is simply redundant with what a player's own
+  ## trailing usage already encodes, and ~20 extra columns cost more variance
+  ## than they return on a fixed depth-3/180-round booster.
+  ##
+  ## Left in place rather than deleted because the artifacts and joins are
+  ## validated and cheap to re-enable (add the two calls back here), and a
+  ## different model family or a retuned booster may yet extract what this one
+  ## could not. Same lesson as the DVOA spread/total test in this repo.
   add_fantasy_opponent_features(players)
 }
 
@@ -321,11 +462,293 @@ add_fantasy_opponent_features <- function(players) {
     )
 }
 
+## Red-zone / expected-TD defense, joined from data/processed/td_redzone_features.rds
+## (built by scripts/73). These already existed and were fully validated, but
+## were wired ONLY into the separate anytime-TD classifier - never into the
+## fantasy TD regressions that most obviously want them. That mattered: as of
+## the pre-change baseline, rushing_tds (-0.019 MAE vs the naive rolling
+## average) and receiving_tds (-0.015) were the two targets actually LOSING to
+## a trailing-5-game mean. "Faces a defense that defends the end zone well" is
+## exactly the signal they were missing.
+##
+## Why this doesn't just call roll_td_redzone_defense(): that function joins the
+## defense's rolled value on (season, week, opponent_team), and rows only exist
+## in def_game for games that have been PLAYED. Every upcoming game - the only
+## kind we actually project - has no row, so it would take NA and get median-
+## imputed. Here the defense-game universe is taken from the player frame
+## itself (which includes the synthetic future rows), the raw per-game values
+## are attached to it, and the lagged roll then carries real trailing history
+## onto future rows. Same aggregate-then-roll shape as
+## add_fantasy_opponent_features() above, for the same reason: one row per
+## defense-game, so a defense with more pass-catchers doesn't get weighted more.
+add_fantasy_redzone_defense <- function(
+  players,
+  path = "data/processed/td_redzone_features.rds",
+  min_match_rate = 0.90
+) {
+  if (!file.exists(path)) {
+    stop("Missing ", path, " - run scripts/73_td_redzone_features.R first.",
+         call. = FALSE)
+  }
+  rz <- readRDS(path)
+  measures <- c(
+    "def_rz10_carries_allowed", "def_rz10_targets_allowed",
+    "def_rz_td_conv_allowed", "def_xtd_allowed"
+  )
+
+  ## normalize_team() on the artifact side: raw pbp says "LA", this frame says
+  ## "LAR". scripts/73 now normalizes at build time, so this is belt-and-braces
+  ## for a stale cache rather than the primary fix.
+  def_raw <- rz$def_game |>
+    dplyr::mutate(defteam = normalize_team(.data$defteam)) |>
+    dplyr::select(
+      "season", "week", defense = "defteam", dplyr::all_of(measures)
+    ) |>
+    dplyr::distinct(.data$season, .data$week, .data$defense, .keep_all = TRUE)
+
+  ## One row per defense-game, drawn from the player frame so that upcoming
+  ## games are present in the sequence and can receive rolled history.
+  def_games <- players |>
+    dplyr::distinct(
+      .data$game_id, .data$season, .data$week,
+      defense = .data$opponent_team
+    ) |>
+    dplyr::filter(!is.na(.data$defense))
+
+  n_def_games <- nrow(def_games)
+  rolled <- def_games |>
+    dplyr::left_join(def_raw, by = c("season", "week", "defense")) |>
+    dplyr::arrange(.data$defense, .data$season, .data$week, .data$game_id) |>
+    dplyr::group_by(.data$defense) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(measures),
+        ~ fantasy_lagged_roll(.x, 5L, "mean"),
+        .names = "{.col}_r5"
+      )
+    ) |>
+    dplyr::ungroup()
+
+  if (nrow(rolled) != n_def_games) {
+    stop("Redzone defense roll changed defense-game count: ", n_def_games,
+         " -> ", nrow(rolled), ". Duplicate (season, week, defteam) in def_game.",
+         call. = FALSE)
+  }
+
+  ## Match-rate guard on the RAW attach, before rolling hides it. A team-code
+  ## drift or a missing season shows up as columns that exist and are entirely
+  ## NA, which median imputation then makes invisible - the precise failure
+  ## this feature set was already suffering from silently.
+  covered <- rolled |>
+    dplyr::filter(
+      .data$season >= min(def_raw$season, na.rm = TRUE),
+      .data$season <= max(def_raw$season, na.rm = TRUE)
+    )
+  if (nrow(covered) > 0) {
+    match_rate <- mean(!is.na(covered$def_xtd_allowed))
+    message(sprintf(
+      "Redzone defense: %.1f%% of %s defense-games in covered seasons matched.",
+      100 * match_rate, format(nrow(covered), big.mark = ",")
+    ))
+    if (match_rate < min_match_rate) {
+      stop("Redzone defense match rate ", round(100 * match_rate, 1),
+           "% below threshold ", round(100 * min_match_rate),
+           "%. Likely a team-code mismatch (pbp LA/OAK/SD vs normalize_team ",
+           "LAR/LV/LAC) or def_game missing seasons.", call. = FALSE)
+    }
+  }
+
+  n_before <- nrow(players)
+  out <- players |>
+    dplyr::left_join(
+      rolled |> dplyr::select("game_id", "defense", dplyr::ends_with("_r5")),
+      by = c("game_id", "opponent_team" = "defense")
+    )
+  if (nrow(out) != n_before) {
+    stop("Redzone defense join changed row count: ", n_before, " -> ",
+         nrow(out), ".", call. = FALSE)
+  }
+  out
+}
+
+## Position x play-type defensive efficiency, from data/processed/
+## nfl_matchup_features.rds (scripts/79). Three things happen here that the
+## existing raw-count opponent block does not do:
+##
+##   1. EFFICIENCY, not volume. EPA and success rate allowed, so "good defense"
+##      is separable from "faced few plays."
+##   2. NORMALIZED to the league. A rolled EPA-allowed of -0.05 means nothing
+##      on its own; as a z-score against the other 31 defenses that same week
+##      it means "top-5 run defense," which is the form the user's own example
+##      ("a standard run team against the best run defense") requires.
+##   3. EXPLICIT INTERACTIONS. Trees can in principle discover volume x
+##      matchup themselves, but with ~6k training rows per target and 100+
+##      features, handing them the product directly is the difference between
+##      a learnable signal and one lost in the split search.
+##
+## Sign convention, kept consistent so the interactions are interpretable:
+## def_*_epa_allowed is HIGHER when the defense is WORSE, so the z-scores are
+## "defensive weakness" and a positive interaction always means a good spot.
+matchup_measure_names <- function() {
+  c("def_rush_epa_allowed", "def_pass_epa_allowed",
+    "def_rush_success_allowed", "def_pass_success_allowed",
+    "def_rush_plays_allowed", "def_pass_plays_allowed",
+    "def_rush_rz_epa_allowed", "def_pass_rz_epa_allowed")
+}
+
+matchup_interaction_names <- function() {
+  c("matchup_rush_volume_x_def", "matchup_target_volume_x_def",
+    "matchup_rz_target_x_def", "matchup_rush_share_x_def")
+}
+
+add_fantasy_matchup_features <- function(
+  players,
+  path = "data/processed/nfl_matchup_features.rds",
+  min_match_rate = 0.90
+) {
+  if (!file.exists(path)) {
+    stop("Missing ", path, " - run scripts/79_build_matchup_features.R first.",
+         call. = FALSE)
+  }
+  mf <- readRDS(path)
+  measures <- intersect(matchup_measure_names(), names(mf$def_pos_game))
+
+  raw <- mf$def_pos_game |>
+    dplyr::mutate(defense = normalize_team(.data$defteam)) |>
+    dplyr::select(
+      "season", "week", "defense", "position", dplyr::all_of(measures)
+    ) |>
+    dplyr::distinct(
+      .data$season, .data$week, .data$defense, .data$position, .keep_all = TRUE
+    )
+
+  ## Universe from the player frame, so upcoming games are in the sequence and
+  ## can receive rolled history (a future game has no pbp row of its own).
+  def_games <- players |>
+    dplyr::distinct(
+      .data$game_id, .data$season, .data$week,
+      defense = .data$opponent_team, .data$position
+    ) |>
+    dplyr::filter(!is.na(.data$defense), !is.na(.data$position))
+
+  n_def_games <- nrow(def_games)
+  rolled <- def_games |>
+    dplyr::left_join(raw, by = c("season", "week", "defense", "position")) |>
+    dplyr::arrange(
+      .data$defense, .data$position, .data$season, .data$week, .data$game_id
+    ) |>
+    dplyr::group_by(.data$defense, .data$position) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(measures),
+        ~ fantasy_lagged_roll(.x, 5L, "mean"),
+        .names = "{.col}_r5"
+      )
+    ) |>
+    dplyr::ungroup()
+
+  if (nrow(rolled) != n_def_games) {
+    stop("Matchup roll changed defense-game count: ", n_def_games, " -> ",
+         nrow(rolled), ". Duplicate keys in def_pos_game.", call. = FALSE)
+  }
+
+  covered <- rolled |>
+    dplyr::filter(
+      .data$season >= min(raw$season, na.rm = TRUE),
+      .data$season <= max(raw$season, na.rm = TRUE)
+    )
+  if (nrow(covered) > 0) {
+    ## Test whether the ROW matched, not whether a particular measure is
+    ## populated. plays_allowed is zero-filled at build time, so it is NA if
+    ## and only if the left_join found nothing - whereas the epa columns are
+    ## legitimately NA for structural reasons (a QB is essentially never a
+    ## target, so def_pass_epa_allowed is empty for every QB row, and QBs are
+    ## a quarter of this universe: checking that column reported a bogus 75%).
+    match_rate <- mean(!is.na(covered$def_rush_plays_allowed))
+    message(sprintf(
+      "Matchup features: %.1f%% of %s (defense, game, position) rows matched.",
+      100 * match_rate, format(nrow(covered), big.mark = ",")
+    ))
+    if (match_rate < min_match_rate) {
+      stop("Matchup match rate ", round(100 * match_rate, 1),
+           "% below threshold ", round(100 * min_match_rate),
+           "%. Likely a team-code or position-convention mismatch.",
+           call. = FALSE)
+    }
+  }
+
+  ## League normalization, within (season, week, position): compare a defense
+  ## only against the other defenses facing that same position at that same
+  ## point in time. Using the rolled (already lagged) value keeps this
+  ## leak-free - the z-score is computed from information available before
+  ## kickoff, not from the week's outcomes.
+  rolled_cols <- paste0(measures, "_r5")
+  rolled <- rolled |>
+    dplyr::group_by(.data$season, .data$week, .data$position) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(rolled_cols),
+        ~ {
+          s <- stats::sd(.x, na.rm = TRUE)
+          if (!is.finite(s) || s == 0) {
+            rep(0, length(.x))
+          } else {
+            (.x - mean(.x, na.rm = TRUE)) / s
+          }
+        },
+        .names = "{.col}_z"
+      )
+    ) |>
+    dplyr::ungroup()
+
+  n_before <- nrow(players)
+  out <- players |>
+    dplyr::left_join(
+      rolled |>
+        dplyr::select(
+          "game_id", "defense", "position",
+          dplyr::all_of(rolled_cols), dplyr::ends_with("_z")
+        ),
+      by = c("game_id", "opponent_team" = "defense", "position")
+    )
+  if (nrow(out) != n_before) {
+    stop("Matchup join changed row count: ", n_before, " -> ", nrow(out), ".",
+         call. = FALSE)
+  }
+
+  ## The four interactions. Each pairs a player's own recent role with the
+  ## specific dimension of the defense that role runs into.
+  zz <- function(x) dplyr::coalesce(x, 0)
+  out |>
+    dplyr::mutate(
+      ## "a standard run team against the best run defense" - the literal case
+      matchup_rush_volume_x_def =
+        zz(.data$carries_r5) * zz(.data$def_rush_epa_allowed_r5_z),
+      matchup_rush_share_x_def =
+        zz(.data$carries_r5) * zz(.data$def_rush_success_allowed_r5_z),
+      ## pass-catcher volume into pass-defense efficiency
+      matchup_target_volume_x_def =
+        zz(.data$targets_r5) * zz(.data$def_pass_epa_allowed_r5_z),
+      ## "a defense that defends the end zone well" - red-zone efficiency
+      ## against the share of the offense this player actually commands
+      matchup_rz_target_x_def =
+        zz(.data$target_share_r5) * zz(.data$def_pass_rz_epa_allowed_r5_z)
+    )
+}
+
 fantasy_model_feature_names <- function(data) {
   rolling <- names(data)[stringr::str_detect(
     names(data),
     "(_r3|_r5|_r8|_sd5)$"
   )]
+  ## The _z normalized matchup columns, the interaction terms, and the role
+  ## trend deltas do not end in a rolling suffix, so they are listed explicitly
+  ## rather than swept up by the regex above.
+  matchup <- c(
+    paste0(matchup_measure_names(), "_r5_z"),
+    matchup_interaction_names()
+  )
+  trends <- names(data)[stringr::str_detect(names(data), "_trend$")]
   context <- c(
     "week", "prior_games", "total_line", "team_spread",
     "implied_team_total", "is_home",
@@ -334,7 +757,7 @@ fantasy_model_feature_names <- function(data) {
     "cold_index", "high_wind_index",
     "position_qb", "position_rb", "position_wr", "position_te"
   )
-  intersect(unique(c(rolling, context)), names(data))
+  intersect(unique(c(rolling, matchup, trends, context)), names(data))
 }
 
 fantasy_target_candidates <- function(data, family, deployment = FALSE) {
