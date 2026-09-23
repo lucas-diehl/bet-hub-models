@@ -3,42 +3,12 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-09-26",
-  "generated_at": "2026-09-22T17:28:27Z",
+  "generated_at": "2026-09-23T17:38:01Z",
   "model_version": "ppp-ppd-2026",
   "mode": "PAPER",
   "event_context": "Week 4",
   "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
   "bets": [
-    {
-      "bet_id": "cfb-modeling-2026-wk4-vanderbilt-auburn-under",
-      "event": "Vanderbilt @ Auburn",
-      "event_start": "2026-09-26T20:15:00Z",
-      "market": "total",
-      "selection": "Under 55.5",
-      "side": "under",
-      "line": 55.5,
-      "odds_american": -110,
-      "book": "DraftKings",
-      "model_prob": 0.6059,
-      "market_prob": 0.5238,
-      "edge": 0.0821,
-      "ev_pct": 0.1566,
-      "stake_units": 1,
-      "confidence": "medium",
-      "tags": [
-        "UNDER",
-        "UNDER4"
-      ],
-      "details": {
-        "proj_total": 51.1,
-        "under_edge": 4.4,
-        "strategy": "UNDER4",
-        "status": "paper",
-        "prob_source": "modelled",
-        "posted_total": 55.5,
-        "min_total": 55.1
-      }
-    },
     {
       "bet_id": "cfb-modeling-2026-wk4-texas-tennessee-under",
       "event": "Texas @ Tennessee",
@@ -75,15 +45,15 @@
       "event": "Oklahoma State @ West Virginia",
       "event_start": "2026-09-26T23:00:00Z",
       "market": "total",
-      "selection": "Under 59.5",
+      "selection": "Under 60.5",
       "side": "under",
-      "line": 59.5,
+      "line": 60.5,
       "odds_american": -110,
       "book": "DraftKings",
-      "model_prob": 0.6582,
+      "model_prob": 0.6804,
       "market_prob": 0.5238,
-      "edge": 0.1344,
-      "ev_pct": 0.2566,
+      "edge": 0.1566,
+      "ev_pct": 0.2988,
       "stake_units": 1,
       "confidence": "high",
       "tags": [
@@ -92,11 +62,11 @@
       ],
       "details": {
         "proj_total": 52.8,
-        "under_edge": 6.7,
+        "under_edge": 7.7,
         "strategy": "UNDER4",
         "status": "paper",
         "prob_source": "modelled",
-        "posted_total": 59.5,
+        "posted_total": 60.5,
         "min_total": 56.8
       }
     },
