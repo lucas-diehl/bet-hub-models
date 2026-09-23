@@ -68,9 +68,19 @@ PRESIDENTS_CUP_ROSTER <- c(PRESIDENTS_CUP_ROSTER_USA, PRESIDENTS_CUP_ROSTER_INTL
 PRESIDENTS_CUP_PAIRINGS <- list(
   meta = list(event = "2026 Presidents Cup", venue = "Medinah Country Club",
               dates = "2026-09-24 to 2026-09-27",
-              updated = "2026-09-22 -- NO sessions announced yet (rosters only)"),
+              updated = "2026-09-23 -- Thursday Fourball announced (4:45pm ET / 3:45pm CT reveal); confirmed against two independent sources (golf.com, golfmagic.com), matching pairings and tee times"),
   sessions = list(
-    list(session = "Thursday Fourball",     type = "fourball",  status = "pending", matches = list()),
+    list(session = "Thursday Fourball", type = "fourball", status = "announced",
+      matches = list(
+        list(team_usa = c("Scottie Scheffler", "Sam Burns"),      team_intl = c("Min Woo Lee", "Sungjae Im")),
+        list(team_usa = c("Cameron Young", "Xander Schauffele"),  team_intl = c("Hideki Matsuyama", "Ryo Hisatsune")),
+        list(team_usa = c("Justin Thomas", "Jackson Koivun"),     team_intl = c("Corey Conners", "Nicolas Echavarria")),
+        list(team_usa = c("Wyndham Clark", "Collin Morikawa"),    team_intl = c("Ryan Fox", "Adam Scott")),
+        list(team_usa = c("Chris Gotterup", "Patrick Cantlay"),   team_intl = c("Tom Kim", "Si Woo Kim"))
+      )),
+    # Sitting out Thursday: Russell Henley, Jacob Bridgeman (USA); Nick Taylor,
+    # Christiaan Bezuidenhout (Intl) -- confirmed by absence from all 5 matches
+    # above, not an oversight (captains usually rest 2 per side before Sunday).
     list(session = "Friday Foursomes",      type = "foursomes", status = "pending", matches = list()),
     list(session = "Saturday AM Fourball",  type = "fourball",  status = "pending", matches = list()),
     list(session = "Saturday PM Foursomes", type = "foursomes", status = "pending", matches = list()),
