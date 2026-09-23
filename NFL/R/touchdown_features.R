@@ -1,3 +1,5 @@
+if (!exists("assert_td_schema")) source("R/touchdown_registry.R")
+
 normalize_prop_player_name <- function(x) {
   x <- iconv(as.character(x), from = "", to = "ASCII//TRANSLIT")
   x <- tolower(trimws(x))
@@ -149,11 +151,54 @@ prepare_td_player_weeks <- function(player_stats, game_context) {
       by = "game_id"
     )
 
+  # Redzone/xTD (player side) and carryover-staleness features, both computed
+  # from lagged history only, both required before the rolling loop below so
+  # their _r3/_r5 versions get generated the same way every other rolling
+  # feature does. See R/touchdown_registry.R.
+  players <- players |>
+    join_td_redzone_features() |>
+    add_td_carryover_flags()
+
+  ## Snap share (scripts/86). Every other usage measure in this model is
+  ## OUTCOME-derived - carries, targets, red-zone touches - so a player only
+  ## registers once the ball reaches him. Snap share says whether he is on the
+  ## field, which for an anytime-TD question is the prerequisite: you cannot
+  ## score from the bench, and a back promoted to the goal-line role plays those
+  ## snaps before the touchdowns show up in his rolling averages.
+  ##
+  ## Added here for the same measured reason it worked on the fantasy side,
+  ## where it moved WR from losing to DK salary (R2 0.3283 vs 0.3321) to beating
+  ## it (0.3335), and helped every rotational position while doing nothing for
+  ## QB. Rolled by the existing td_lagged_roll() below, so the same-game value
+  ## never becomes a feature.
+  snap_path <- "data/processed/nfl_snap_features.rds"
+  if (file.exists(snap_path)) {
+    snaps <- readRDS(snap_path)
+    n_before_snap <- nrow(players)
+    players <- players |>
+      dplyr::left_join(snaps, by = c("season", "week", "player_id"))
+    if (nrow(players) != n_before_snap) {
+      stop("TD snap join changed row count: ", n_before_snap, " -> ",
+           nrow(players), ". Duplicate keys in nfl_snap_features.rds.",
+           call. = FALSE)
+    }
+    matched <- mean(!is.na(players$snap_share))
+    message(sprintf("TD snap join: %.1f%% of %s player-games matched.",
+                    100 * matched, format(nrow(players), big.mark = ",")))
+  } else {
+    message("No ", snap_path, " (run scripts/86); TD snap features unavailable.")
+  }
+
   rolling_measures <- c(
     "carries", "targets", "receptions", "rushing_yards", "receiving_yards",
     "rushing_tds", "receiving_tds", "rushing_first_downs",
     "receiving_first_downs", "touches", "carry_share", "target_share",
-    "air_yards_share", "wopr", "team_td_share"
+    "air_yards_share", "wopr", "team_td_share",
+    td_redzone_rolling_measures()
+  )
+  rolling_measures <- c(
+    rolling_measures,
+    intersect(c("snap_share", "offense_snaps"), names(players))
   )
 
   players <- players |>
@@ -167,6 +212,14 @@ prepare_td_player_weeks <- function(player_stats, game_context) {
         NA_real_
       )
     )
+
+  ## Same season-boundary fix as prepare_fantasy_player_features() in
+  ## fantasy_prop_model.R (2026-09-23): regroup to (player_id, season) for just
+  ## the recent-usage rolling windows, so an r3/r5 early in a new season isn't
+  ## diluted by the tail of last season (a different team/role for anyone who
+  ## moved). prior_games/career_td_rate above stay CAREER-level on purpose.
+  players <- players |>
+    dplyr::group_by(.data$player_id, .data$season)
 
   for (window in c(3L, 5L)) {
     players <- players |>
@@ -186,7 +239,7 @@ prepare_td_player_weeks <- function(player_stats, game_context) {
 add_td_defense_features <- function(players) {
   defense_games <- players |>
     dplyr::group_by(
-      .data$game_id, .data$game_date,
+      .data$game_id, .data$game_date, .data$season,
       defense = .data$opponent_team,
       .data$position
     ) |>
@@ -198,7 +251,11 @@ add_td_defense_features <- function(players) {
       .groups = "drop"
     ) |>
     dplyr::arrange(.data$defense, .data$position, .data$game_date, .data$game_id) |>
-    dplyr::group_by(.data$defense, .data$position) |>
+    # Same season-boundary fix as above: a defense's r5 recent-form window
+    # shouldn't be diluted by last season's personnel/scheme (offseason
+    # coordinator changes, free agency, etc.) for the first few weeks of a
+    # new season.
+    dplyr::group_by(.data$defense, .data$position, .data$season) |>
     dplyr::mutate(
       dplyr::across(
         dplyr::all_of(c(
@@ -228,6 +285,11 @@ add_td_defense_features <- function(players) {
 build_td_player_features <- function(player_stats, game_context) {
   players <- prepare_td_player_weeks(player_stats, game_context) |>
     add_td_defense_features() |>
+    # Opponent redzone/xTD measures, rolled by defense before joining - same
+    # place, same pattern as add_td_defense_features() just above. Not routed
+    # through prepare_td_player_weeks()'s per-player rolling_measures loop;
+    # see R/touchdown_registry.R header for why that would be wrong here.
+    roll_td_redzone_defense() |>
     dplyr::left_join(game_context, by = c("game_id", "season", "week", "game_date")) |>
     dplyr::mutate(
       is_home = as.integer(.data$team == .data$home_team),
