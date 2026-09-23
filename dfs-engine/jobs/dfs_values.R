@@ -30,6 +30,16 @@ N_VALUES                <- 10L           # top N players emitted
 N_ENTRIES               <- 20L           # GPP entries for the exposure build
 MAX_EXPOSURE            <- 0.40          # per-player exposure cap
 DFS_SPORTS              <- c("golf", "wnba", "tennis", "nfl", "ncaaf")
+# Slight bust-risk discount on proj-per-$ value/leverage rankings. Raw proj/$
+# has no penalty for role instability -- a rock-bottom-salary player with ANY
+# non-trivial projection mechanically tops the board regardless of how much of
+# that projection is a live bust risk (min-priced punt plays, e.g. a TE2 whose
+# QB just got worse, routinely "win" pure proj/$ math this way). Deliberately
+# mild (p_zero=0.10, a normal healthy role player, only costs ~2% of value;
+# p_zero=0.50, a real coin-flip bust risk, costs ~10%) -- this nudges the
+# ranking, it doesn't override a real, already-fixed projection.
+VALUE_BUST_RISK_K <- 0.2
+.value_bust_discount <- function(p_zero) 1 - VALUE_BUST_RISK_K * pmin(pmax(as.numeric(p_zero %||% 0), 0), 1)
 dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Documents/dashboard_feed")
 
 # "Last, First" -> "First Last" (golf stores names comma-first)
@@ -74,7 +84,8 @@ dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Docum
                  team = if (individual) "" else as.character(r$team %||% ""),
                  position = if (individual) "" else as.character(r$position %||% ""),
                  salary = as.integer(sal), proj = round(pr, 1),
-                 value = round(pr / (sal / 1000), 2), exposure = round(ec$exposure[i], 4))
+                 value = round(pr * .value_bust_discount(r$p_zero) / (sal / 1000), 2),
+                 exposure = round(ec$exposure[i], 4))
     if ("ceil" %in% names(r) && is.finite(r$ceil)) item$ceiling   <- round(as.numeric(r$ceil), 1)
     if ("own"  %in% names(r) && is.finite(r$own))  item$ownership <- round(as.numeric(r$own), 4)  # pool own is 0..1
     item })
@@ -91,7 +102,7 @@ dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Docum
   nmcol <- if ("player_name" %in% names(pool)) "player_name" else "name"
   P <- pool[ec$idx]
   P[, `:=`(.exp = ec$exposure, .row = .I,
-           .val = round(as.numeric(proj) / pmax(as.numeric(salary) / 1000, 0.1), 2),
+           .val = round(as.numeric(proj) * .value_bust_discount(p_zero) / pmax(as.numeric(salary) / 1000, 0.1), 2),
            .pos = toupper(trimws(as.character(position))))]
   mk <- function(sub) lapply(seq_len(nrow(sub)), function(i) { r <- sub[i]
     item <- list(rank = i, name = .disp_name(r[[nmcol]] %||% ""),
@@ -133,11 +144,11 @@ dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Docum
 }
 .dfs_value_pool <- function(slate_id) {
   q <- "WITH latest AS (
-          SELECT player_id, proj_mean, ceil,
+          SELECT player_id, proj_mean, ceil, p_zero,
                  ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY version_ts DESC) rn
           FROM projections WHERE slate_id = ?)
         SELECT sa.player_id, pl.name, sa.team, sa.position, sa.salary,
-               l.proj_mean AS proj, l.ceil, ow.projected_pct AS own
+               l.proj_mean AS proj, l.ceil, l.p_zero, ow.projected_pct AS own
         FROM salaries sa
         JOIN latest l ON l.player_id = sa.player_id AND l.rn = 1
         LEFT JOIN players pl ON pl.player_id = sa.player_id AND pl.sport = sa.sport
@@ -153,7 +164,7 @@ dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Docum
   if (!nrow(d)) return(list())
   individual <- sport %in% c("golf", "tennis")
   cap <- as.numeric(quantile(d$salary, VALUE_MAX_SAL_PCTILE, na.rm = TRUE, names = FALSE))
-  d[, value := proj / (salary / 1000)]
+  d[, value := proj * .value_bust_discount(p_zero) / (salary / 1000)]
   v <- head(d[salary <= cap][order(-value)], N_VALUES)
   lapply(seq_len(nrow(v)), function(i) { r <- v[i]
     item <- list(rank = i, name = .disp_name(r$name %||% ""),
