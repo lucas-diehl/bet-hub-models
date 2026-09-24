@@ -1,7 +1,11 @@
-data/raw/*
+﻿data/raw/*
 data/processed/*
 outputs/*
 !data/raw/.gitkeep
+# Frozen historical seed data (see root .gitignore for why these are tracked).
+!data/raw/player_stats_2021_2025.rds
+!data/raw/team_games.rds
+!data/raw/schedules.rds
 !data/processed/.gitkeep
 !outputs/.gitkeep
 
