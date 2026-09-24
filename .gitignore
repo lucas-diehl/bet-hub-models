@@ -14,16 +14,20 @@
 **/.Rlib/
 **/ownership_inbox/
 **/*.duckdb
-NFL/data/processed/
+NFL/data/processed/*
 NFL/data/raw/*
 !NFL/data/raw/odds_api_line_movement/
-# Frozen historical seed data (2021-2025 seasons, pre-2026 team games/schedules).
-# Static and never rebuilt in CI; scripts/15 and scripts/57 read these directly
-# with no fallback, so they must be tracked or the nfl.yml "publish" job fails
-# on every run (confirmed: readRDS "cannot open the connection" on both files).
+# Frozen historical seed data (2021-2025 seasons, pre-2026 team games/schedules)
+# plus a handful of build artifacts that nothing in nfl.yml ever regenerates.
+# Static/rarely-rebuilt and read directly with no fallback by scripts 12/13/15/57,
+# so they must be tracked or the nfl.yml "publish" job fails on every run
+# (confirmed repeatedly: readRDS "cannot open the connection" on each of these).
 !NFL/data/raw/player_stats_2021_2025.rds
 !NFL/data/raw/team_games.rds
 !NFL/data/raw/schedules.rds
+!NFL/data/processed/game_features.rds
+!NFL/data/processed/td_game_context.rds
+!NFL/data/processed/td_deployment_model.rds
 NFL/outputs/
 dfs-engine/data/raw/
 dfs-engine/data/reports/

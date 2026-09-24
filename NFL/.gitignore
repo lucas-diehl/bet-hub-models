@@ -6,6 +6,9 @@ outputs/*
 !data/raw/player_stats_2021_2025.rds
 !data/raw/team_games.rds
 !data/raw/schedules.rds
+!data/processed/game_features.rds
+!data/processed/td_game_context.rds
+!data/processed/td_deployment_model.rds
 !data/processed/.gitkeep
 !outputs/.gitkeep
 
