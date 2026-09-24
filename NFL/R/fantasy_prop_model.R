@@ -237,6 +237,16 @@ prepare_fantasy_player_features <- function(player_stats, game_context) {
     dplyr::group_by(.data$player_id, .data$season) |>
     dplyr::mutate(prior_games_season = dplyr::row_number() - 1L)
 
+  ## Tested tightening this to 2 (2026-09-23) to react faster to two confirmed
+  ## live cases (Wan'Dale Robinson traded; Theo Johnson displaced by a
+  ## teammate's target-share takeover) -- reverted: verified it barely moved
+  ## either player's projection (Wan'Dale 11.13->11.05, Theo Johnson actually
+  ## went UP 8.39->8.46), so the convergence window isn't the real bottleneck
+  ## for these cases. Something else (likely the static preseason_role_rank/
+  ## draft_priority features, which never update in-season, or the salary-
+  ## stack blend pulling back toward a DK-salary-implied expectation) is
+  ## holding their floor up regardless of rolling-window weighting. Needs a
+  ## real follow-up investigation, not a hyperparameter tweak.
   blend_convergence_games <- 3   # fully weighted to current season by this many current-season games
   for (window in c(3L, 5L, 8L)) {
     players <- players |>
@@ -338,7 +348,8 @@ build_fantasy_2026_features <- function(
   player_stats,
   rosters,
   historical_game_context,
-  upcoming_game_context
+  upcoming_game_context,
+  schedules = NULL
 ) {
   current_roster <- rosters |>
     dplyr::filter(
@@ -379,9 +390,38 @@ build_fantasy_2026_features <- function(
     dplyr::inner_join(game_teams, by = "team") |>
     dplyr::mutate(season = 2026L, season_type = "REG")
 
+  game_context <- dplyr::bind_rows(historical_game_context, upcoming_game_context)
+
+  ## Confirmed bug (2026-09-24): historical_game_context (td_game_context.rds) is
+  ## a slow-to-refresh cache that has ZERO 2026 rows until scripts/12 is re-run
+  ## for the season -- so every ALREADY-PLAYED 2026 game (weeks before the one
+  ## being projected) gets game_date = NA from the join in
+  ## prepare_fantasy_player_features(), while the synthetic row for the week
+  ## actually being projected DOES get a real date (from upcoming_game_context,
+  ## built fresh every run). dplyr::arrange() sorts NA last, so that one real
+  ## date sorts BEFORE the NA-dated real games it should follow -- inverting
+  ## the chronological order and making prior_games_season compute as 0 for
+  ## EVERY player EVERY week, which silently disabled the current/prior-season
+  ## blend added in prepare_fantasy_player_features() (always fell back to
+  ## ~100% prior-season weight for the live weekly projection, the one place
+  ## that blend most needed to work). Patch in a game_date-only row, sourced
+  ## directly from the schedule (always complete/accurate), for any 2026 game
+  ## missing from both context sources -- anti_join by game_id first so this
+  ## never creates a duplicate-key row for a game already present.
+  if (!is.null(schedules)) {
+    known_ids <- unique(game_context$game_id)
+    schedule_patch <- schedules |>
+      dplyr::filter(.data$season == 2026, !.data$game_id %in% known_ids) |>
+      dplyr::transmute(
+        .data$game_id, .data$season, .data$week,
+        game_date = as.Date(.data$gameday)
+      )
+    if (nrow(schedule_patch)) game_context <- dplyr::bind_rows(game_context, schedule_patch)
+  }
+
   prepared <- prepare_fantasy_player_features(
     dplyr::bind_rows(player_stats, synthetic),
-    dplyr::bind_rows(historical_game_context, upcoming_game_context)
+    game_context
   ) |>
     dplyr::filter(
       .data$season == 2026,
