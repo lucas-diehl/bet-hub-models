@@ -426,11 +426,21 @@ build_golf_captain_card <- function(date = Sys.Date(), opts = load_bankroll_opts
     list(player = x$player, team = x$team, cpt_salary = x$cpt_salary, cpt_proj = x$cpt_proj,
          cpt_ceil = x$cpt_ceil, cpt_own = x$cpt_own, leverage = x$leverage) })
 
+  # Optimizer pool payload (browser /dfs page) — same build_sim_payload() the classic
+  # and build_contest_card() paths use. This card builds esim/field/rr/exp_pool itself
+  # (rather than via run_contest()), so assemble the minimal r-like list build_sim_payload()
+  # and dash_cand_metrics_hi() actually read (sim, field, rr, pool, sport).
+  sim_r <- list(sim = esim, field = field, rr = rr, pool = exp_pool, sport = "golf")
+  sim_payload <- tryCatch(build_sim_payload(sim_r), error = function(e) { msg("  sim payload skipped:", conditionMessage(e)); NULL })
+  if (!is.null(sim_payload))
+    sim_payload$contests <- tryCatch(dash_contest_options("golf", sim_payload$field_size), error = function(e) NULL)
+
   list(sport = "golf_captain", name = disp, title = cg$name, status = "ready", mode = "showdown",
        slate_id = make_slate_id("golf", "dk", date, paste0("captain_r", cg$round %||% "x")),
+       slate_label = "Captain Showdown",
        gates = list(cash = isTRUE(gates$cash_enabled), gpp = isTRUE(gates$gpp_enabled)),
        bankroll = opts$bankroll, daily_budget = 0, live_total = 0, plan = list(),
-       captains = captains, lineups = lineups, players = players)
+       captains = captains, lineups = lineups, players = players, sim = sim_payload)
 }
 
 # Presidents/Ryder Cup captain-mode card -- same generic showdown machinery as
@@ -485,11 +495,22 @@ build_golf_presidents_cup_card <- function(date = Sys.Date(), opts = load_bankro
     list(player = x$player, team = x$team, cpt_salary = x$cpt_salary, cpt_proj = x$cpt_proj,
          cpt_ceil = x$cpt_ceil, cpt_own = x$cpt_own, leverage = x$leverage) })
 
+  # Optimizer pool payload (browser /dfs page) — same build_sim_payload() the classic
+  # and build_contest_card() paths use. This card builds esim/field/rr/exp_pool itself
+  # (rather than via run_contest()), so assemble the minimal r-like list build_sim_payload()
+  # and dash_cand_metrics_hi() actually read (sim, field, rr, pool, sport). Without this,
+  # publish_pools() silently drops the card (card$sim stays NULL) and it never reaches
+  # the site's optimizer feed even though the card itself is status="ready".
+  sim_r <- list(sim = esim, field = field, rr = rr, pool = exp_pool, sport = "golf")
+  sim_payload <- tryCatch(build_sim_payload(sim_r), error = function(e) { msg("  sim payload skipped:", conditionMessage(e)); NULL })
+  if (!is.null(sim_payload))
+    sim_payload$contests <- tryCatch(dash_contest_options("golf", sim_payload$field_size), error = function(e) NULL)
+
   list(sport = "presidents_cup", name = disp, title = pg$name %||% nm0, status = "ready", mode = "showdown",
-       slate_id = slate_id,
+       slate_id = slate_id, slate_label = "Presidents Cup",
        gates = list(cash = isTRUE(gates$cash_enabled), gpp = isTRUE(gates$gpp_enabled)),
        bankroll = opts$bankroll, daily_budget = 0, live_total = 0, plan = list(),
-       captains = captains, lineups = lineups, players = players)
+       captains = captains, lineups = lineups, players = players, sim = sim_payload)
 }
 
 # Scorecard: fuse the P&L ledger + projection-accuracy scorecard into one per-sport
@@ -554,12 +575,19 @@ build_bestball <- function(max_players = 300L) {
 # pool_<sport>_<date>_<site>.json (+ _r<round> for single-round golf) for the Bet
 # Hub browser optimizer. Reuses the card's already-computed sim — no extra sims.
 POOL_SPORT_MAP <- list(
-  wnba       = list(sport = "wnba",   slate_type = NA_character_),
-  tennis     = list(sport = "tennis", slate_type = NA_character_),
-  golf       = list(sport = "golf",   slate_type = NA_character_),
-  golf_round = list(sport = "golf",   slate_type = "single_round"),
-  nfl        = list(sport = "nfl",    slate_type = NA_character_),
-  ncaaf      = list(sport = "ncaaf",  slate_type = NA_character_)
+  wnba           = list(sport = "wnba",   slate_type = NA_character_),
+  tennis         = list(sport = "tennis", slate_type = NA_character_),
+  golf           = list(sport = "golf",   slate_type = NA_character_),
+  golf_round     = list(sport = "golf",   slate_type = "single_round"),
+  # Showdown-format golf (Captain Mode, Presidents/Ryder Cup) folds into the same
+  # "golf" pool sport as the classic tournament -- distinct slate_id tags already
+  # slug into distinct filenames (see publish_pools()'s `slug` logic below), exactly
+  # like golf_round's per-round files coexist with the main golf file today. This
+  # means these show up under the site's existing golf tab with no frontend change.
+  golf_captain   = list(sport = "golf",   slate_type = NA_character_),
+  presidents_cup = list(sport = "golf",   slate_type = NA_character_),
+  nfl            = list(sport = "nfl",    slate_type = NA_character_),
+  ncaaf          = list(sport = "ncaaf",  slate_type = NA_character_)
 )
 publish_pools <- function(cards, date, site = "draftkings") {
   feed <- Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Documents/dashboard_feed")
