@@ -1,4 +1,4 @@
-# === secrets — NEVER commit (provided via GitHub Secrets in CI, .Renviron locally) ===
+﻿# === secrets — NEVER commit (provided via GitHub Secrets in CI, .Renviron locally) ===
 **/.Renviron
 **/.env
 **/.env.local
@@ -17,6 +17,13 @@
 NFL/data/processed/
 NFL/data/raw/*
 !NFL/data/raw/odds_api_line_movement/
+# Frozen historical seed data (2021-2025 seasons, pre-2026 team games/schedules).
+# Static and never rebuilt in CI; scripts/15 and scripts/57 read these directly
+# with no fallback, so they must be tracked or the nfl.yml "publish" job fails
+# on every run (confirmed: readRDS "cannot open the connection" on both files).
+!NFL/data/raw/player_stats_2021_2025.rds
+!NFL/data/raw/team_games.rds
+!NFL/data/raw/schedules.rds
 NFL/outputs/
 dfs-engine/data/raw/
 dfs-engine/data/reports/
