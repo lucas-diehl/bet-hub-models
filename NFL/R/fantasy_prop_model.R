@@ -92,11 +92,14 @@ fantasy_target_specifications <- function() {
 ## receiver's own rolling features already encode the relationship, so the delta
 ## was adding noise and nothing else.
 ##
-## Deployment note: for an upcoming game the starter is imputed as the team's most
-## recent primary QB. That means a change is detected the week AFTER it happens
-## unless config/qb_starter_overrides.csv names the expected starter (columns:
-## season, week, team, qb). Week 3 2026 is exactly why that override exists --
-## ATL switched Rush -> Penix and the model had no way to know pre-lock.
+## Deployment: the starter for an upcoming game is resolved AUTOMATICALLY by
+## R/qb_starter.R from two public feeds -- the daily depth chart (pos_rank 1 = QB1)
+## and the weekly injury report (walk down the ladder past anyone Out/Doubtful).
+## No manual entry. Validated on 2026 weeks 1-3: it names Michael Penix Jr. for ATL
+## in week 3 off the depth chart dated the day before kickoff, which is precisely
+## the change (Cooper Rush -> Penix) that the old carry-the-incumbent-forward
+## approach missed. Falls back to the last observed starter only if both feeds
+## are missing a team.
 QB_PAIR_SHRINKAGE_K <- 8
 
 add_qb_pair_features <- function(players) {
@@ -113,31 +116,49 @@ add_qb_pair_features <- function(players) {
     dplyr::group_by(.data$season, .data$week, .data$team) |>
     dplyr::summarise(qb = .data$player_display_name[which.max(.data$attempts)], .groups = "drop")
 
-  # upcoming games carry no box score, so the QB is unknown -> carry the team's most
-  # recent known starter forward, then let the override file correct it when a change
-  # is announced before we would otherwise see it.
-  starters <- qb_by_game |>
-    dplyr::arrange(.data$team, .data$season, .data$week)
+  # A team-game with no QB box score is an upcoming game. Those are the rows that
+  # need a PROJECTED starter; completed games already tell us who threw.
   players <- players |>
     dplyr::left_join(qb_by_game, by = c("season", "week", "team")) |>
+    dplyr::mutate(.no_box = is.na(.data$qb))
+
+  future <- unique(as.data.frame(players)[players$.no_box, c("season", "week", "team"), drop = FALSE])
+
+  if (nrow(future) && exists("project_qb_starters")) {
+    # fallback if a feed is missing a team: that team's last observed starter
+    fb <- players |>
+      dplyr::filter(!is.na(.data$qb)) |>
+      dplyr::arrange(.data$team, .data$season, .data$week) |>
+      dplyr::group_by(.data$team) |>
+      dplyr::slice_tail(n = 1) |>
+      dplyr::ungroup() |>
+      dplyr::select("team", "qb")
+    keys <- unique(future[, c("season", "week"), drop = FALSE])
+    proj <- purrr::pmap_dfr(keys, function(season, week) {
+      p <- tryCatch(project_qb_starters(season, week, fallback = data.table::as.data.table(fb)),
+                    error = function(e) NULL)
+      if (is.null(p) || !nrow(p)) return(NULL)
+      tibble::tibble(season = season, week = week,
+                     team = as.character(p$team), qb_proj = as.character(p$qb))
+    })
+    if (!is.null(proj) && nrow(proj)) {
+      players <- players |>
+        dplyr::left_join(proj, by = c("season", "week", "team")) |>
+        dplyr::mutate(qb = dplyr::if_else(.data$.no_box & !is.na(.data$qb_proj),
+                                          .data$qb_proj, .data$qb)) |>
+        dplyr::select(-"qb_proj")
+      message("QB starters auto-resolved for ", nrow(proj), " upcoming team-games")
+    }
+  }
+
+  # anything still unknown (feeds down, or a team absent from both) falls back to
+  # carrying the last known starter forward.
+  players <- players |>
     dplyr::arrange(.data$team, .data$season, .data$week) |>
     dplyr::group_by(.data$team) |>
     dplyr::mutate(qb = .data$qb |> vctrs::vec_fill_missing(direction = "down")) |>
-    dplyr::ungroup()
-
-  ov_path <- "config/qb_starter_overrides.csv"
-  if (file.exists(ov_path)) {
-    ov <- tryCatch(readr::read_csv(ov_path, show_col_types = FALSE), error = function(e) NULL)
-    if (!is.null(ov) && all(c("season", "week", "team", "qb") %in% names(ov))) {
-      ov <- ov |> dplyr::transmute(season = as.integer(.data$season), week = as.integer(.data$week),
-                                    team = normalize_team(.data$team), qb_override = as.character(.data$qb))
-      players <- players |>
-        dplyr::left_join(ov, by = c("season", "week", "team")) |>
-        dplyr::mutate(qb = dplyr::coalesce(.data$qb_override, .data$qb)) |>
-        dplyr::select(-"qb_override")
-      message("QB overrides applied: ", nrow(ov))
-    }
-  }
+    dplyr::ungroup() |>
+    dplyr::select(-".no_box")
 
   players <- players |>
     dplyr::arrange(.data$player_id, .data$season, .data$week) |>
