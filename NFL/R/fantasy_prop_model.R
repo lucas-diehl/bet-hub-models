@@ -72,6 +72,114 @@ fantasy_target_specifications <- function() {
   )
 }
 
+## QB x RECEIVER PAIR CHEMISTRY.
+##
+## Who is throwing materially changes a receiver's output, independent of team
+## pass volume. Drake London: 20.5 PPR/gm with Penix vs 13.9 with Cousins on
+## 31.3 vs 31.9 team attempts/gm -- target share, not volume. League-wide across
+## 601 receiver-seasons where a receiver played for >=2 QBs in the same season,
+## a receiver's prior over/under-performance with a specific QB predicts his
+## FUTURE performance with that QB out of sample at dR2 +0.028 (PPR) / +0.035
+## (target share), coefficient ~1.0 -- it carries forward at nearly full strength.
+##
+## GATED ON A QB CHANGE, deliberately. Tuning (scripts/98) compared plain
+## shrinkage (K=4/12), a hard cap, and a min-sample gate: all of them helped on
+## QB-change games but DEGRADED the tail, costing R2 -0.006 to -0.009 at the top
+## 5% of |delta| where small-sample noise dominates. Applying the delta only when
+## the QB actually changed from the player's last game turns that tail from
+## -0.0072 to +0.0099 and improves every other cut too (receiving yards: ALL
+## dR2 +0.0025, QB-change dR2 +0.0144, MAE -1.26%). When the QB is stable the
+## receiver's own rolling features already encode the relationship, so the delta
+## was adding noise and nothing else.
+##
+## Deployment note: for an upcoming game the starter is imputed as the team's most
+## recent primary QB. That means a change is detected the week AFTER it happens
+## unless config/qb_starter_overrides.csv names the expected starter (columns:
+## season, week, team, qb). Week 3 2026 is exactly why that override exists --
+## ATL switched Rush -> Penix and the model had no way to know pre-lock.
+QB_PAIR_SHRINKAGE_K <- 8
+
+add_qb_pair_features <- function(players) {
+  need <- c("player_id", "season", "week", "team", "position", "fantasy_points_ppr")
+  if (!all(need %in% names(players))) {
+    players$qb_pair_delta_r5 <- 0
+    players$qb_pair_games_r5 <- 0
+    return(players)
+  }
+
+  # primary QB per team-game = most pass attempts (from these same rows)
+  qb_by_game <- players |>
+    dplyr::filter(.data$position == "QB", !is.na(.data$attempts), .data$attempts > 0) |>
+    dplyr::group_by(.data$season, .data$week, .data$team) |>
+    dplyr::summarise(qb = .data$player_display_name[which.max(.data$attempts)], .groups = "drop")
+
+  # upcoming games carry no box score, so the QB is unknown -> carry the team's most
+  # recent known starter forward, then let the override file correct it when a change
+  # is announced before we would otherwise see it.
+  starters <- qb_by_game |>
+    dplyr::arrange(.data$team, .data$season, .data$week)
+  players <- players |>
+    dplyr::left_join(qb_by_game, by = c("season", "week", "team")) |>
+    dplyr::arrange(.data$team, .data$season, .data$week) |>
+    dplyr::group_by(.data$team) |>
+    dplyr::mutate(qb = .data$qb |> vctrs::vec_fill_missing(direction = "down")) |>
+    dplyr::ungroup()
+
+  ov_path <- "config/qb_starter_overrides.csv"
+  if (file.exists(ov_path)) {
+    ov <- tryCatch(readr::read_csv(ov_path, show_col_types = FALSE), error = function(e) NULL)
+    if (!is.null(ov) && all(c("season", "week", "team", "qb") %in% names(ov))) {
+      ov <- ov |> dplyr::transmute(season = as.integer(.data$season), week = as.integer(.data$week),
+                                    team = normalize_team(.data$team), qb_override = as.character(.data$qb))
+      players <- players |>
+        dplyr::left_join(ov, by = c("season", "week", "team")) |>
+        dplyr::mutate(qb = dplyr::coalesce(.data$qb_override, .data$qb)) |>
+        dplyr::select(-"qb_override")
+      message("QB overrides applied: ", nrow(ov))
+    }
+  }
+
+  players <- players |>
+    dplyr::arrange(.data$player_id, .data$season, .data$week) |>
+    dplyr::group_by(.data$player_id) |>
+    dplyr::mutate(
+      .g = dplyr::row_number(),
+      .prior_ppr = (cumsum(dplyr::coalesce(.data$fantasy_points_ppr, 0)) -
+                      dplyr::coalesce(.data$fantasy_points_ppr, 0)) / pmax(.data$.g - 1, 1),
+      .prior_ppr = dplyr::if_else(.data$.g == 1, NA_real_, .data$.prior_ppr),
+      .prev_qb = dplyr::lag(.data$qb),
+      .qb_changed = !is.na(.data$.prev_qb) & !is.na(.data$qb) & .data$qb != .data$.prev_qb
+    ) |>
+    dplyr::group_by(.data$player_id, .data$qb) |>
+    dplyr::mutate(
+      .pair_i = dplyr::row_number(),
+      .prior_pair_ppr = (cumsum(dplyr::coalesce(.data$fantasy_points_ppr, 0)) -
+                           dplyr::coalesce(.data$fantasy_points_ppr, 0)) / pmax(.data$.pair_i - 1, 1),
+      .prior_pair_ppr = dplyr::if_else(.data$.pair_i == 1, NA_real_, .data$.prior_pair_ppr),
+      .n_pair = .data$.pair_i - 1L
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(
+      .raw = dplyr::coalesce(.data$.prior_pair_ppr - .data$.prior_ppr, 0),
+      qb_pair_games_r5 = as.numeric(dplyr::coalesce(.data$.n_pair, 0L)),
+      qb_pair_delta_r5 = dplyr::if_else(
+        .data$.qb_changed,
+        .data$.raw * .data$qb_pair_games_r5 / (.data$qb_pair_games_r5 + QB_PAIR_SHRINKAGE_K),
+        0
+      ),
+      qb_pair_delta_r5 = dplyr::coalesce(.data$qb_pair_delta_r5, 0),
+      # Pass-catchers only. A QB is trivially "paired" with himself, which made the
+      # raw feature light up for QBs (Cooper Rush with QB Cooper Rush) -- meaningless,
+      # and for a QB "the QB changed" really means he was benched, which the position's
+      # own usage features already say far more directly.
+      qb_pair_delta_r5 = dplyr::if_else(.data$position == "QB", 0, .data$qb_pair_delta_r5),
+      qb_pair_games_r5 = dplyr::if_else(.data$position == "QB", 0, .data$qb_pair_games_r5)
+    ) |>
+    dplyr::select(-dplyr::starts_with("."))
+
+  players
+}
+
 prepare_fantasy_player_features <- function(player_stats, game_context) {
   measures <- c(
     "completions", "attempts", "passing_yards", "passing_tds",
@@ -271,6 +379,9 @@ prepare_fantasy_player_features <- function(player_stats, game_context) {
   }
   players <- players |>
     dplyr::select(-dplyr::ends_with("_prior"))
+
+  players <- add_qb_pair_features(players)
+
   volatility_measures <- intersect(
     c(
       "attempts", "passing_yards", "carries", "rushing_yards",
