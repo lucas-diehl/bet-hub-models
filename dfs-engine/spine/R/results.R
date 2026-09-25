@@ -42,11 +42,31 @@ parse_standings_entrants <- function(csv_path) {
     rank <- suppressWarnings(as.integer(gsub("[^0-9]", "", p[1])))     # "T5" -> 5
     if (is.na(rank) || !grepl("^\\s*\\d{6,}\\s*$", p[2])) return(NULL)  # need rank + EntryId
     list(rank = rank, entry_id = trimws(p[2]), entry_name = trimws(p[3]),
+         time_remaining = suppressWarnings(as.numeric(p[4])),
          points = suppressWarnings(as.numeric(p[5])), lineup = trimws(p[6]))
   })
   out <- out[!vapply(out, is.null, logical(1))]
   if (!length(out)) return(NULL)
   rbindlist(out)
+}
+
+# Is a standings file FINAL, or a mid-contest snapshot? DK's TimeRemaining column is
+# 0 for every entrant once all games have finished, and > 0 while any rostered player
+# still has game time left.
+#
+# Confirmed bug (2026-09-25): the ATL@GB Thursday showdown was captured 279 minutes
+# from the end -- the whole 118,906-entry field's top score was 50.58, Bijan Robinson
+# showed 16 FPTS against a 35.3 final, Drake London showed 0 against 28.4. Those
+# partial scores were ingested as if they were results, so the ranks, prizes and pnl
+# written to the ledger for that contest were fiction (it recorded a 62.5% cash rate
+# on a night the lineups actually missed badly). 4 of 21 downloaded files were
+# mid-game. A P&L ledger that silently mixes in partial scores is worse than no
+# ledger, because every gate and ROI read downstream inherits the error.
+standings_is_final <- function(ent) {
+  if (is.null(ent) || !nrow(ent)) return(FALSE)
+  tr <- suppressWarnings(as.numeric(ent$time_remaining))
+  if (all(is.na(tr))) return(TRUE)          # column absent/unparseable -> don't block
+  isTRUE(max(tr, na.rm = TRUE) <= 0)
 }
 
 # prize a finishing rank won, from a DK payout table (min_rank, max_rank, prize).
@@ -107,6 +127,11 @@ parse_standings_entrants <- function(csv_path) {
 # ingest ONE contest's standings into user_entries + entry_results (idempotent).
 ingest_contest_results <- function(contest_id, csv_path, users = dk_usernames(), force = FALSE) {
   ent <- parse_standings_entrants(csv_path); if (is.null(ent)) return(0L)
+  # never record a contest that is still in progress -- see standings_is_final().
+  if (!standings_is_final(ent)) {
+    msg("  results: skipping", contest_id, "- standings not final (mid-contest snapshot); re-download after games end")
+    return(0L)
+  }
   mine <- ent[.is_user_entry(entry_name, users)]
   if (!nrow(mine)) return(0L)
   if (!force) {
