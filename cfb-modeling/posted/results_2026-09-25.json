@@ -1,0 +1,33 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-09-25",
+  "graded_at": "2026-09-26T16:51:33Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk4-navy-uab-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.1117,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 4,
+        "cover_line": 11.5,
+        "closing_line": 6.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-army-temple-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0226,
+      "pnl_units": -2,
+      "actual": {
+        "actual_margin": -4,
+        "cover_line": 3,
+        "closing_line": 4
+      }
+    }
+  ]
+}

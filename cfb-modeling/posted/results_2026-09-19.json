@@ -3,18 +3,18 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-09-19",
-  "graded_at": "2026-09-25T17:40:45Z",
+  "graded_at": "2026-09-26T16:51:30Z",
   "results": [
     {
       "bet_id": "cfb-modeling-2026-wk3-florida-auburn-under",
       "result": "loss",
       "closing_odds_american": -110,
-      "clv_pct": 0,
+      "clv_pct": -0.0244,
       "pnl_units": -1,
       "actual": {
         "total_points": 83,
         "line": 52.5,
-        "closing_line": 52.5
+        "closing_line": 53.5
       }
     },
     {
@@ -225,12 +225,12 @@
       "bet_id": "cfb-modeling-2026-wk3-jamesmadison-sandiegostate-atsopen",
       "result": "loss",
       "closing_odds_american": -110,
-      "clv_pct": 0,
+      "clv_pct": 0.0113,
       "pnl_units": -1,
       "actual": {
         "actual_margin": -13,
         "cover_line": -2.5,
-        "closing_line": -2.5
+        "closing_line": -3
       }
     },
     {
@@ -297,12 +297,12 @@
       "bet_id": "cfb-modeling-2026-wk3-louisianatech-baylor-atsopen",
       "result": "win",
       "closing_odds_american": -110,
-      "clv_pct": -0.0452,
+      "clv_pct": -0.0676,
       "pnl_units": 2.73,
       "actual": {
         "actual_margin": 17,
         "cover_line": 17.5,
-        "closing_line": 19.5
+        "closing_line": 20.5
       }
     }
   ]
