@@ -3,13 +3,13 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-09-24",
-  "graded_at": "2026-09-26T16:51:33Z",
+  "graded_at": "2026-09-27T17:24:17Z",
   "results": [
     {
       "bet_id": "cfb-modeling-2026-wk4-liberty-coastalcarolina-atsopen",
       "result": "loss",
       "closing_odds_american": -110,
-      "clv_pct": -0.0898,
+      "clv_pct": -0.0897,
       "pnl_units": -1,
       "actual": {
         "actual_margin": -17,

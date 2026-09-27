@@ -1,0 +1,81 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-10-02",
+  "generated_at": "2026-09-27T17:24:21Z",
+  "model_version": "ppp-ppd-2026",
+  "mode": "PAPER",
+  "event_context": "Week 5",
+  "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
+  "bets": [
+    {
+      "bet_id": "cfb-modeling-2026-wk5-pennstate-northwestern-atsopen",
+      "event": "Penn State @ Northwestern",
+      "event_start": "2026-10-03T00:00:00Z",
+      "market": "spread",
+      "selection": "Northwestern",
+      "side": "home",
+      "line": 7,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.58,
+      "market_prob": 0.5238,
+      "edge": 0.0562,
+      "ev_pct": 0.1072,
+      "stake_units": 3,
+      "confidence": "high",
+      "tags": [
+        "OPEN_ATS",
+        "dog"
+      ],
+      "details": {
+        "proj_margin": 3.4,
+        "open_spread": 7,
+        "edge_pts": 10.4,
+        "dvoa_consensus": "5/5",
+        "opened": "2026-09-24T17:40:38Z",
+        "week": 5,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
+        "posted_spread": 7,
+        "min_line": 5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk5-liberty-delaware-atsopen",
+      "event": "Liberty @ Delaware",
+      "event_start": "2026-10-02T23:00:00Z",
+      "market": "spread",
+      "selection": "Delaware",
+      "side": "home",
+      "line": 6.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.58,
+      "market_prob": 0.5238,
+      "edge": 0.0562,
+      "ev_pct": 0.1072,
+      "stake_units": 3,
+      "confidence": "high",
+      "tags": [
+        "OPEN_ATS",
+        "dog"
+      ],
+      "details": {
+        "proj_margin": 4.7,
+        "open_spread": 6.5,
+        "edge_pts": 11.2,
+        "dvoa_consensus": "5/5",
+        "opened": "2026-09-27T17:23:15Z",
+        "week": 5,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
+        "posted_spread": 6.5,
+        "min_line": 4.5
+      }
+    }
+  ]
+}

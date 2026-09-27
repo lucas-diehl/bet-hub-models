@@ -1,0 +1,345 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-09-26",
+  "graded_at": "2026-09-27T17:24:17Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk4-oklahomastate-westvirginia-under",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": -1,
+      "actual": {
+        "total_points": 65,
+        "line": 60.5,
+        "closing_line": 60.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-centralmichigan-miami-under",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0244,
+      "pnl_units": -1,
+      "actual": {
+        "total_points": 55,
+        "line": 53.5,
+        "closing_line": 52.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-southcarolina-alabama-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0226,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 31,
+        "cover_line": -11.5,
+        "closing_line": -12.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-texasam-lsu-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0675,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 29,
+        "cover_line": -5.5,
+        "closing_line": -8.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-texas-tennessee-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0226,
+      "pnl_units": 0.91,
+      "actual": {
+        "actual_margin": -3,
+        "cover_line": 4.5,
+        "closing_line": 5.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-arizona-washingtonstate-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0226,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": -10,
+        "cover_line": 10.5,
+        "closing_line": 11.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-samhouston-texastech-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0675,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 35,
+        "cover_line": 37.5,
+        "closing_line": 34.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-houston-georgiasouthern-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0451,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": -14,
+        "cover_line": 19.5,
+        "closing_line": 17.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-kansasstate-cincinnati-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0113,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 5,
+        "cover_line": 6.5,
+        "closing_line": 6
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-tcu-ucf-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0113,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 8,
+        "cover_line": 3,
+        "closing_line": 3.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-utah-iowastate-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0897,
+      "pnl_units": -2,
+      "actual": {
+        "actual_margin": -14,
+        "cover_line": 11.5,
+        "closing_line": 7.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-centralmichigan-miami-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0226,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": 49,
+        "cover_line": 42.5,
+        "closing_line": 41.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-georgiatech-stanford-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0113,
+      "pnl_units": 1.82,
+      "actual": {
+        "actual_margin": 7,
+        "cover_line": 3.5,
+        "closing_line": 3
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-missouristate-smu-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0897,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 10,
+        "cover_line": 34.5,
+        "closing_line": 30.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-virginiatech-bostoncollege-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0113,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": -7,
+        "cover_line": 14,
+        "closing_line": 14.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-notredame-purdue-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": -39,
+        "cover_line": 27.5,
+        "closing_line": 27.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-sandiegostate-toledo-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0226,
+      "pnl_units": 1.82,
+      "actual": {
+        "actual_margin": 25,
+        "cover_line": -1.5,
+        "closing_line": -2.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-troy-utahstate-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0113,
+      "pnl_units": 1.82,
+      "actual": {
+        "actual_margin": 11,
+        "cover_line": -2.5,
+        "closing_line": -3
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-oregonstate-utep-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": -26,
+        "cover_line": 11.5,
+        "closing_line": 11.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-boisestate-westernmichigan-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0226,
+      "pnl_units": -1,
+      "actual": {
+        "actual_margin": -25,
+        "cover_line": 7.5,
+        "closing_line": 8.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-uconn-miamioh-atsopen",
+      "result": "push",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0113,
+      "pnl_units": 0,
+      "actual": {
+        "actual_margin": 3,
+        "cover_line": -3,
+        "closing_line": -2.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-louisiana-charlotte-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.1116,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": -27,
+        "cover_line": 14.5,
+        "closing_line": 9.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-floridaatlantic-ulmonroe-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0451,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": -28,
+        "cover_line": 13.5,
+        "closing_line": 11.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-southflorida-bowlinggreen-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0451,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": -8,
+        "cover_line": 15.5,
+        "closing_line": 17.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-unlv-akron-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0113,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": -28,
+        "cover_line": 14,
+        "closing_line": 13.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-southalabama-kentucky-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0226,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": 24,
+        "cover_line": 19.5,
+        "closing_line": 20.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-newmexico-newmexicostate-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0226,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": -24,
+        "cover_line": 12.5,
+        "closing_line": 11.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-jamesmadison-olddominion-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0564,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": -26,
+        "cover_line": 4.5,
+        "closing_line": 7
+      }
+    }
+  ]
+}
