@@ -3,42 +3,12 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-10-03",
-  "generated_at": "2026-09-27T17:24:21Z",
+  "generated_at": "2026-09-28T19:57:16Z",
   "model_version": "ppp-ppd-2026",
   "mode": "PAPER",
   "event_context": "Week 5",
   "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
   "bets": [
-    {
-      "bet_id": "cfb-modeling-2026-wk5-auburn-tennessee-under",
-      "event": "Auburn @ Tennessee",
-      "event_start": "2026-10-03T19:30:00Z",
-      "market": "total",
-      "selection": "Under 55.5",
-      "side": "under",
-      "line": 55.5,
-      "odds_american": -110,
-      "book": "DraftKings",
-      "model_prob": 0.6159,
-      "market_prob": 0.5238,
-      "edge": 0.0921,
-      "ev_pct": 0.1757,
-      "stake_units": 1,
-      "confidence": "medium",
-      "tags": [
-        "UNDER",
-        "UNDER4"
-      ],
-      "details": {
-        "proj_total": 50.7,
-        "under_edge": 4.8,
-        "strategy": "UNDER4",
-        "status": "paper",
-        "prob_source": "modelled",
-        "posted_total": 55.5,
-        "min_total": 54.7
-      }
-    },
     {
       "bet_id": "cfb-modeling-2026-wk5-bostoncollege-smu-under",
       "event": "Boston College @ SMU",
@@ -49,10 +19,10 @@
       "line": 56.5,
       "odds_american": -110,
       "book": "DraftKings",
-      "model_prob": 0.6142,
+      "model_prob": 0.6158,
       "market_prob": 0.5238,
-      "edge": 0.0904,
-      "ev_pct": 0.1726,
+      "edge": 0.092,
+      "ev_pct": 0.1755,
       "stake_units": 1,
       "confidence": "medium",
       "tags": [
@@ -60,13 +30,13 @@
         "UNDER4"
       ],
       "details": {
-        "proj_total": 51.8,
-        "under_edge": 4.7,
+        "proj_total": 51.7,
+        "under_edge": 4.8,
         "strategy": "UNDER4",
         "status": "paper",
         "prob_source": "modelled",
         "posted_total": 56.5,
-        "min_total": 55.8
+        "min_total": 55.7
       }
     },
     {
@@ -74,15 +44,15 @@
       "event": "California @ UNLV",
       "event_start": "2026-10-03T19:30:00Z",
       "market": "total",
-      "selection": "Under 52.5",
+      "selection": "Under 53.5",
       "side": "under",
-      "line": 52.5,
+      "line": 53.5,
       "odds_american": -110,
       "book": "DraftKings",
-      "model_prob": 0.6056,
+      "model_prob": 0.6284,
       "market_prob": 0.5238,
-      "edge": 0.0818,
-      "ev_pct": 0.1562,
+      "edge": 0.1046,
+      "ev_pct": 0.1997,
       "stake_units": 1,
       "confidence": "medium",
       "tags": [
@@ -91,11 +61,11 @@
       ],
       "details": {
         "proj_total": 48.1,
-        "under_edge": 4.4,
+        "under_edge": 5.4,
         "strategy": "UNDER4",
         "status": "paper",
         "prob_source": "modelled",
-        "posted_total": 52.5,
+        "posted_total": 53.5,
         "min_total": 52.1
       }
     },
@@ -120,9 +90,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 6.7,
+        "proj_margin": 6.1,
         "open_spread": 3.5,
-        "edge_pts": 10.2,
+        "edge_pts": 9.6,
         "dvoa_consensus": "3/5",
         "opened": "2026-09-24T17:40:38Z",
         "week": 5,
@@ -188,9 +158,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 13.1,
+        "proj_margin": 12.7,
         "open_spread": -20.5,
-        "edge_pts": 7.4,
+        "edge_pts": 7.8,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -222,9 +192,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 0.4,
+        "proj_margin": 0.1,
         "open_spread": 5.5,
-        "edge_pts": 5.9,
+        "edge_pts": 5.6,
         "dvoa_consensus": "3/5",
         "opened": "2026-09-24T17:40:38Z",
         "week": 5,
@@ -256,9 +226,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": -1.1,
+        "proj_margin": -1.5,
         "open_spread": 14.5,
-        "edge_pts": 13.4,
+        "edge_pts": 13,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -283,17 +253,17 @@
       "market_prob": 0.5238,
       "edge": 0.0562,
       "ev_pct": 0.1072,
-      "stake_units": 1,
-      "confidence": "low",
+      "stake_units": 2,
+      "confidence": "medium",
       "tags": [
         "OPEN_ATS",
         "fav"
       ],
       "details": {
-        "proj_margin": 11,
+        "proj_margin": 14.4,
         "open_spread": -1.5,
-        "edge_pts": 9.5,
-        "dvoa_consensus": "3/5",
+        "edge_pts": 12.9,
+        "dvoa_consensus": "4/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
         "status": "paper",
@@ -324,9 +294,9 @@
         "fav"
       ],
       "details": {
-        "proj_margin": 21.9,
+        "proj_margin": 21.5,
         "open_spread": -1.5,
-        "edge_pts": 20.4,
+        "edge_pts": 20,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -392,9 +362,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": -7.3,
+        "proj_margin": -7.9,
         "open_spread": 17.5,
-        "edge_pts": 10.2,
+        "edge_pts": 9.6,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-24T17:40:38Z",
         "week": 5,
@@ -426,9 +396,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": -6.4,
+        "proj_margin": -6.7,
         "open_spread": 20.5,
-        "edge_pts": 14.1,
+        "edge_pts": 13.8,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-24T17:40:38Z",
         "week": 5,
@@ -460,9 +430,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 17.9,
+        "proj_margin": 18.1,
         "open_spread": 5.5,
-        "edge_pts": 23.4,
+        "edge_pts": 23.6,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -487,8 +457,8 @@
       "market_prob": 0.5238,
       "edge": 0.0562,
       "ev_pct": 0.1072,
-      "stake_units": 2,
-      "confidence": "medium",
+      "stake_units": 3,
+      "confidence": "high",
       "tags": [
         "OPEN_ATS",
         "dog"
@@ -497,7 +467,7 @@
         "proj_margin": 7.3,
         "open_spread": 3,
         "edge_pts": 10.3,
-        "dvoa_consensus": "4/5",
+        "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
         "status": "paper",
@@ -528,9 +498,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 1,
+        "proj_margin": 1.2,
         "open_spread": 14,
-        "edge_pts": 15,
+        "edge_pts": 15.2,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-24T17:40:38Z",
         "week": 5,
@@ -562,9 +532,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": -12.8,
+        "proj_margin": -12.9,
         "open_spread": 23.5,
-        "edge_pts": 10.7,
+        "edge_pts": 10.6,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -596,9 +566,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 1.1,
+        "proj_margin": 0.6,
         "open_spread": 4,
-        "edge_pts": 5.1,
+        "edge_pts": 4.6,
         "dvoa_consensus": "4/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -630,9 +600,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 13.2,
+        "proj_margin": 12.9,
         "open_spread": 4.5,
-        "edge_pts": 17.7,
+        "edge_pts": 17.4,
         "dvoa_consensus": "4/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -664,9 +634,9 @@
         "fav"
       ],
       "details": {
-        "proj_margin": 10.8,
+        "proj_margin": 10.6,
         "open_spread": -1.5,
-        "edge_pts": 9.3,
+        "edge_pts": 9.1,
         "dvoa_consensus": "3/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -698,9 +668,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": -9.9,
+        "proj_margin": -10.1,
         "open_spread": 21.5,
-        "edge_pts": 11.6,
+        "edge_pts": 11.4,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -732,9 +702,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": -2.6,
+        "proj_margin": -3.1,
         "open_spread": 12.5,
-        "edge_pts": 9.9,
+        "edge_pts": 9.4,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -759,17 +729,17 @@
       "market_prob": 0.5238,
       "edge": 0.0562,
       "ev_pct": 0.1072,
-      "stake_units": 2,
-      "confidence": "medium",
+      "stake_units": 1,
+      "confidence": "low",
       "tags": [
         "OPEN_ATS",
         "fav"
       ],
       "details": {
-        "proj_margin": 5.2,
+        "proj_margin": 5.8,
         "open_spread": -1.5,
-        "edge_pts": 3.7,
-        "dvoa_consensus": "4/5",
+        "edge_pts": 4.3,
+        "dvoa_consensus": "3/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
         "status": "paper",
@@ -800,9 +770,9 @@
         "fav"
       ],
       "details": {
-        "proj_margin": 19.7,
+        "proj_margin": 19.5,
         "open_spread": -5.5,
-        "edge_pts": 14.2,
+        "edge_pts": 14,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -834,9 +804,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": -2.9,
+        "proj_margin": -2.5,
         "open_spread": 17.5,
-        "edge_pts": 14.6,
+        "edge_pts": 15,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -868,9 +838,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 1.5,
+        "proj_margin": 1.4,
         "open_spread": 16.5,
-        "edge_pts": 18,
+        "edge_pts": 17.9,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -902,9 +872,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 0.1,
+        "proj_margin": -0.7,
         "open_spread": 5.5,
-        "edge_pts": 5.6,
+        "edge_pts": 4.8,
         "dvoa_consensus": "4/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -936,9 +906,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 11.7,
+        "proj_margin": 11.4,
         "open_spread": 3.5,
-        "edge_pts": 15.2,
+        "edge_pts": 14.9,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -970,9 +940,9 @@
         "fav"
       ],
       "details": {
-        "proj_margin": 9.3,
+        "proj_margin": 9,
         "open_spread": -4,
-        "edge_pts": 5.3,
+        "edge_pts": 5,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
@@ -1004,9 +974,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 8.1,
+        "proj_margin": 7.8,
         "open_spread": 1.5,
-        "edge_pts": 9.6,
+        "edge_pts": 9.3,
         "dvoa_consensus": "4/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,

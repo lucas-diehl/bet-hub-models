@@ -3,7 +3,7 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-10-02",
-  "generated_at": "2026-09-27T17:24:21Z",
+  "generated_at": "2026-09-28T19:57:16Z",
   "model_version": "ppp-ppd-2026",
   "mode": "PAPER",
   "event_context": "Week 5",
@@ -30,9 +30,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 3.4,
+        "proj_margin": 3,
         "open_spread": 7,
-        "edge_pts": 10.4,
+        "edge_pts": 10,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-24T17:40:38Z",
         "week": 5,
@@ -64,9 +64,9 @@
         "dog"
       ],
       "details": {
-        "proj_margin": 4.7,
+        "proj_margin": 4.3,
         "open_spread": 6.5,
-        "edge_pts": 11.2,
+        "edge_pts": 10.8,
         "dvoa_consensus": "5/5",
         "opened": "2026-09-27T17:23:15Z",
         "week": 5,
