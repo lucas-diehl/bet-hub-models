@@ -953,6 +953,226 @@
         "posted_spread": 4.5,
         "min_line": 2.5
       }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-texas-tennessee-under",
+      "event": "Texas @ Tennessee",
+      "event_start": "2026-09-26T16:00:00.000Z",
+      "market": "total",
+      "selection": "Under 57.5",
+      "side": "under",
+      "line": 57.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.6099,
+      "market_prob": 0.5238,
+      "edge": 0.0861,
+      "ev_pct": 0.1643,
+      "stake_units": 1,
+      "confidence": "medium",
+      "tags": [
+        "UNDER",
+        "UNDER4+DOG",
+        "dog"
+      ],
+      "details": {
+        "status": "paper",
+        "strategy": "UNDER4+DOG",
+        "min_total": 56.9,
+        "proj_total": 52.9,
+        "under_edge": 4.6,
+        "prob_source": "modelled",
+        "posted_total": 57.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-northernillinois-georgiastate-under",
+      "event": "Northern Illinois @ Georgia State",
+      "event_start": "2026-09-26T18:00:00.000Z",
+      "market": "total",
+      "selection": "Under 56.5",
+      "side": "under",
+      "line": 56.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.6262,
+      "market_prob": 0.5238,
+      "edge": 0.1024,
+      "ev_pct": 0.1954,
+      "stake_units": 1,
+      "confidence": "medium",
+      "tags": [
+        "UNDER",
+        "UNDER4"
+      ],
+      "details": {
+        "status": "paper",
+        "strategy": "UNDER4",
+        "min_total": 55.2,
+        "proj_total": 51.2,
+        "under_edge": 5.3,
+        "prob_source": "modelled",
+        "posted_total": 56.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-olemiss-florida-atsopen",
+      "event": "Ole Miss @ Florida",
+      "event_start": "2026-09-26T19:30:00.000Z",
+      "market": "spread",
+      "selection": "Florida",
+      "side": "home",
+      "line": -1.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.58,
+      "market_prob": 0.5238,
+      "edge": 0.0562,
+      "ev_pct": 0.1072,
+      "stake_units": 1,
+      "confidence": "low",
+      "tags": [
+        "OPEN_ATS",
+        "fav"
+      ],
+      "details": {
+        "week": 4,
+        "opened": "2026-09-18T14:06:39Z",
+        "status": "paper",
+        "edge_pts": 12.2,
+        "min_line": -3.5,
+        "mechanism": "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
+        "open_spread": -1.5,
+        "prob_source": "empirical_insample",
+        "proj_margin": 13.7,
+        "posted_spread": -1.5,
+        "dvoa_consensus": "3/5"
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-vanderbilt-auburn-under",
+      "event": "Vanderbilt @ Auburn",
+      "event_start": "2026-09-26T20:15:00.000Z",
+      "market": "total",
+      "selection": "Under 55.5",
+      "side": "under",
+      "line": 55.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.6059,
+      "market_prob": 0.5238,
+      "edge": 0.0821,
+      "ev_pct": 0.1566,
+      "stake_units": 1,
+      "confidence": "medium",
+      "tags": [
+        "UNDER",
+        "UNDER4"
+      ],
+      "details": {
+        "status": "paper",
+        "strategy": "UNDER4",
+        "min_total": 55.1,
+        "proj_total": 51.1,
+        "under_edge": 4.4,
+        "prob_source": "modelled",
+        "posted_total": 55.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-southcarolina-alabama-under",
+      "event": "South Carolina @ Alabama",
+      "event_start": "2026-09-26T23:00:00.000Z",
+      "market": "total",
+      "selection": "Under 54.5",
+      "side": "under",
+      "line": 54.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.6634,
+      "market_prob": 0.5238,
+      "edge": 0.1396,
+      "ev_pct": 0.2664,
+      "stake_units": 1,
+      "confidence": "high",
+      "tags": [
+        "UNDER",
+        "UNDER4"
+      ],
+      "details": {
+        "status": "paper",
+        "strategy": "UNDER4",
+        "min_total": 51.6,
+        "proj_total": 47.6,
+        "under_edge": 6.9,
+        "prob_source": "modelled",
+        "posted_total": 54.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-missouristate-smu-under",
+      "event": "Missouri State @ SMU",
+      "event_start": "2026-09-27T01:00:00.000Z",
+      "market": "total",
+      "selection": "Under 59.5",
+      "side": "under",
+      "line": 59.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.5749,
+      "market_prob": 0.5238,
+      "edge": 0.0511,
+      "ev_pct": 0.0975,
+      "stake_units": 1,
+      "confidence": "low",
+      "tags": [
+        "UNDER",
+        "UNDER3_DOG",
+        "dog"
+      ],
+      "details": {
+        "status": "paper",
+        "strategy": "UNDER3_DOG",
+        "min_total": 59.4,
+        "proj_total": 56.4,
+        "under_edge": 3.1,
+        "prob_source": "modelled",
+        "posted_total": 59.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-minnesota-washington-atsopen",
+      "event": "Minnesota @ Washington",
+      "event_start": "2026-09-27T03:00:00.000Z",
+      "market": "spread",
+      "selection": "Washington",
+      "side": "home",
+      "line": -8.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.58,
+      "market_prob": 0.5238,
+      "edge": 0.0562,
+      "ev_pct": 0.1072,
+      "stake_units": 2,
+      "confidence": "medium",
+      "tags": [
+        "OPEN_ATS",
+        "fav"
+      ],
+      "details": {
+        "week": 4,
+        "opened": "2026-09-21T05:02:04Z",
+        "status": "paper",
+        "edge_pts": 12,
+        "min_line": -10.5,
+        "mechanism": "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
+        "open_spread": -8.5,
+        "prob_source": "empirical_insample",
+        "proj_margin": 20.5,
+        "posted_spread": -8.5,
+        "dvoa_consensus": "4/5"
+      }
     }
   ]
 }
