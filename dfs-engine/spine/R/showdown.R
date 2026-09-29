@@ -104,7 +104,15 @@ run_contest <- function(contest_id, sport = NULL, date = Sys.Date(), n_lineups =
     field <- simulate_field(exp_pool, rr, field_n = field_n, own = exp_pool$own)
     cands <- make_candidates(exp_pool, rr, n_cand = n_cand)
     res   <- grade_candidates(cands, esim, field, curve_gpp = curve, curve_cash = curve, field_size = fsize)
-    picks <- build_portfolio(res, gates, n = n_lineups, max_overlap = 5L)
+    # 3, not 5. On a 6-man showdown roster `max_overlap = 5L` allows two entries to
+    # differ by a SINGLE player -- looser even than build_portfolio's own default of
+    # rsize-2 (=4), so the explicit 5 was actively removing what little diversification
+    # existed. Measured on the real ledger (2026-09-28): median pair of our NFL entries
+    # shared 43.8% of the roster, median MAXIMUM pair overlap was exactly 5 of 6, and
+    # the 8 ATL@GB entries all landed inside 25.7 points of each other while the
+    # hindsight-optimal lineup scored 157.5. Capping at 3 forces entries that can
+    # actually win on different outcomes.
+    picks <- build_portfolio(res, gates, n = n_lineups, max_overlap = 3L)
     cap_board <- captain_board(base, cpt_mult)
     pool_out <- exp_pool
   } else {
