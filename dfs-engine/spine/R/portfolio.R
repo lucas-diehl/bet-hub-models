@@ -72,9 +72,35 @@ build_portfolio <- function(res, gates = list(cash_enabled = FALSE, gpp_enabled 
 # chases noise) and the exposure cap barely mattered. Unlike the 150-max spread, a 20-set
 # concentrates on the best projections with only light self-uniqueness (no forced contrarian
 # fades — those can't be validated and cost EV, per P2b). Returns the same shape as build_portfolio.
+## DIVERSIFICATION LEVERS (max_overlap, min_sd_pct) -- BOTH DEFAULT OFF.
+##
+## Measured 2026-09-28 on the real entry ledger: across NFL contests the median pair
+## of our own entries shared 43.8% of the roster and the median MAXIMUM pair overlap
+## was 5 of 6 players -- two entries routinely differing by one player. Outcomes agree:
+## 8 entries in the ATL@GB showdown finished inside a 25.7-point range, and 10 WNBA
+## entries inside 1.5 points. That is one bet wearing several hats.
+##
+## Hunter/Vielma/Zaman (arXiv 1604.01455) build each successive entry by maximising
+## expected score subject to (a) an upper bound on correlation with already-chosen
+## entries and (b) a lower bound on its own variance. `max_overlap` is (a) in its
+## combinatorial form; `min_sd_pct` is (b), as a quantile of the candidate pool's own
+## sim_sd so it travels across sports and slate sizes.
+##
+## They default to NULL because the ranking criterion here is backtest-validated and
+## must not be silently changed: on 24 settled golf slates (2026-08-23) ranking by
+## ceiling/leverage instead of projection LOST 2.3%. That finding is about the RANKING,
+## not about pairwise overlap, which has never been tested -- so the capability ships
+## now and the default flips only after the same harness says it should.
 build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap = 0.50,
-                        pool = NULL, caps = NULL) {
+                        pool = NULL, caps = NULL, max_overlap = NULL, min_sd_pct = NULL) {
   R <- res[order(-proj)]
+  if (!is.null(min_sd_pct) && "sim_sd" %in% names(R)) {
+    floor_sd <- stats::quantile(R$sim_sd, min_sd_pct, na.rm = TRUE)
+    keep <- !is.finite(R$sim_sd) | R$sim_sd >= floor_sd
+    msg(sprintf("  20-max GPP: variance floor at p%02d drops %d of %d candidates",
+                round(100 * min_sd_pct), sum(!keep), nrow(R)))
+    R <- R[keep]
+  }
   base_cap <- max(1L, floor(n * exp_cap))
   # PER-PLAYER cap overrides (injury/news): caps = named vector player_name -> max exposure frac.
   # Order-insensitive name match (First Last vs "Last, First"). Only lowers a player below base_cap.
@@ -99,10 +125,13 @@ build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap
   picks <- list(); expo <- integer(0)
   cnt <- function(k) { v <- expo[k]; if (is.na(v)) 0L else v }
   is_dupe <- function(idx) any(vapply(picks, function(p) setequal(p$idx[[1]], idx), logical(1)))
+  overlap_ok <- function(idx) is.null(max_overlap) ||
+    all(vapply(picks, function(p) length(intersect(idx, p$idx[[1]])) <= max_overlap, logical(1)))
   for (i in seq_len(nrow(R))) {
     if (length(picks) >= n) break
     idx <- R$idx[[i]]
     if (is_dupe(idx)) next
+    if (!overlap_ok(idx)) next
     if (!all(vapply(idx, function(j) cnt(keyf(j)) < cap_of(keyf(j)), logical(1)))) next
     picks[[length(picks) + 1]] <- c(as.list(R[i]), role = "20-max GPP", live = gates$gpp_enabled,
       reason = sprintf("20-entry GPP set (proj-ranked, %.0f%% max exposure): projected %.1f, avg own %.0f%%. %s.",

@@ -45,6 +45,12 @@ grade_candidates <- function(cands, sim, field, curve_gpp = make_gpp(),
       p_cash   = mean(tot >= fld_med),
       gpp_ev   = mean(grade_roi(rank, curve_gpp, field_size, dupes)),
       cash_ev  = mean(grade_roi(rank, curve_cash, field_size)),
-      p_top1   = mean(pct >= 0.99))
+      p_top1   = mean(pct >= 0.99),
+      # Simulated spread of THIS lineup's own total. Hunter/Vielma/Zaman build each
+      # successive entry by maximising expected score subject to a LOWER BOUND ON ITS
+      # VARIANCE and an upper bound on its correlation with entries already chosen --
+      # top-heavy payouts need volatility, and a low-variance lineup cannot win one.
+      # Exposed here so build_gpp20()/build_portfolio() can apply that floor.
+      sim_sd   = stats::sd(tot))
   }))
 }

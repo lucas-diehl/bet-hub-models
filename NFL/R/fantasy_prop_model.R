@@ -102,6 +102,49 @@ fantasy_target_specifications <- function() {
 ## are missing a team.
 QB_PAIR_SHRINKAGE_K <- 8
 
+## NEXT GEN STATS tracking features (separation, cushion, air-yards share, YAC over
+## expected). These are the free, repeatable analogues of route-running and burst:
+## raw top speed, agility splits and spiral telemetry are Zebra chip data the NFL
+## does not publish at any tier, so they are not obtainable.
+##
+## SIZE OF THE REAL EFFECT, and why the first measurement was wrong. Merging these
+## naively showed receptions dR2 +0.15 -- 75x anything else tested. No time leakage
+## (the lag verified clean: rolled correlations ~3x weaker than same-week, 0% identical
+## values). The cause was population, not tracking: NGS only publishes QUALIFYING
+## receivers, so only 21.4% of feature rows have coverage and those average 4.98
+## receptions against 1.12 for the rest. Median-imputing the other 79% turned these
+## columns into an "is a real receiver" flag and the booster learned that instead.
+## Re-running with training AND evaluation confined to NGS-covered players, where the
+## flag is constant and can do no work, the genuine signal is dR2 +0.0043 (all) /
+## +0.0030 (WR) -- real, slightly better than the QB-pair feature, and ~40x smaller
+## than the headline. Kept at that honest size.
+NGS_RECEIVING_MEASURES <- c("avg_cushion", "avg_separation", "avg_intended_air_yards",
+                            "percent_share_of_intended_air_yards", "avg_yac_above_expectation")
+
+add_ngs_features <- function(players) {
+  out_cols <- paste0("ngs_", NGS_RECEIVING_MEASURES, "_r5")
+  ngs <- tryCatch(
+    nflreadr::load_nextgen_stats(sort(unique(players$season)), stat_type = "receiving"),
+    error = function(e) NULL)
+  if (is.null(ngs) || !nrow(ngs)) {
+    message("NGS unavailable; tracking features skipped")
+    for (cc in out_cols) players[[cc]] <- NA_real_
+    return(players)
+  }
+  ngs <- data.table::as.data.table(ngs)
+  ngs <- ngs[week > 0 & season_type == "REG"]
+  data.table::setnames(ngs, "player_gsis_id", "player_id")
+  data.table::setorder(ngs, player_id, season, week)
+  for (m in NGS_RECEIVING_MEASURES) {
+    if (!m %in% names(ngs)) { ngs[[m]] <- NA_real_ }
+    ngs[, (paste0("ngs_", m, "_r5")) := fantasy_lagged_roll(get(m), 5L, "mean"), by = player_id]
+  }
+  keep <- c("player_id", "season", "week", out_cols)
+  players |>
+    dplyr::left_join(as.data.frame(ngs[, keep, with = FALSE]),
+                     by = c("player_id", "season", "week"))
+}
+
 add_qb_pair_features <- function(players) {
   need <- c("player_id", "season", "week", "team", "position", "fantasy_points_ppr")
   if (!all(need %in% names(players))) {
@@ -402,6 +445,7 @@ prepare_fantasy_player_features <- function(player_stats, game_context) {
     dplyr::select(-dplyr::ends_with("_prior"))
 
   players <- add_qb_pair_features(players)
+  players <- add_ngs_features(players)
 
   volatility_measures <- intersect(
     c(
