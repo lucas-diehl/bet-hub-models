@@ -3,7 +3,7 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-09-26",
-  "graded_at": "2026-09-28T19:57:11Z",
+  "graded_at": "2026-09-29T04:47:35Z",
   "results": [
     {
       "bet_id": "cfb-modeling-2026-wk4-oklahomastate-westvirginia-under",
@@ -339,6 +339,90 @@
         "actual_margin": -26,
         "cover_line": 4.5,
         "closing_line": 7
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-texas-tennessee-under",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0727,
+      "pnl_units": 0.91,
+      "actual": {
+        "total_points": 37,
+        "line": 57.5,
+        "closing_line": 54.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-northernillinois-georgiastate-under",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": 0.91,
+      "actual": {
+        "total_points": 49,
+        "line": 56.5,
+        "closing_line": 56.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-olemiss-florida-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0564,
+      "pnl_units": 0.91,
+      "actual": {
+        "actual_margin": 24,
+        "cover_line": -1.5,
+        "closing_line": -4
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-vanderbilt-auburn-under",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0244,
+      "pnl_units": 0.91,
+      "actual": {
+        "total_points": 36,
+        "line": 55.5,
+        "closing_line": 54.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-southcarolina-alabama-under",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0244,
+      "pnl_units": -1,
+      "actual": {
+        "total_points": 67,
+        "line": 54.5,
+        "closing_line": 53.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-missouristate-smu-under",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0244,
+      "pnl_units": 0.91,
+      "actual": {
+        "total_points": 58,
+        "line": 59.5,
+        "closing_line": 60.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk4-minnesota-washington-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0897,
+      "pnl_units": -2,
+      "actual": {
+        "actual_margin": -3,
+        "cover_line": -8.5,
+        "closing_line": -12.5
       }
     }
   ]

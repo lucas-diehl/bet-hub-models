@@ -3,42 +3,12 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-10-03",
-  "generated_at": "2026-09-28T19:57:16Z",
+  "generated_at": "2026-09-29T04:47:39Z",
   "model_version": "ppp-ppd-2026",
   "mode": "PAPER",
   "event_context": "Week 5",
   "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
   "bets": [
-    {
-      "bet_id": "cfb-modeling-2026-wk5-bostoncollege-smu-under",
-      "event": "Boston College @ SMU",
-      "event_start": "2026-10-03T16:00:00Z",
-      "market": "total",
-      "selection": "Under 56.5",
-      "side": "under",
-      "line": 56.5,
-      "odds_american": -110,
-      "book": "DraftKings",
-      "model_prob": 0.6158,
-      "market_prob": 0.5238,
-      "edge": 0.092,
-      "ev_pct": 0.1755,
-      "stake_units": 1,
-      "confidence": "medium",
-      "tags": [
-        "UNDER",
-        "UNDER4"
-      ],
-      "details": {
-        "proj_total": 51.7,
-        "under_edge": 4.8,
-        "strategy": "UNDER4",
-        "status": "paper",
-        "prob_source": "modelled",
-        "posted_total": 56.5,
-        "min_total": 55.7
-      }
-    },
     {
       "bet_id": "cfb-modeling-2026-wk5-california-unlv-under",
       "event": "California @ UNLV",
