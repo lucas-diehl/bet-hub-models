@@ -65,14 +65,30 @@ ncaaf_project_players <- function(slate) {
     for (c1 in c("proj", "sim_sd", "ceil", "floor", "p_zero")) pool[[c1]][miss] <- bl[[c1]][miss] }
 
   # --- pregame expected |margin| for scenario-conditioned correlation (ncaaf_correlation)
-  # TODO: wire real Vegas spreads in (vegas_games("ncaaf", slate$date) already works, same
-  # ESPN-lines infra as WNBA) once a DK-abbreviation <-> ESPN-team-name alias map exists
-  # (CFBD/ESPN use full school names; DK draftables use its own abbreviations — a fuzzy
-  # join without a verified alias table risks silent mismatches, so deferred rather than
-  # shipped unverified). Until then, use the empirical mean |margin| (~18.8, measured in
-  # tests/validate_ncaaf_game_script_correlation.R) as a neutral per-game prior — better
-  # than defaulting to 0, which would wrongly imply every game is a toss-up.
-  pool[, exp_margin := 18.8]
+  # Real Vegas spread per game where DK's game_id joins ESPN's, the empirical mean
+  # |margin| (~18.8, from tests/validate_ncaaf_game_script_correlation.R) where it does
+  # not. Vegas feeds the JOINT distribution only -- correlation/blowout -- never the
+  # marginal mean, matching NFL/WNBA (see the header note in spine/R/vegas.R).
+  #
+  # This was blocked for a long time on a supposed DK<->ESPN alias map for ~130 schools.
+  # It wasn't: both sides already use the same "AWY@HOM" abbreviation shape and match
+  # exactly ~67% of the time out of the box. The REAL blocker was that vegas_fetch()
+  # returned NULL for NCAAF at all, because ESPN dropped the odds block from the
+  # scoreboard payload -- fixed in spine/R/vegas.R. Per-game fallback means an
+  # unmatched school is simply unchanged from today's behaviour, never a silent
+  # wrong-team join, so partial coverage is strictly better than the flat constant.
+  em <- rep(18.8, nrow(pool))
+  vg <- tryCatch(vegas_games("ncaaf", slate$date), error = function(e) NULL)
+  if (!is.null(vg) && nrow(vg) && "game_id" %in% names(pool)) {
+    mi <- match(pool$game_id, vg$game_id)
+    ok <- !is.na(mi) & is.finite(vg$spread[mi])
+    if (any(ok)) {
+      em[ok] <- abs(vg$spread[mi[ok]])
+      msg(sprintf("  NCAAF game script: real Vegas margin for %d of %d games (%d players); rest keep the 18.8 prior",
+                  length(unique(pool$game_id[ok])), length(unique(pool$game_id[!is.na(pool$game_id)])), sum(ok)))
+    } else msg("  NCAAF game script: no DK<->ESPN game_id matched -> flat 18.8 prior")
+  } else msg("  NCAAF game script: no Vegas lines for this date -> flat 18.8 prior")
+  pool[, exp_margin := em]
 
   # cold-start projected ownership (chalk tracks value); refined once trained (train_ownership_model)
   own_pred <- tryCatch(predict_ownership(pool, "ncaaf"), error = function(e) NULL)

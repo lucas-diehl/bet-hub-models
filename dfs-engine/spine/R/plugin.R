@@ -86,5 +86,20 @@ validate_projection <- function(dt) {
     }
   }
   if ("sim_sd" %in% names(dt)) dt[["sim_sd"]][dt[["sim_sd"]] <= 0] <- stats::median(dt[["sim_sd"]][dt[["sim_sd"]] > 0])
+  # A projected MEAN below zero is never coherent -- it claims a player's EXPECTED
+  # DK score is negative, which no scoring system produces in expectation (even
+  # golf, where a single round can go negative, cannot in the mean). Golf's affine
+  # level-calibration emitted 39 such rows, down to -32.2, across 2026-07-31..08-02.
+  # Left alone they reach the sim, where a negative mean distorts the correlated
+  # draws and poisons the value/ownership math that divides by proj. Clamp loudly.
+  if ("proj" %in% names(dt)) {
+    neg <- which(dt[["proj"]] < 0)
+    if (length(neg)) {
+      msg(sprintf("  validate_projection: clamped %d negative proj to 0 (min was %.1f)",
+                  length(neg), min(dt[["proj"]][neg])))
+      dt[["proj"]][neg] <- 0
+    }
+  }
+  if ("floor" %in% names(dt)) dt[["floor"]][dt[["floor"]] < 0] <- 0
   dt
 }

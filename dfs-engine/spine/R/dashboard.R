@@ -196,6 +196,20 @@ log_projections <- function(sports = c("wnba", "tennis", "golf", "golf_opp"), da
       slate <- "main"; extra <- list()
       if (sport %in% names(DASH_GOLF_MAP)) { if (sport != "golf") slate <- sport; extra <- DASH_GOLF_MAP[[sport]] }
       dfs_load_sport(psport)
+      # SINGLE-ROUND golf needs the live round + its draft group resolved before the
+      # pool can be built -- build_sport_card() does this, and log_projections did NOT.
+      # Without them the golf plugin cannot build a round pool and falls through to the
+      # TOURNAMENT pool, writing 4-round projections (67-102 pts) under a `-golf-round`
+      # slate id over the correct 1-round ones (15-21 pts). That really happened on
+      # 2026-08-22: refresh_dfs built round-scale at 07:59, run_all's log_projections
+      # overwrote it with tournament-scale at 23:06, and slate_projection() takes the
+      # NEWEST version -- so the archive kept the wrong one. Skip rather than guess:
+      # build_dashboard()'s persist_projections() still archives the round slate.
+      if (isTRUE(extra$single_round) && is.null(extra$round)) {
+        lr <- tryCatch(golf_live_round(), error = function(e) NULL)
+        if (is.null(lr)) { msg("  log_projections", sport, "skipped: no live DK round posted"); return(FALSE) }
+        extra$round <- lr$round; extra$draft_group_id <- lr$draft_group_id
+      }
       if (psport != "golf") {                       # non-golf: need a live DK slate scraped first
         ms <- tryCatch(dk_main_slate(psport), error = function(e) NULL)
         if (is.null(ms) || isTRUE(ms$is_showdown)) return(FALSE)
@@ -400,7 +414,7 @@ build_golf_captain_card <- function(date = Sys.Date(), opts = load_bankroll_opts
   cands <- make_candidates(exp_pool, rr, n_cand = 300L)
   res   <- grade_candidates(cands, esim, field, curve_gpp = make_gpp(), curve_cash = make_double_up())
   gates <- tryCatch(load_gates("golf"), error = function(e) list(gpp_enabled = FALSE, cash_enabled = FALSE))
-  picks <- build_gpp20(res, gates, n = 20L, pool = exp_pool,
+  picks <- build_gpp20(res, gates, n = 20L, pool = exp_pool, rr = rr,
                        caps = tryCatch(load_exposure_overrides("golf"), error = function(e) NULL))
   cb <- captain_board(base, cpt_mult, n = 12L)
   ev <- tryCatch(golf_event_name("main"), error = function(e) NULL)
@@ -470,7 +484,7 @@ build_golf_presidents_cup_card <- function(date = Sys.Date(), opts = load_bankro
   cands <- make_candidates(exp_pool, rr, n_cand = 300L)
   res   <- grade_candidates(cands, esim, field, curve_gpp = make_gpp(), curve_cash = make_double_up())
   gates <- tryCatch(load_gates("golf"), error = function(e) list(gpp_enabled = FALSE, cash_enabled = FALSE))
-  picks <- build_gpp20(res, gates, n = 20L, pool = exp_pool,
+  picks <- build_gpp20(res, gates, n = 20L, pool = exp_pool, rr = rr,
                        caps = tryCatch(load_exposure_overrides("golf"), error = function(e) NULL))
   cb <- captain_board(base, cpt_mult, n = 12L)
   disp <- paste0(nm0, " (20-max GPP)")

@@ -29,9 +29,40 @@ suppressPackageStartupMessages({ library(data.table) })
 # Fetch + persist today's (or a date's) game lines for a sport. Returns a data.table
 # (sport, game_id "AWY@HOM", home, away, vegas_total, spread [home line], home_total,
 # away_total). game_id mirrors DK's "AWY@HOM" so sports can match on the team pair.
+# ESPN REMOVED the `odds` block from the scoreboard payload. The scoreboard still
+# returns the games -- 65 NCAAF events on 2026-09-26, every one with odds = length 0
+# -- so `vegas_fetch` returned NULL for NFL *and* NCAAF and nothing surfaced it. That
+# is the single root cause behind BOTH the long-standing "NFL Vegas caching gap" and
+# NCAAF's hardcoded `exp_margin := 18.8`; they were never two bugs.
+#
+# The lines moved to the core API, one call per competition, still DraftKings-sourced.
+# VERIFIED on 6 real games that `spread` keeps the SAME convention as the old
+# scoreboard field -- the HOME line, negative = home favored (TEX@TENN: "TEX -5.5"
+# -> spread +5.5 because the HOME side is the underdog). So the arithmetic below is
+# unchanged; only where the numbers come from is different.
+.ESPN_CORE_LEAGUE <- c(wnba = "basketball/leagues/wnba", nba = "basketball/leagues/nba",
+                       nfl = "football/leagues/nfl", ncaaf = "football/leagues/college-football")
+
+.espn_core_odds <- function(sport, event_id, comp_id) {
+  lg <- .ESPN_CORE_LEAGUE[[sport]]; if (is.null(lg)) return(NULL)
+  url <- sprintf("https://sports.core.api.espn.com/v2/sports/%s/events/%s/competitions/%s/odds",
+                 lg, event_id, comp_id)
+  resp <- tryCatch(httr2::request(url) |> httr2::req_user_agent("DFS-ENGINE/1.0") |>
+                     httr2::req_timeout(20) |> httr2::req_perform(), error = function(e) NULL)
+  if (is.null(resp) || httr2::resp_status(resp) != 200) return(NULL)
+  j <- tryCatch(httr2::resp_body_json(resp, simplifyVector = FALSE), error = function(e) NULL)
+  items <- j$items %||% list(); if (!length(items)) return(NULL)
+  # prefer DraftKings (matches the book we actually play), else the first with a total
+  pick <- NULL
+  for (it in items) if (identical(it$provider$name %||% "", "DraftKings") && !is.null(it$overUnder)) { pick <- it; break }
+  if (is.null(pick)) for (it in items) if (!is.null(it$overUnder)) { pick <- it; break }
+  pick
+}
+
 vegas_fetch <- function(sport, date = Sys.Date()) {
   j <- .espn_scoreboard(sport, date)
   if (is.null(j) || is.null(j$events) || !length(j$events)) return(NULL)
+  n_core <- 0L
   rows <- rbindlist(lapply(j$events, function(ev) {
     comp <- ev$competitions[[1]]; if (is.null(comp)) return(NULL)
     home <- away <- NA_character_
@@ -41,6 +72,11 @@ vegas_fetch <- function(sport, date = Sys.Date()) {
     }
     od <- NULL
     for (o in (comp$odds %||% list())) if (!is.null(o$overUnder)) { od <- o; break }
+    # scoreboard carried nothing -> ask the core API for this competition
+    if (is.null(od) && !is.null(ev$id) && !is.null(comp$id)) {
+      od <- .espn_core_odds(sport, ev$id, comp$id)
+      if (!is.null(od)) n_core <<- n_core + 1L
+    }
     if (is.null(od)) return(NULL)
     total  <- suppressWarnings(as.numeric(od$overUnder))
     spread <- suppressWarnings(as.numeric(od$spread))          # home spread (neg = home fav)
@@ -60,7 +96,9 @@ vegas_fetch <- function(sport, date = Sys.Date()) {
                    spread = rows$spread, home_total = rows$home_total, away_total = rows$away_total,
                    pace = NA_real_, updated_ts = format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
   tryCatch(db_upsert("games", df, keys = c("sport", "game_id")), error = function(e) NULL)
-  msg(sprintf("  vegas: %d %s game line(s) for %s", nrow(rows), toupper(sport), as.character(as.Date(date))))
+  msg(sprintf("  vegas: %d %s game line(s) for %s%s", nrow(rows), toupper(sport),
+              as.character(as.Date(date)),
+              if (n_core > 0L) sprintf(" (%d via core API -- scoreboard carried no odds)", n_core) else ""))
   rows[]
 }
 

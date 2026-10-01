@@ -104,15 +104,18 @@ run_contest <- function(contest_id, sport = NULL, date = Sys.Date(), n_lineups =
     field <- simulate_field(exp_pool, rr, field_n = field_n, own = exp_pool$own)
     cands <- make_candidates(exp_pool, rr, n_cand = n_cand)
     res   <- grade_candidates(cands, esim, field, curve_gpp = curve, curve_cash = curve, field_size = fsize)
-    # 3, not 5. On a 6-man showdown roster `max_overlap = 5L` allows two entries to
-    # differ by a SINGLE player -- looser even than build_portfolio's own default of
-    # rsize-2 (=4), so the explicit 5 was actively removing what little diversification
-    # existed. Measured on the real ledger (2026-09-28): median pair of our NFL entries
-    # shared 43.8% of the roster, median MAXIMUM pair overlap was exactly 5 of 6, and
-    # the 8 ATL@GB entries all landed inside 25.7 points of each other while the
-    # hindsight-optimal lineup scored 157.5. Capping at 3 forces entries that can
-    # actually win on different outcomes.
-    picks <- build_portfolio(res, gates, n = n_lineups, max_overlap = 3L)
+    # No explicit max_overlap here -- build_portfolio()'s own default (floor(rsize/2),
+    # = 3 of 6 on this roster) now carries the fix in ONE place instead of a value
+    # hardcoded per call site. Was explicitly 5L, which let two entries differ by a
+    # SINGLE player; measured on the real ledger (2026-09-28), median pair of our NFL
+    # entries shared 43.8% of the roster and median MAXIMUM pair overlap was exactly
+    # 5 of 6, and the 8 ATL@GB entries all landed inside 25.7 points of each other
+    # while the hindsight-optimal lineup scored 157.5. Also fixed the same day: this
+    # cap combined with a thin candidate pool was silently shipping FEWER than
+    # n_lineups entries (a real PIT@CLE showdown: asked for 20, got 15) -- see the
+    # candidate-diversity retry in make_candidates() and the relax-on-underfill
+    # backfill in build_portfolio(), both now guarantee the full count automatically.
+    picks <- build_portfolio(res, gates, n = n_lineups)
     cap_board <- captain_board(base, cpt_mult)
     pool_out <- exp_pool
   } else {
