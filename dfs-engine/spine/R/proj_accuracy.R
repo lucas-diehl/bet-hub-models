@@ -42,25 +42,128 @@ slate_projection <- function(slate_id) {
 # contest whose players best MATCH our projection and reject weak matches, so a mismatched
 # contest never pollutes the accuracy metric. `min_frac` = share of the contest's players
 # our projection must cover; `min_match` = absolute floor.
-projection_actuals <- function(min_frac = 0.40, min_match = 8L) {
+# ── SCORING-SCALE GUARD ───────────────────────────────────────────────────────
+# The roster-overlap test below (`min_frac`) catches a contest drawn from a
+# DIFFERENT PLAYER POOL. It cannot catch a contest drawn from the SAME pool but
+# scored on a different NUMBER OF ROUNDS -- and in golf that is the common case:
+# DK runs "PGA TOUR Showdown ... (Round 2 TOUR)" on the same 150 golfers as the
+# 4-round main event. Grading a 4-round projection (65-102 pts) against 1-round
+# actuals (15-25 pts) passed every existing guard and produced a completely fake
+# scorecard: 1.95x "over-projection" and corr 0.06 across all three settled golf
+# slates, which is what the handoff doc's "golf runs ~2x too high" was built on.
+# Nothing was wrong with the model.
+#
+# So classify BOTH sides by how many rounds they score and require them to agree.
+# Unknown-vs-known is rejected, not assumed compatible: a missing measurement is
+# recoverable, a confidently wrong one sends us fixing a model that is fine.
+.scale_class_contest <- function(name) {
+  n <- tolower(name %||% "")
+  if (!nzchar(n)) return(NA_character_)
+  # Cup FIRST: "Presidents Cup Showdown" is match-play scoring, not a round slate,
+  # and testing "showdown" before "cup" would file it as one.
+  if (grepl("presidents cup|ryder cup", n)) return("cup")      # match play, own scale
+  # DK golf single-round products: "Showdown", "Captain", or an explicit "Round N"
+  if (grepl("showdown|captain|\\bround\\s*[1-4]\\b|\\br[1-4]\\s*tour\\b", n)) return("round")
+  "event"
+}
+.scale_class_slate <- function(slate_id) {
+  s <- tolower(slate_id %||% "")
+  if (grepl("presidents|cup", s)) return("cup")
+  if (grepl("golf-round|captain|showdown|_r[1-4]\\b", s)) return("round")
+  "event"
+}
+
+.slate_date <- function(slate_id) {
+  m <- regmatches(slate_id, regexpr("\\d{4}-\\d{2}-\\d{2}", slate_id))
+  if (!length(m)) return(as.Date(NA)) else as.Date(m)
+}
+
+# Re-point a scale-mismatched contest at the RIGHT slate instead of discarding it.
+# `ownership` links a contest to whichever slate was being built when the standings
+# were imported, which for golf is routinely the `-main` tournament slate even when
+# the contest is a Round-2 showdown. But we DO archive round-scale projections under
+# their own `-golf-round` slate id, so the correct comparison usually exists -- it is
+# just filed under a sibling slate. Look for one of the contest's own scale on the
+# same date (a round contest is drafted the day before it is played, so allow +/-1).
+# NOTE: args are `sport_x` / `scale_x`, NOT `sport` / `scale` -- those are COLUMN
+# names in all_slates, and data.table would compare the column to itself (always
+# TRUE) rather than to the argument. Same shadowing trap that made an earlier
+# starter-resolver silently match every row.
+.slate_for_scale <- function(all_slates, sport_x, near_date, scale_x) {
+  if (!nrow(all_slates) || is.na(near_date)) return(character(0))
+  cand <- all_slates[sport == sport_x & scale == scale_x & !is.na(sdate)]
+  if (!nrow(cand)) return(character(0))
+  cand <- cand[abs(as.numeric(sdate - near_date)) <= 1]
+  if (!nrow(cand)) return(character(0))
+  cand[order(abs(as.numeric(sdate - near_date))), slate_id]
+}
+
+projection_actuals <- function(min_frac = 0.40, min_match = 8L, strict_scale = TRUE) {
   sdir <- dfs_path("data", "ownership_inbox", "processed")
   sl <- tryCatch(as.data.table(db_query(
     "SELECT DISTINCT sport, slate_id, contest_id FROM ownership WHERE contest_id <> '_projected'")),
     error = function(e) NULL)
   if (is.null(sl) || !nrow(sl)) return(NULL)
+  # contest names, for the scale guard (best-effort: absent name -> unknown class)
+  cn <- tryCatch(as.data.table(db_query(
+    "SELECT contest_id, name FROM contest_results")), error = function(e) NULL)
+  cmap <- if (!is.null(cn) && nrow(cn)) setNames(cn$name, as.character(cn$contest_id)) else character(0)
+  # every slate that has archived projections, with its date + scale class, so a
+  # mismatched contest can be re-pointed at a correctly-scaled sibling slate
+  allsl <- tryCatch(as.data.table(db_query(
+    "SELECT DISTINCT sport, slate_id FROM projections")), error = function(e) NULL)
+  if (!is.null(allsl) && nrow(allsl)) {
+    allsl[, sdate := .slate_date(slate_id), by = slate_id]
+    allsl[, scale := .scale_class_slate(slate_id), by = slate_id]
+  } else allsl <- data.table(sport = character(0), slate_id = character(0),
+                             sdate = as.Date(character(0)), scale = character(0))
+
+  # Re-pointing means a slate's projections can be asked for from several contests
+  # (and from other slates' loops), so memoize -- without this the DB is queried once
+  # per contest instead of once per slate and the scorecard stops finishing.
+  .prcache <- new.env(parent = emptyenv())
+  slate_projection_cached <- function(x) {
+    k <- as.character(x)
+    if (!is.null(.prcache[[k]])) return(.prcache[[k]])
+    v <- tryCatch(slate_projection(x), error = function(e) data.table())
+    assign(k, v, envir = .prcache); v
+  }
+
   keys <- unique(sl[, .(sport, slate_id)])
   rbindlist(lapply(seq_len(nrow(keys)), function(i) {
     sp <- keys$sport[i]; sid <- keys$slate_id[i]
-    pr <- slate_projection(sid); if (!nrow(pr)) return(NULL)
-    best <- NULL; bestn <- 0L
+    sdte <- .slate_date(sid)
+    best <- NULL; bestn <- 0L; best_sid <- sid
     for (cid in sl[sport == sp & slate_id == sid, contest_id]) {
       f <- file.path(sdir, sprintf("contest-standings-%s.csv", cid)); if (!file.exists(f)) next
+      use_sid <- sid
+      if (strict_scale) {
+        got <- .scale_class_contest(cmap[[as.character(cid)]] %||% NA_character_)
+        if (is.na(got)) {
+          msg(sprintf("  accuracy: skipping contest %s (no name -> scoring scale unverifiable)", cid))
+          next
+        }
+        if (!identical(got, .scale_class_slate(sid))) {
+          alt <- .slate_for_scale(allsl, sp, sdte, got)
+          if (!length(alt)) {
+            msg(sprintf("  accuracy: skipping contest %s ('%s' scale) - no '%s'-scale slate archived near %s",
+                        cid, got, got, as.character(sdte)))
+            next
+          }
+          use_sid <- alt[1]
+          msg(sprintf("  accuracy: contest %s is '%s' scale -> grading against %s (not %s)",
+                      cid, got, use_sid, sid))
+        }
+      }
+      pr <- slate_projection_cached(use_sid); if (!nrow(pr)) next
       a <- actual_player_points(f, sp); if (is.null(a) || !nrow(a)) next
       m <- merge(pr, a, by = "player_id")
-      if (nrow(m) >= min_frac * nrow(a) && nrow(m) > bestn) { best <- m; bestn <- nrow(m) }  # best well-matching contest
+      if (nrow(m) >= min_frac * nrow(a) && nrow(m) > bestn) {
+        best <- m; bestn <- nrow(m); best_sid <- use_sid                 # best well-matching contest
+      }
     }
-    if (is.null(best) || nrow(best) < min_match) return(NULL)                                 # no matching contest -> skip
-    best[, `:=`(sport = sp, slate_id = sid)]; best
+    if (is.null(best) || nrow(best) < min_match) return(NULL)            # no matching contest -> skip
+    best[, `:=`(sport = sp, slate_id = best_sid)]; best
   }), fill = TRUE)
 }
 
