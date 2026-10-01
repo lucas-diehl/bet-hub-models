@@ -72,7 +72,7 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
   cands <- make_candidates(pool, rr, n_cand = n_cand)
   res   <- grade_candidates(cands, sim, field, curve_gpp = make_gpp(), curve_cash = make_double_up())
   picks <- if (identical(gpp_mode, "gpp20"))
-             build_gpp20(res, gates, n = n_lineups, pool = pool,
+             build_gpp20(res, gates, n = n_lineups, pool = pool, rr = rr,
                          caps = tryCatch(load_exposure_overrides(sport), error = function(e) NULL))
            else build_portfolio(res, gates, n = n_lineups)
   # archive projections + recommended lineups (best-effort; never fail the build).

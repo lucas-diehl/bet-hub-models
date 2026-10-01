@@ -513,7 +513,17 @@ golf_presidents_cup_pool <- function(pg, slate) {
   p[, norm := norm_name(player_name)]
   d <- merge(sal, p[, setdiff(names(p), c("player_name", "salary", "tproj")), with = FALSE], by = "norm")  # DK name + DK single-round salary
   d <- d[is.finite(proj) & salary > 0]; if (!nrow(d)) return(NULL)
-  d[, `:=`(player_id = surrogate_player_id(norm), dk_id = NA_character_, team = NA_character_,
+  # player_id MUST be dg_id, matching .golf_model_pool -- surrogate_player_id() mints
+  # NEGATIVE hashes that exist in no other table, so round slates landed in their own
+  # ID space and could never join the players dimension or resolved standings. That is
+  # why golf ROUND accuracy was unmeasurable: the scale guard finally routes a Round-2
+  # contest to its round slate, and then the join returns zero rows. Fall back to the
+  # surrogate only when the feed genuinely has no dg_id.
+  d[, player_id := {
+    z <- suppressWarnings(as.integer(dg_id))
+    ifelse(is.finite(z) & z > 0, z, surrogate_player_id(norm))
+  }]
+  d[, `:=`(dk_id = NA_character_, team = NA_character_,
            game_id = NA_character_, position = "G", sim_sd = pmax(as.numeric(sim_sd), 4),
            ceil = as.numeric(ceil), floor = pmax(as.numeric(floor), 0),
            own = pmax(as.numeric(own), 0.001), p_zero = 0.01)]
