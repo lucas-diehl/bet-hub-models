@@ -118,10 +118,40 @@ QB_PAIR_SHRINKAGE_K <- 8
 ## flag is constant and can do no work, the genuine signal is dR2 +0.0043 (all) /
 ## +0.0030 (WR) -- real, slightly better than the QB-pair feature, and ~40x smaller
 ## than the headline. Kept at that honest size.
+## DISABLED 2026-10-01 -- these features BROKE the live receiving models.
+##
+## After the 2026-09-28 retrain, ngs_percent_share_of_intended_air_yards_r5 became the
+## #1 feature by Gain in BOTH receiving models, and the five NGS columns together took
+## 43.2% of total gain in `receptions` and 44.1% in `receiving_yards`. With only ~20%
+## coverage, that means the models' dominant inputs are ABSENT for four out of five
+## players, so predictions collapse toward a constant. Measured on the week-4 board:
+## WR receptions sd fell 1.350 -> 0.638 and max 5.86 -> 2.77; every WR in the league
+## projected 2.4-2.8 receptions regardless of role. Top-12 WR projections landed at
+## 41% of what those players actually score. Rushing models, which carry ~0% NGS gain,
+## were untouched -- that contrast is the proof.
+##
+## It compounded: a mean-collapsed model has BETTER MAE than one that discriminates,
+## so the MAE-driven blend weight promoted the broken model from 0.726 to 1.000 and
+## discarded the baseline, which was still correctly spread (sd 1.930, max 9.00).
+##
+## And the value never justified the risk. scripts/103 measured these columns at
+## +0.0198 median lineup percentile beyond a bare 0/1 "NGS published this player"
+## coverage flag -- i.e. ~82% of their apparent lift was the flag, not the tracking
+## data. The honest replacement is target_share / snap_share / wopr, which carry the
+## same role signal for 100% of players; those are already in the feature set.
+##
+## Set NFL_NGS_FEATURES=1 to re-enable for research ONLY. Do not ship it on without
+## validating that WR top-12 projections land near their actual ~21.7 PPR, and that
+## receptions sd stays near the baseline's -- never on MAE alone.
 NGS_RECEIVING_MEASURES <- c("avg_cushion", "avg_separation", "avg_intended_air_yards",
                             "percent_share_of_intended_air_yards", "avg_yac_above_expectation")
 
 add_ngs_features <- function(players) {
+  if (!identical(Sys.getenv("NFL_NGS_FEATURES"), "1")) {
+    message("NGS tracking features DISABLED (collapsed the receiving models 2026-09-28; ",
+            "set NFL_NGS_FEATURES=1 to re-enable for research)")
+    return(players)
+  }
   out_cols <- paste0("ngs_", NGS_RECEIVING_MEASURES, "_r5")
   ngs <- tryCatch(
     nflreadr::load_nextgen_stats(sort(unique(players$season)), stat_type = "receiving"),
@@ -957,6 +987,13 @@ fantasy_model_feature_names <- function(data) {
     names(data),
     "(_r3|_r5|_r8|_sd5)$"
   )]
+  ## Belt-and-braces for the NGS disable above. The regex sweeps ANY *_r5 column, so a
+  ## cached fantasy_prop_features.rds written while NGS was enabled would silently feed
+  ## those columns back into a retrain even though add_ngs_features() no longer emits
+  ## them -- re-collapsing the receiving models from a stale file. Drop them here too
+  ## unless NGS is explicitly re-enabled.
+  if (!identical(Sys.getenv("NFL_NGS_FEATURES"), "1"))
+    rolling <- rolling[!stringr::str_detect(rolling, "^ngs_")]
   ## The _z normalized matchup columns, the interaction terms, and the role
   ## trend deltas do not end in a rolling suffix, so they are listed explicitly
   ## rather than swept up by the regex above.
@@ -1182,8 +1219,36 @@ fit_fantasy_deployment_models <- function(features, seed = 20260728L) {
   })
 }
 
+## The weight below is the least-squares-optimal blend coefficient, so it minimises
+## SQUARED ERROR -- and that is exactly the objective a mean-collapsed model wins.
+## Predicting near-constant beats discriminating when the model has lost its signal,
+## so this formula will happily promote a broken model to weight 1.0 and throw away a
+## baseline that is still correctly spread. That is not hypothetical: on 2026-09-28 the
+## NGS features collapsed the receiving models and this function moved `receptions`
+## from 0.726 to 1.000, taking WR projections to 41% of reality league-wide while the
+## baseline it discarded was still right (sd 1.930 vs the model's 0.638).
+##
+## COLLAPSE_SPREAD_FLOOR is a circuit breaker, NOT a tuning knob. A model whose
+## dispersion falls below 60% of the baseline's has stopped discriminating, whatever
+## its MAE says, and must not be allowed to take the blend over. It warns loudly,
+## because the real fix is always to repair the model, never to lean on the cap.
+FANTASY_COLLAPSE_SPREAD_FLOOR <- 0.60
+
+## ...but the cap applies ONLY to the continuous VOLUME targets. Measured on the clean
+## 2026-10-01 retrain, the guard fired on all five count targets (receiving_tds 47%,
+## rushing_tds 54%, passing_tds 59%, interceptions 32%, fumbles_lost 43%) and would
+## have halved their model weight. Those are not collapsed: a near-Poisson target with
+## a base rate of ~0.1-0.6 per game legitimately has a much narrower model spread than
+## its own noisier baseline, so a spread ratio that signals breakage for `receptions`
+## is normal for `receiving_tds`. Capping them would have silently moved the TD
+## projections that feed the TD prop card -- a real regression introduced by a guard
+## meant to prevent one. Count targets still WARN so a genuine collapse is visible,
+## but they are not capped on a threshold calibrated for a different distribution.
+FANTASY_COLLAPSE_CAP_TARGETS <- c("receptions", "receiving_yards",
+                                  "rushing_yards", "passing_yards")
+
 fantasy_deployment_blend_weights <- function(walk_forward_predictions) {
-  walk_forward_predictions |>
+  w <- walk_forward_predictions |>
     dplyr::group_by(.data$target) |>
     dplyr::summarise(
       numerator = sum(
@@ -1191,14 +1256,37 @@ fantasy_deployment_blend_weights <- function(walk_forward_predictions) {
           (.data$actual - .data$baseline)
       ),
       denominator = sum((.data$prediction - .data$baseline)^2),
-      model_weight = dplyr::if_else(
+      raw_weight = dplyr::if_else(
         .data$denominator > 0,
         pmin(pmax(.data$numerator / .data$denominator, 0), 1),
         1
       ),
+      sd_model = stats::sd(.data$prediction, na.rm = TRUE),
+      sd_base = stats::sd(.data$baseline, na.rm = TRUE),
       .groups = "drop"
     ) |>
-    dplyr::select("target", "model_weight")
+    dplyr::mutate(
+      spread_ratio = dplyr::if_else(.data$sd_base > 0, .data$sd_model / .data$sd_base, 1),
+      narrow = .data$spread_ratio < FANTASY_COLLAPSE_SPREAD_FLOOR,
+      cappable = .data$target %in% FANTASY_COLLAPSE_CAP_TARGETS,
+      collapsed = .data$narrow & .data$cappable,
+      model_weight = dplyr::if_else(.data$collapsed, pmin(.data$raw_weight, 0.5), .data$raw_weight)
+    )
+
+  bad <- w[w$narrow, ]
+  if (nrow(bad)) {
+    for (i in seq_len(nrow(bad)))
+      warning(sprintf(
+        paste0("COLLAPSE GUARD: '%s' model spread is %.0f%% of baseline (sd %.3f vs %.3f). %s"),
+        bad$target[i], 100 * bad$spread_ratio[i], bad$sd_model[i], bad$sd_base[i],
+        if (bad$collapsed[i])
+          sprintf("VOLUME target has stopped discriminating -- weight capped %.3f -> %.3f. FIX THE MODEL; do not ship on the cap.",
+                  bad$raw_weight[i], bad$model_weight[i])
+        else
+          sprintf("Count target -- NOT capped (narrow spread is normal for a ~Poisson rate); weight left at %.3f. Investigate if this is new.",
+                  bad$model_weight[i])), call. = FALSE)
+  }
+  w |> dplyr::select("target", "model_weight")
 }
 
 predict_fantasy_deployment <- function(
