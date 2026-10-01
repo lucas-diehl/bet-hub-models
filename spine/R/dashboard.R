@@ -414,7 +414,7 @@ build_golf_captain_card <- function(date = Sys.Date(), opts = load_bankroll_opts
   cands <- make_candidates(exp_pool, rr, n_cand = 300L)
   res   <- grade_candidates(cands, esim, field, curve_gpp = make_gpp(), curve_cash = make_double_up())
   gates <- tryCatch(load_gates("golf"), error = function(e) list(gpp_enabled = FALSE, cash_enabled = FALSE))
-  picks <- build_gpp20(res, gates, n = 20L, pool = exp_pool,
+  picks <- build_gpp20(res, gates, n = 20L, pool = exp_pool, rr = rr,
                        caps = tryCatch(load_exposure_overrides("golf"), error = function(e) NULL))
   cb <- captain_board(base, cpt_mult, n = 12L)
   ev <- tryCatch(golf_event_name("main"), error = function(e) NULL)
@@ -484,7 +484,7 @@ build_golf_presidents_cup_card <- function(date = Sys.Date(), opts = load_bankro
   cands <- make_candidates(exp_pool, rr, n_cand = 300L)
   res   <- grade_candidates(cands, esim, field, curve_gpp = make_gpp(), curve_cash = make_double_up())
   gates <- tryCatch(load_gates("golf"), error = function(e) list(gpp_enabled = FALSE, cash_enabled = FALSE))
-  picks <- build_gpp20(res, gates, n = 20L, pool = exp_pool,
+  picks <- build_gpp20(res, gates, n = 20L, pool = exp_pool, rr = rr,
                        caps = tryCatch(load_exposure_overrides("golf"), error = function(e) NULL))
   cb <- captain_board(base, cpt_mult, n = 12L)
   disp <- paste0(nm0, " (20-max GPP)")
