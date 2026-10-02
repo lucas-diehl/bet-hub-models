@@ -173,8 +173,14 @@ round_projection <- function(round=2, late=FALSE, n_sims=6000L) {
 # full-tournament engine/export.R -> golf_picks/dfs_projections.rds bridge.
 export_round_projection <- function(round=2, late=FALSE, n_sims=6000L) {
   pm <- .round_project_pm(round, late, n_sims); Pm <- pm$Pm
+  # player_name here is master-data format ("Last, First" -- e.g. "Glover, Lucas"), but
+  # DK's salary feed (and every consumer's norm_name()) uses "First Last". Every row
+  # therefore failed to match on export, so the DFS-ENGINE bridge silently produced a
+  # 0-player pool every single run -- not a staleness or detection bug, a name-format
+  # mismatch introduced right here. Same conversion bet_hub.R's disp() already uses.
+  disp <- function(x) if (grepl(",", x, fixed = TRUE)) sub("^(.*),\\s*(.*)$", "\\2 \\1", trimws(x)) else x
   out <- Pm[is.finite(proj), .(
-    dg_id = as.integer(player_id), player_name,
+    dg_id = as.integer(player_id), player_name = vapply(player_name, disp, character(1)),
     proj  = round(proj, 2), ceil = round(ceil, 2), floor = round(pmax(floor, 0), 2),
     sim_sd = round(pmax(sim_sd, 4), 3), own = round(fcoalesce(as.numeric(own), 0.001), 4),
     p_frl = round(as.numeric(p_frl), 4))]

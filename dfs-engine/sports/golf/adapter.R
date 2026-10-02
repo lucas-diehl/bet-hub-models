@@ -216,7 +216,7 @@ golf_event_name <- function(tournament = "main") {
 # A 1-day golf contest scores ONLY that round — no tournament finish/placement bonus and
 # its own DK salary structure (split by tee wave). DK posts "Round N PGA TOUR" (classic
 # gameTypeId 85) + a "Late Round N" wave. Find the classic single-round draft group.
-golf_dk_round_group <- function(round = 2L, late = FALSE) {
+golf_dk_round_group <- function(round = 2L, late = FALSE, event_name = NULL) {
   j <- tryCatch(httr2::request("https://www.draftkings.com/lobby/getcontests?sport=GOLF") |>
         httr2::req_user_agent("Mozilla/5.0") |> httr2::req_timeout(30) |> httr2::req_perform() |>
         httr2::resp_body_json(simplifyVector = TRUE), error = function(e) NULL)
@@ -241,26 +241,74 @@ golf_dk_round_group <- function(round = 2L, late = FALSE) {
           (grepl("Late", desc, ignore.case = TRUE) == late)
   if (!any(keep)) return(NULL)
   cand <- which(keep)
+  # DK's own text fields (checked above) carry NO tour qualifier some weeks ("(Round 2)"
+  # with nothing else), so the exclusion list above can't tell "PGA Tour's main event" apart
+  # from a DIFFERENT concurrent tour's own "Round 2" classic slate (confirmed live: an
+  # "opposite field" week where the PGA Tour's real event ran alongside a DP World Tour
+  # event, and DK happened to post single-round classic slates for BOTH — this function
+  # returned whichever came first in DK's table, which was the wrong one, and every
+  # downstream merge against the model's actual target event silently produced 0 rows).
+  # When the caller tells us which event the model actually built projections for
+  # (event_name, from DataGolf via golf-modeling's own schedule call), confirm each
+  # structural candidate's REAL tournament via its own draftables payload
+  # (competition.name/.nameDisplay) and keep only the one that matches. If none match,
+  # there is genuinely no live DK slate for that event/round — return NULL rather than
+  # silently handing back a different tournament's slate.
+  .ev_match <- function(a, b) {
+    a <- tolower(trimws(a)); b <- tolower(trimws(b))
+    nzchar(a) && nzchar(b) && (grepl(a, b, fixed = TRUE) || grepl(b, a, fixed = TRUE) ||
+                                 grepl(substr(a, 1, 10), b, fixed = TRUE))
+  }
   # structural confirmation: classic single-round golf is ONE flat roster slot (players
   # listed once). If a candidate is actually 2-slot CPT/FLEX captain mode (mislabeled into
   # matching here), skip it — that's golf_dk_captain_group()'s job, not this one's.
+  hits <- list()
   for (i in cand) {
     dgid <- as.character(g$DraftGroupId[i])
     dj <- tryCatch(.dk_get_json(sprintf("https://api.draftkings.com/draftgroups/v1/draftgroups/%s/draftables", dgid)),
                    error = function(e) NULL)
-    slots <- tryCatch(uniqueN(as.data.table(dj$draftables)$rosterSlotId), error = function(e) NA_integer_)
-    if (is.na(slots) || slots == 1L) {
-      nm <- if (nzchar(d2[i])) d2[i] else d1[i]
-      return(list(draft_group_id = dgid, name = trimws(nm)))
-    }
+    dd <- tryCatch(as.data.table(dj$draftables), error = function(e) NULL)
+    slots <- tryCatch(uniqueN(dd$rosterSlotId), error = function(e) NA_integer_)
+    if (is.na(slots) || slots != 1L) next
+    nm <- if (nzchar(d2[i])) d2[i] else d1[i]
+    comp <- tryCatch(unique(c(dd$competition.nameDisplay, dd$competition.name)), error = function(e) character(0))
+    comp <- comp[!is.na(comp) & nzchar(comp)][1]
+    rec <- list(draft_group_id = dgid, name = trimws(nm), event = comp %||% NA_character_)
+    if (is.null(event_name)) return(rec)         # old behavior: first structural match wins
+    if (!is.na(rec$event) && .ev_match(event_name, rec$event)) return(rec)
+    hits[[length(hits) + 1]] <- rec
   }
+  if (!is.null(event_name) && length(hits))
+    msg(sprintf("  golf: DK has %d single-round Round %d slate(s) but none match '%s' (saw: %s) — treating as no live slate",
+                length(hits), round, event_name, paste(vapply(hits, function(h) h$event %||% "?", character(1)), collapse = ", ")))
   NULL
 }
 
+# The PGA Tour's actual CURRENT main event, straight from DataGolf (same source
+# golf-modeling's assemble_live_slate("pga","main",...) uses) -- one light call, cached
+# per-process. Needed to disambiguate DK's "Round N" classic slate from a DIFFERENT,
+# concurrently-running tour's own "Round N" slate (opposite-field weeks; see
+# golf_dk_round_group()'s event_name param). Returns NA on any failure -- callers then
+# fall back to the old (name-only) matching rather than hard-failing.
+.golf_current_pga_event_cache <- new.env(parent = emptyenv())
+.golf_current_pga_event <- function() {
+  if (!is.null(.golf_current_pga_event_cache$v)) return(.golf_current_pga_event_cache$v)
+  raw <- tryCatch(.golf_dg_get("preds/fantasy-projection-defaults",
+                                list(tour = "pga", site = "draftkings", slate = "main")),
+                  error = function(e) NULL)
+  ev <- tryCatch(raw$event_name, error = function(e) NULL)
+  if (is.null(ev) || !nzchar(ev)) ev <- NA_character_
+  .golf_current_pga_event_cache$v <- ev
+  ev
+}
+
 # Auto-detect the live DK single-round slate (the round feed uses this): the only
-# single-round group posted is the upcoming round, so scan R1..R4 and take the first live.
+# single-round group posted is the upcoming round, so scan R1..R4 and take the first live
+# that matches the PGA Tour's actual current event (opposite-field weeks can have a
+# DIFFERENT tour's "Round N" classic slate posted too -- see golf_dk_round_group()).
 golf_live_round <- function() {
-  for (r in 1:4) { rg <- tryCatch(golf_dk_round_group(r, late = FALSE), error = function(e) NULL)
+  ev <- .golf_current_pga_event()
+  for (r in 1:4) { rg <- tryCatch(golf_dk_round_group(r, late = FALSE, event_name = ev), error = function(e) NULL)
     if (!is.null(rg)) return(list(round = r, draft_group_id = rg$draft_group_id, name = rg$name)) }
   NULL
 }
@@ -336,8 +384,9 @@ golf_captain_base <- function(cg, date = Sys.Date()) {
   cs <- .golf_captain_util_salaries(cg$draft_group_id)
   if (is.null(cs) || !nrow(cs)) return(NULL)
   rnd <- cg$round; if (is.null(rnd) || is.na(rnd)) rnd <- 4L
-  rg  <- tryCatch(golf_dk_round_group(rnd), error = function(e) NULL)
-  if (is.null(rg)) rg <- tryCatch(golf_dk_round_group(rnd, late = TRUE), error = function(e) NULL)
+  ev  <- .golf_current_pga_event()
+  rg  <- tryCatch(golf_dk_round_group(rnd, event_name = ev), error = function(e) NULL)
+  if (is.null(rg)) rg <- tryCatch(golf_dk_round_group(rnd, late = TRUE, event_name = ev), error = function(e) NULL)
   slate <- list(sport = "golf", site = "dk", date = as.character(date), round = rnd,
                 slate_type = "single_round", tournament = "main",
                 slate_id = make_slate_id("golf", "dk", date, paste0("captain_r", rnd)))
@@ -473,15 +522,25 @@ golf_presidents_cup_pool <- function(pg, slate) {
 # (re)generate the v2-round projection export (per-tee-time wind + FRL) via golf-modeling's
 # engine/round_sim.R --export, so the single-round pool uses the good engine even from the
 # dashboard. Best-effort subprocess; ~30s. Returns TRUE on success.
+#
+# stdout/stderr used to be fully SILENCED (stdout=FALSE, stderr=FALSE) — any failure in
+# the export (missing golf-modeling data, a DataGolf credit/rate issue, an R error) was
+# completely invisible, so this always just fell through to the degraded DataGolf-only
+# fallback (.golf_round_pool) with no way to tell why. Now captured and logged (last few
+# lines on failure), same convention as the CFB/NFL pipelines' subprocess steps.
 .golf_run_round_export <- function(dir, round, late = FALSE) {
   rsim <- file.path(dir, "engine", "round_sim.R"); if (!file.exists(rsim)) return(FALSE)
   rscript <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
   msg(sprintf("  golf: exporting v2-round projection (round %d) — per-tee-time wind, ~30s...", round))
   old <- getwd(); on.exit(setwd(old)); setwd(dir)
-  code <- tryCatch(system2(rscript, c(shQuote(rsim), "--round", round, "--export",
-                                       if (late) "--late" else character(0)), stdout = FALSE, stderr = FALSE),
-                   error = function(e) 1L)
-  identical(as.integer(code), 0L)
+  out <- tryCatch(system2(rscript, c(shQuote(rsim), "--round", round, "--export",
+                                      if (late) "--late" else character(0)),
+                          stdout = TRUE, stderr = TRUE, timeout = 120),
+                  error = function(e) structure(conditionMessage(e), status = 1L))
+  code <- attr(out, "status"); if (is.null(code)) code <- 0L
+  ok <- identical(as.integer(code), 0L)
+  if (!ok) msg(sprintf("  golf: round export FAILED (exit %s) - %s", code, paste(tail(out, 4), collapse = " ; ")))
+  ok
 }
 
 # PREFERRED single-round pool: the exported v2-round projection (per-tee-time wind + FRL,
@@ -614,7 +673,7 @@ golf_project_players <- function(slate) {
   # single-round (Round 2/3/4) 1-day contest — its own DK salaries + per-round projection
   if (isTRUE(slate$single_round)) {
     rg <- if (!is.null(slate$draft_group_id)) list(draft_group_id = slate$draft_group_id)
-          else golf_dk_round_group(slate$round %||% 2L, late = isTRUE(slate$late))
+          else golf_dk_round_group(slate$round %||% 2L, late = isTRUE(slate$late), event_name = .golf_current_pga_event())
     if (is.null(rg)) { msg(sprintf("  golf: no DK Round %d slate posted yet", slate$round %||% 2L)); return(NULL) }
     rnd <- slate$round %||% 2L
     # prefer the exported v2-round model (per-tee-time wind + FRL); auto-(re)export if stale;
