@@ -74,9 +74,24 @@ $paths = @("dfs-engine/data/models",
 # redirected native-stderr line into a terminating NativeCommandError -- which made this
 # script exit 1 on a run that actually succeeded.
 & $git -C $repo add -f -- $paths
-# week-stamped projection JSONs (name varies by week) -- add whatever exists
-Get-ChildItem "$repo\NFL\outputs" -Filter "fantasy_prop_2026_week*_projections.json" -ErrorAction SilentlyContinue |
-  ForEach-Object { & $git -C $repo add -f -- "NFL/outputs/$($_.Name)"; $paths += "NFL/outputs/$($_.Name)" }
+# ONLY the week the latest projection file is actually for. Publishing every
+# fantasy_prop_2026_week*_projections.json broke the engine: sports/nfl/project.R selects
+# from that glob and picked up week2 instead of week4, silently projecting the wrong week.
+# Older weeks stay untracked (they are still on disk locally for backtests).
+$wk = $null
+try { $wk = (Get-Content "$repo\NFL\outputs\dfs_projections_latest.json" -Raw | ConvertFrom-Json).week } catch {}
+if ($wk) {
+  $wkFile = "fantasy_prop_2026_week${wk}_projections.json"
+  if (Test-Path "$repo\NFL\outputs\$wkFile") {
+    & $git -C $repo add -f -- "NFL/outputs/$wkFile"
+    $paths += "NFL/outputs/$wkFile"
+    Write-Output "  current week = $wk -> $wkFile"
+  }
+  # drop any other week that is still tracked, so the glob can never resolve to a stale one
+  (& $git -C $repo ls-files "NFL/outputs/fantasy_prop_2026_week*_projections.json") |
+    Where-Object { $_ -and $_ -ne "NFL/outputs/$wkFile" } |
+    ForEach-Object { & $git -C $repo rm --cached -- $_ | Out-Null; $paths += $_; Write-Output "  untracked stale $_" }
+}
 $changed = & $git -C $repo status --porcelain -- $paths
 if ($changed) {
   $summary = ($changed | Measure-Object).Count
