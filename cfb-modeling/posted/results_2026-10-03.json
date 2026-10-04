@@ -1,0 +1,33 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-10-03",
+  "graded_at": "2026-10-04T17:14:20Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk5-texasstate-sandiegostate-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.1221,
+      "pnl_units": 1.82,
+      "actual": {
+        "actual_margin": 2,
+        "cover_line": 4.5,
+        "closing_line": 10
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk5-fresnostate-washingtonstate-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0225,
+      "pnl_units": -1,
+      "actual": {
+        "actual_margin": -20,
+        "cover_line": -1.5,
+        "closing_line": -2.5
+      }
+    }
+  ]
+}
