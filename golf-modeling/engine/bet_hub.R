@@ -499,8 +499,19 @@ if (identical(environment(), globalenv()) && !nzchar(Sys.getenv("BETHUB_SOURCE_O
     ri <- which(a=="--results"); sd <- a[ri+1]
     ei <- which(a=="--event")
     if (!length(ei) && (is.na(sd) || !nzchar(sd) || startsWith(sd, "--"))) {   # no date given -> grade the newest picks slate
+      # "newest" = newest slate that has actually STARTED, not newest by filename. Slate
+      # files are named by the tournament's START date, and the next tournament's picks get
+      # posted (by the daily LIVE pull) days before the current one is even graded -- so once
+      # that happens, the max-filename file is a FUTURE, not-yet-played event, and auto-grade
+      # silently kept pointing at it instead of the just-finished tournament that actually
+      # needs grading. Confirmed live 2026-10-06: Bank of Utah Championship (10-01, finished
+      # Sunday) sat fully ungraded while --results kept defaulting to Baycurrent Classic
+      # (10-08, hadn't even teed off) every single auto-run that week.
       pfs <- list.files(file.path(FEED,"golf-modeling","pga"), pattern="^picks_.*\\.json$")
-      if (length(pfs)) { sd <- sub("^picks_(.*)\\.json$","\\1", sort(pfs, decreasing=TRUE)[1]); emsg("--results: defaulting to latest slate ", sd) }
+      ds  <- sub("^picks_(.*)\\.json$","\\1", pfs)
+      started <- ds[!is.na(as.Date(ds, "%Y-%m-%d")) & as.Date(ds, "%Y-%m-%d") <= Sys.Date()]
+      if (length(started)) { sd <- sort(started, decreasing=TRUE)[1]; emsg("--results: defaulting to latest STARTED slate ", sd) }
+      else if (length(ds)) { sd <- sort(ds, decreasing=TRUE)[1]; emsg("--results: no started slate found; falling back to latest by filename ", sd) }
     }
     if (is.na(sd) || !nzchar(sd) || startsWith(sd, "--")) { emsg("--results: no slate to grade"); quit() }
     fc <- "--force" %in% a
