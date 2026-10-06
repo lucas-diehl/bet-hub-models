@@ -54,6 +54,16 @@ if (!file.exists(ledger_path)) {
 ledger <- readr::read_csv(ledger_path, show_col_types = FALSE)
 cat("Published bets in ledger:", nrow(ledger), "\n")
 
+# Schema backfill: a ledger written before prop support existed (the cloud
+# pipeline ran for weeks without scripts/88 or this file's prop-grading code)
+# has no player/team/stat columns at all. Those bets are real spread/total
+# rows and grade fine without them - only prop rows ever read these three -
+# so backfilling NA here is correct, not a cover-up: there is no prop bet in
+# an old-schema ledger for these columns to be wrong about.
+for (col in c("player", "team", "stat")) {
+  if (!col %in% names(ledger)) ledger[[col]] <- NA_character_
+}
+
 schedules <- readRDS("data/raw/schedules_2026.rds") |>
   dplyr::filter(.data$game_type == "REG") |>
   dplyr::transmute(
