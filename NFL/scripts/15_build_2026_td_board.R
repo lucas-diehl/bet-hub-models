@@ -89,20 +89,48 @@ upcoming_events <- event_map |>
     .data$commence <= window_end
   )
 
+event_fetch_failures <- character()
 if (execute && nrow(upcoming_events)) {
   for (i in seq_len(nrow(upcoming_events))) {
     event <- upcoming_events[i, ]
-    result <- odds_api_current_event_props(
-      event$event_id,
-      market = "player_anytime_td",
-      region = config$market$region
+    # One event failing (rate limit, timeout, transient 5xx) used to be an
+    # uncaught error that killed the whole run - every other event's props,
+    # already fetched and sitting in this loop, along with the board build and
+    # refresh_status write that come after it, were lost with it. A failed
+    # event is now skipped: if a cached file from an earlier successful run
+    # exists it is left in place and scored on, otherwise that event is simply
+    # missing from today's board, which is the same "not ready yet" state the
+    # rest of this pipeline already handles via weather_status/active_status.
+    result <- tryCatch(
+      odds_api_current_event_props(
+        event$event_id,
+        market = "player_anytime_td",
+        region = config$market$region
+      ),
+      error = function(e) {
+        event_fetch_failures <<- c(event_fetch_failures, event$event_id)
+        message(sprintf(
+          "Props fetch failed for event %s: %s",
+          event$event_id, conditionMessage(e)
+        ))
+        NULL
+      }
     )
-    saveRDS(
-      result$data,
-      file.path(props_dir, paste0(event$event_id, ".rds"))
-    )
-    quota_used <- result$quota$last
-    quota_remaining <- result$quota$remaining
+    if (!is.null(result)) {
+      saveRDS(
+        result$data,
+        file.path(props_dir, paste0(event$event_id, ".rds"))
+      )
+      quota_used <- result$quota$last
+      quota_remaining <- result$quota$remaining
+    }
+  }
+  if (length(event_fetch_failures)) {
+    message(sprintf(
+      "%d of %d events failed to fetch this run and will use cached props if available: %s",
+      length(event_fetch_failures), nrow(upcoming_events),
+      paste(event_fetch_failures, collapse = ", ")
+    ))
   }
 }
 

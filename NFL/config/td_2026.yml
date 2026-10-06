@@ -4,22 +4,58 @@ mode: "paper"
 market:
   region: "us"
   minimum_books: 2
-  minimum_american_odds: -300
+  # Price floor raised from -300 to -150 (2026-09-29). Bets priced worse than
+  # -150 returned -7.8% over 67 selected bets in 2024-25; all but a handful were
+  # short-priced RB props, where the market is efficient and the model adds
+  # nothing. See outputs/td_price_band_performance.csv.
+  minimum_american_odds: -150
+  # Left at 700 deliberately. 1,298 of the 1,339 selected bets at +700-or-longer
+  # sit ABOVE this cap, and that tail's apparent +18.9% ROI collapses to -4.1%
+  # once the ten best winners are removed (week-block CI [-0.026, +0.418]).
+  # Inside the cap the same period returns +17.6% with P(ROI<=0) = 0.000. The
+  # cap is load-bearing, not an oversight.
   maximum_american_odds: 700
   refresh_window_days: 10
 
 strategy:
+  # Positions barred from the slip regardless of edge. QB is the only position
+  # that still LOSES to the price you can actually bet: 192 selected bets over
+  # 2024-25 returned -14.8% ROI (-28.3u), and it is the one position with a
+  # negative Brier edge vs best price (-0.00064). Removing it lifted overall
+  # selected ROI from +16.1% to +18.2%.
+  exclude_positions: ["QB"]
+  # Price band barred outright. The +400s are the worst-priced region of the
+  # whole market (-13.5% betting blind, the largest drag of any band) AND the
+  # model fails to rescue it: 228 selected bets returned -8.1% (-18.4u).
+  # Both ends are inclusive of the 400s and exclusive of 500.
+  exclude_odds_low: 400
+  exclude_odds_high: 499
   expanded_edge: 0.02
   core_edge: 0.05
   low_total_max: 42
   heavy_favorite_max_spread: -6
+  # Weekly cap on CORE+EXPANDED bets actually published, added 2026-10-01 -
+  # this is what the bankroll section's old "daily_or_weekly_cap: null" was a
+  # placeholder for; moved here next to the other qualification knobs and
+  # finally populated the week it was needed. The live week-4 board hit a
+  # 64.0% positive-edge rate (275 of 430 priced players) against a 2024-25
+  # walk-forward that never exceeded 41.8% in any of 36 weeks, and the root
+  # cause was only partly resolved (a real zero-history-player imputation bug,
+  # fixed, but it didn't explain the bulk of the shift). 20 matches the upper
+  # end of the historical CORE+EXPANDED weekly average (15.2-20.6/week across
+  # the backtest) - a normal week passes through untouched, an anomalous one
+  # like this is bounded rather than publishing 3-5x the usual volume while
+  # the anomaly is unexplained. See prepare_td_2026_bet_card() in
+  # R/touchdown_deploy.R for how the cap is applied (CORE first, then
+  # EXPANDED ordered by SMALLEST edge first - deliberately inverted, since
+  # this week's extreme edges are the least trustworthy ones).
+  weekly_bet_cap: 20
 
 bankroll:
   starting_bankroll: 1000
   unit_fraction: 0.01
   minimum_units: 3
   maximum_units: 10
-  daily_or_weekly_cap: null
 
 execution:
   require_confirmed_active: true

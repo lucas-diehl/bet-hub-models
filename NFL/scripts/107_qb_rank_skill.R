@@ -85,26 +85,36 @@ if (!file.exists(wfp)) {
   cat("  no walk-forward file at", wfp, "-- skipping\n")
 } else {
   W <- as.data.table(readRDS(wfp))
-  cat("  rows:", nrow(W), " cols:", paste(head(names(W), 14), collapse = ", "), "\n")
-  pc <- intersect(c("prediction", "pred"), names(W))[1]
-  ac <- intersect(c("actual", "outcome"), names(W))[1]
-  tc <- intersect(c("target"), names(W))[1]
-  poc <- intersect(c("position", "pos"), names(W))[1]
-  if (any(is.na(c(pc, ac, tc)))) {
-    cat("  unexpected schema; cannot score\n")
-  } else {
-    ## score the PPR-relevant passing targets for QBs, and the volume targets elsewhere
-    show <- W[, {
-      rho <- suppressWarnings(stats::cor(get(pc), get(ac), method = "spearman"))
-      .(n = .N, spearman = round(rho, 3))
-    }, by = c(tc, if (!is.na(poc)) poc else NULL)]
-    if (!is.na(poc)) {
-      cat("\n  by target x position (QB rows are the ones in question):\n")
-      print(show[get(poc) %in% c("QB", "WR", "RB", "TE")][order(get(tc), get(poc))])
-    } else {
-      cat("\n  by target:\n"); print(show[order(get(tc))])
-    }
-  }
+  ## the rds stores a nested list, so readRDS->data.table flattens to "predictions.*"
+  setnames(W, sub("^predictions\\.", "", names(W)))
+  cat("  rows:", nrow(W), " seasons:", paste(sort(unique(W$season)), collapse = ","), "\n")
+
+  ## Per-target rank skill is NOT the question -- the optimizer consumes a single PPR
+  ## number per player. So rebuild PPR per player-week from the component predictions,
+  ## exactly as the board does, then score the ranking of THAT.
+  ppr_w <- c(receptions = 1, receiving_yards = 0.1, receiving_tds = 6,
+             rushing_yards = 0.1, rushing_tds = 6, passing_yards = 0.04,
+             passing_tds = 4, interceptions = -1, fumbles_lost = -1)
+  W <- W[target %in% names(ppr_w)]
+  W[, wt := ppr_w[target]]
+  W[, pred_blend := model_weight * model_prediction + (1 - model_weight) * baseline]
+  agg <- W[, .(proj = sum(wt * pred_blend, na.rm = TRUE),
+               act  = sum(wt * actual, na.rm = TRUE)),
+           by = .(season, week, player_id, position)]
+  agg <- agg[is.finite(proj) & is.finite(act)]
+  cat("  player-weeks with a rebuilt PPR pair:", nrow(agg), "\n")
+
+  ## rank WITHIN each season-week so league scoring swings cannot inflate it
+  agg[, `:=`(pr = frank(-proj, ties.method = "average"),
+             ar = frank(-act,  ties.method = "average")), by = .(season, week, position)]
+  res3 <- agg[position %in% c("QB", "WR", "RB", "TE"), {
+    rho <- suppressWarnings(stats::cor(pr, ar, method = "spearman"))
+    ci <- boot_spearman(pr, ar, B = 800L)
+    .(n = .N, player_weeks = uniqueN(paste(season, week, player_id)),
+      spearman = round(rho, 3), lo95 = round(ci[1], 3), hi95 = round(ci[2], 3))
+  }, by = position]
+  cat("\n  2023-2025 walk-forward, PPR rank skill within each week:\n")
+  print(res3[order(-spearman)])
 }
 
 cat("\n=========== VERDICT GUIDE ===========\n")

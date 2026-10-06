@@ -68,12 +68,41 @@ function Invoke-Native {
     $previous = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        & $Exe @Arguments
+        for ($attempt = 1; $attempt -le $script:MaxAttempts; $attempt++) {
+            & $Exe @Arguments
+            if ($LASTEXITCODE -eq 0) { return }
+            if ($attempt -lt $script:MaxAttempts) {
+                Write-Output "[Invoke-Native] $Exe exited $LASTEXITCODE on attempt $attempt of $script:MaxAttempts - retrying in $($script:RetryDelaySeconds)s."
+                Start-Sleep -Seconds $script:RetryDelaySeconds
+            }
+        }
+        # Exhausted retries: $LASTEXITCODE is left as the final attempt's
+        # code, which is exactly what every existing call site already checks.
     }
     finally {
         $ErrorActionPreference = $previous
     }
 }
+
+# Transient crash retry.
+#
+# Confirmed in production 2026-10-01: scripts/57 crashed twice (R.dll stack
+# overflow / ucrtbase.dll fault, Windows Event Viewer exception codes
+# 0xc00000fd and 0xc0000409 - this machine's R has intermittently crashed this
+# way since at least 9/25) under memory pressure from a concurrent R process on
+# this machine (another Claude session's own pipeline run), then succeeded
+# cleanly on the third attempt once that contention eased. A scheduled task has
+# no one to retry it by hand, so without this, the exact failure that needed a
+# manual retry today would have silently skipped the 8am publish with nothing
+# in the log but "exit 255" and no bets for the week.
+#
+# 3 attempts, 15s apart. Retries on ANY nonzero exit, not just crash-looking
+# codes - a genuine script error just fails a bit slower (an extra ~30s before
+# the caller's existing "if ($LASTEXITCODE -ne 0)" handling kicks in exactly as
+# it already does), which is a trivial cost for not needing to tell a crash
+# apart from a real failure here.
+$script:MaxAttempts = 3
+$script:RetryDelaySeconds = 15
 
 # The workbook builder writes every output and then crashes during interpreter
 # teardown inside the bundled spreadsheet runtime, so its exit code is not a

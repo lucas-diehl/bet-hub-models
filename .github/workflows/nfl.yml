@@ -1,21 +1,37 @@
 name: nfl
 
-# NFL published-picks pipeline for the Bet Hub feed (scripts/57 publish + 58 grade/capture).
-#   publish       Tue  — refresh TD board, publish the week's picks, grade last week
-#   capture-close Thu + Sun — snapshot near-kickoff lines for closing-line value (CLV)
+# NFL published-picks pipeline for the Bet Hub feed.
+#   publish       Tue 9am ET + Sun 6am ET  — full weekly refresh: snap features,
+#                 TD board, publish picks, slate board, TD prop board, DK salary
+#                 capture, fantasy projections + DFS feeds, grade last week.
+#                 Sunday's run is the "lock-in" pass: new TD plays that clear
+#                 the board only once books open Sunday markets get staked here,
+#                 on top of (never replacing) anything already posted Tuesday -
+#                 the ledger is append-only and frozen per bet, so re-running
+#                 publish is always safe.
+#   td-refresh    2x daily (~9am/~2pm ET) — repost the TD board + prop feed
+#                 WITHOUT staking anything, so the Touchdowns tab tracks the
+#                 live market between publish runs.
+#   capture-close Thu + Sun — snapshot near-kickoff lines for closing-line
+#                 value (CLV).
+#   grade         available via workflow_dispatch for an ad hoc regrade.
+#
 # NFL is STATEFUL: the frozen-pick ledger (data/processed/published_picks_ledger.csv)
 # and the closing-line capture (data/processed/closing_line_capture.csv) must survive
 # between runs, so NFL/data is cached with a rolling key (restored newest, saved each run).
-# Best-effort cron; the whole thing is a cheap no-op until Week 1 (2026-09-09).
+# Best-effort cron (GitHub may fire 5-20 min late); fine for daily/weekly picks.
 on:
   schedule:
-    - cron: "0 14 * * 2"   # Tue ~09:00 ET — publish + grade last week
+    - cron: "0 14 * * 2"   # Tue ~09:00 ET — full publish + grade last week
+    - cron: "0 10 * * 0"   # Sun ~06:00 ET — lock-in: full publish again
+    - cron: "0 13 * * *"   # ~09:00 ET daily — td-refresh (board only, no stakes)
+    - cron: "0 18 * * *"   # ~14:00 ET daily — td-refresh (board only, no stakes)
     - cron: "0 23 * * 4"   # Thu ~19:00 ET — capture close before TNF (~20:15 ET kickoff)
     - cron: "0 15 * * 0"   # Sun ~11:00 ET — capture close before the 13:00 ET slate
   workflow_dispatch:
     inputs:
       job:
-        description: "publish | capture-close | grade (blank = pick from the schedule)"
+        description: "publish | td-refresh | capture-close | grade (blank = pick from the schedule)"
         required: false
       season:
         description: "NFL_SEASON (blank = auto)"
@@ -61,23 +77,37 @@ jobs:
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
-          Rscript -e 'p<-c("nflfastR","nflreadr","dplyr","tidyr","purrr","slider","readr","stringr","lubridate","yaml","jsonlite","httr2","ranger","xgboost","nnet","ggplot2"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+          Rscript -e 'p<-c("nflfastR","nflreadr","dplyr","tidyr","purrr","slider","readr","stringr","lubridate","yaml","jsonlite","httr2","ranger","xgboost","nnet","ggplot2","data.table","mgcv","tibble"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
-      - name: Run NFL job (publish / capture-close / grade)
+      - name: Run NFL job (publish / td-refresh / capture-close / grade)
         working-directory: NFL
         run: |
           JOB="${{ github.event.inputs.job }}"
           if [ -z "$JOB" ]; then
             case "${{ github.event.schedule }}" in
               "0 14 * * 2") JOB="publish" ;;
+              "0 10 * * 0") JOB="publish" ;;
+              "0 13 * * *") JOB="td-refresh" ;;
+              "0 18 * * *") JOB="td-refresh" ;;
               *)            JOB="capture-close" ;;
             esac
           fi
           echo "NFL job = $JOB"
           if [ "$JOB" = "publish" ]; then
-            Rscript scripts/15_build_2026_td_board.R --execute || echo "TD board refresh failed; game-level bets only"
+            Rscript scripts/86_build_snap_features.R || echo "Snap-share refresh failed; continuing with the cached file."
+            Rscript scripts/15_build_2026_td_board.R --execute --refresh-stats || echo "TD board refresh failed; publishing game-level bets only."
             Rscript scripts/57_publish_weekly_picks.R --execute
+            Rscript scripts/78_nfl_write_slate.R --execute || echo "Slate board write failed; picks were still published."
+            Rscript scripts/88_emit_td_prop_board.R --execute || echo "Touchdown prop board failed; picks were still published."
+            Rscript scripts/21_capture_current_dk_salaries.R || echo "DK salary capture failed; continuing without fresh salaries."
+            Rscript scripts/81_build_current_salary_table.R || echo "Salary table build failed; capture archive is still saved."
+            Rscript scripts/17_build_fantasy_prop_models.R --execute || echo "Fantasy projection refresh failed; picks were still published."
+            Rscript scripts/59_emit_dfs_projection_json.R || echo "DFS ENGINE projection JSON failed; CSV projections still written."
+            Rscript scripts/82_emit_dfs_values_feed.R --execute || echo "DFS values feed failed; projections still written."
             Rscript scripts/58_grade_published_picks.R --grade --execute || echo "grade: nothing final to grade yet"
+          elif [ "$JOB" = "td-refresh" ]; then
+            Rscript scripts/15_build_2026_td_board.R --execute || echo "Touchdown board refresh failed; prop board not rebuilt."
+            Rscript scripts/88_emit_td_prop_board.R --execute || echo "Touchdown prop board failed."
           elif [ "$JOB" = "grade" ]; then
             Rscript scripts/58_grade_published_picks.R --grade --execute
           else

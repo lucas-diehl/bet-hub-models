@@ -26,11 +26,22 @@ odds_api_base_url <- function() {
 }
 
 odds_api_request <- function(path, query = list()) {
+  # req_retry had no cap on either the per-try wait or the total time spent
+  # retrying: 10 tries at httr2's default exponential backoff can run past 15
+  # minutes on one request before it finally gives up, and req_perform had no
+  # timeout of its own, so a single stalled connection could hang indefinitely.
+  # scripts/15's live board build calls this once per upcoming game with no
+  # per-event error handling, so on 2026-09-08 - the first Tuesday with real
+  # games inside the refresh window - one or two slow/rate-limited requests
+  # turned a job that should take a couple of minutes into a 2.5-hour run that
+  # then crashed with nothing written, because the uncaught error propagated
+  # all the way past every step that would have saved partial progress.
   key <- read_odds_api_key()
   request <- httr2::request(paste0(odds_api_base_url(), path)) |>
     httr2::req_url_query(!!!c(query, list(apiKey = key))) |>
     httr2::req_user_agent("nfl-touchdown-model/0.1") |>
-    httr2::req_retry(max_tries = 10, retry_on_failure = TRUE)
+    httr2::req_timeout(20) |>
+    httr2::req_retry(max_tries = 5, max_seconds = 60, retry_on_failure = TRUE)
 
   response <- tryCatch(
     httr2::req_perform(request),
@@ -165,15 +176,15 @@ flatten_player_prop_payload <- function(payload, market_key, game = NULL) {
     # Pull these out before the tibble() call below: tibble exposes each column
     # it has already built to later arguments, so a column named `bookmaker`
     # would shadow this loop variable mid-construction.
-    bookmaker_key_value <- as.character(bookmaker$key)
-    bookmaker_title <- as.character(bookmaker$title)
-    bookmaker_updated <- as.character(bookmaker$last_update)
+    bookmaker_key_value <- as.character(bookmaker$key %||% NA_character_)
+    bookmaker_title <- as.character(bookmaker$title %||% NA_character_)
+    bookmaker_updated <- as.character(bookmaker$last_update %||% NA_character_)
 
     for (market in bookmaker$markets %||% list()) {
       if (!identical(market$key, market_key)) next
       outcomes <- market$outcomes %||% list()
       if (!length(outcomes)) next
-      market_key_value <- as.character(market$key)
+      market_key_value <- as.character(market$key %||% NA_character_)
 
       points <- vapply(
         outcomes,
@@ -197,12 +208,18 @@ flatten_player_prop_payload <- function(payload, market_key, game = NULL) {
       )
 
       row_number <- row_number + 1L
+      # Every scalar field pulled straight off the JSON, guarded with %||%: an
+      # absent key (rather than an explicit null) makes as.character(NULL)
+      # return character(0), not NA. tibble() takes the first column's length
+      # as the row count, so one missing field silently collapsing to
+      # length-zero broke every row in the table the moment it hit real
+      # 2026-season data with a field the discovery-era payloads always had.
       rows[[row_number]] <- tibble::tibble(
-        event_id = as.character(event$id),
-        event_snapshot = as.character(payload$timestamp),
-        commence_time = as.character(event$commence_time),
-        home_team = as.character(event$home_team),
-        away_team = as.character(event$away_team),
+        event_id = as.character(event$id %||% NA_character_),
+        event_snapshot = as.character(payload$timestamp %||% NA_character_),
+        commence_time = as.character(event$commence_time %||% NA_character_),
+        home_team = as.character(event$home_team %||% NA_character_),
+        away_team = as.character(event$away_team %||% NA_character_),
         bookmaker_key = bookmaker_key_value,
         bookmaker = bookmaker_title,
         bookmaker_last_update = bookmaker_updated,
@@ -297,32 +314,39 @@ flatten_anytime_td_payload <- function(payload, game = NULL) {
       outcomes <- market$outcomes %||% list()
       if (!length(outcomes)) next
       row_number <- row_number + 1L
+      # Guarded with %||% throughout: an absent key collapses as.numeric(NULL)
+      # / as.character(NULL) to a zero-length value rather than NA, which
+      # either breaks vapply's length-1 contract per outcome or, for the
+      # per-market scalars, makes tibble() infer a row count of zero from
+      # whichever field hit it first and then reject every other column as
+      # the wrong size. Only showed up once this ran against live-season data
+      # carrying a field the discovery-era cached payloads always had.
       prices <- vapply(
         outcomes,
-        function(x) suppressWarnings(as.numeric(x$price)),
+        function(x) suppressWarnings(as.numeric(x$price %||% NA_real_)),
         numeric(1)
       )
-      bookmaker_key_value <- as.character(bookmaker$key)
-      bookmaker_title <- as.character(bookmaker$title)
-      bookmaker_updated <- as.character(bookmaker$last_update)
+      bookmaker_key_value <- as.character(bookmaker$key %||% NA_character_)
+      bookmaker_title <- as.character(bookmaker$title %||% NA_character_)
+      bookmaker_updated <- as.character(bookmaker$last_update %||% NA_character_)
       rows[[row_number]] <- tibble::tibble(
-        event_id = as.character(event$id),
-        event_snapshot = as.character(payload$timestamp),
-        commence_time = as.character(event$commence_time),
-        home_team = as.character(event$home_team),
-        away_team = as.character(event$away_team),
+        event_id = as.character(event$id %||% NA_character_),
+        event_snapshot = as.character(payload$timestamp %||% NA_character_),
+        commence_time = as.character(event$commence_time %||% NA_character_),
+        home_team = as.character(event$home_team %||% NA_character_),
+        away_team = as.character(event$away_team %||% NA_character_),
         bookmaker_key = bookmaker_key_value,
         bookmaker = bookmaker_title,
         bookmaker_last_update = bookmaker_updated,
-        market_last_update = as.character(market$last_update),
+        market_last_update = as.character(market$last_update %||% NA_character_),
         player = vapply(
           outcomes,
-          function(x) as.character(x$description),
+          function(x) as.character(x$description %||% NA_character_),
           character(1)
         ),
         outcome = vapply(
           outcomes,
-          function(x) as.character(x$name),
+          function(x) as.character(x$name %||% NA_character_),
           character(1)
         ),
         american_odds = prices,

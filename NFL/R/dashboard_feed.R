@@ -94,22 +94,201 @@ feed_lookup_cover_prob <- function(market, edge, table) {
 
 nfl_bet_strategies <- function() {
   tibble::tribble(
-    ~id, ~tag, ~label, ~tier, ~market,
-    1L, "portfolio", "Combined game-level portfolio", 1L, "game",
-    2L, "total_fl5", "Forward-linear total, edge >= 5", 2L, "total",
-    3L, "spread_rf6", "Random-forest home spread, edge >= 6", 2L, "spread",
-    4L, "td_core_upgraded", "TD core tier, upgraded model", 2L, "td",
-    5L, "td_core_baseline", "TD core tier, baseline model", 2L, "td",
-    6L, "spread_home", "Spread home-selection filter", 3L, "spread",
-    7L, "spread_key3", "Spread crosses key number 3", 3L, "spread",
-    8L, "total_over_heavy_fav", "Total over x favourite 7+", 3L, "total",
-    9L, "total_under_small_fav", "Total under x spread <= 2.5", 3L, "total",
-    10L, "td_te", "TD x tight end", 4L, "td",
-    11L, "td_minus_odds", "TD x minus-odds player", 4L, "td",
-    12L, "prop_te_under", "Tight-end prop unders", 4L, "prop",
-    13L, "prop_te", "Tight-end props", 4L, "prop",
-    14L, "prop_ev18", "Upgraded prop model, EV >= 0.18", 4L, "prop"
+    ~id, ~tag, ~label, ~tier, ~market, ~status,
+    1L, "portfolio", "Combined game-level portfolio", 1L, "game", "funded",
+    2L, "total_fl5", "Forward-linear total, edge >= 5", 2L, "total", "funded",
+    3L, "spread_rf6", "Random-forest home spread, edge >= 6", 2L, "spread", "funded",
+    4L, "td_core_upgraded", "TD core tier, upgraded model", 2L, "td", "paper",
+    5L, "td_core_baseline", "TD core tier, baseline model", 2L, "td", "paper",
+    6L, "spread_home", "Spread home-selection filter", 3L, "spread", "paper",
+    7L, "spread_key3", "Spread crosses key number 3", 3L, "spread", "paper",
+    8L, "total_over_heavy_fav", "Total over x favourite 7+", 3L, "total", "paper",
+    9L, "total_under_small_fav", "Total under x spread <= 2.5", 3L, "total", "paper",
+    10L, "td_te", "TD x tight end", 4L, "td", "paper",
+    11L, "td_minus_odds", "TD x minus-odds player", 4L, "td", "paper",
+    12L, "prop_te_under", "Tight-end prop unders", 4L, "prop", "rejected",
+    13L, "prop_te", "Tight-end props", 4L, "prop", "rejected",
+    14L, "prop_ev18", "Upgraded prop model, EV >= 0.18", 4L, "prop", "rejected"
   )
+}
+
+feed_status_levels <- function() c("funded", "paper", "rejected")
+
+# Status is a claim about evidence, and it is separate from tier, which is only
+# about stake. Three values, in decreasing order of what the record supports:
+#
+#   funded    an interval that excludes zero on a closing-line backtest, with
+#             the timing of that line established rather than assumed.
+#   paper     positive but not established: small n, book-price sensitivity, or
+#             an overlay that has not been replicated out of sample.
+#   rejected  tested and found not to have an edge. These must never reach the
+#             site. The yardage-prop rules are here because the calibration
+#             curve was flat and a 320-segment scan beat chance 27.4% of the
+#             time - the honest reading is that the estimator was wrong, not
+#             that a smaller edge is hiding somewhere.
+#
+# The three prop rules stayed wired into the feed as tier-4 "tracked
+# candidates" after that verdict. Emitting them at any stake size is a claim
+# the record does not support, so the assertion below drops them at source.
+feed_strategy_status <- function(tags) {
+  registry <- nfl_bet_strategies()
+  out <- registry$status[match(tags, registry$tag)]
+  out[is.na(out)] <- "rejected"
+  out
+}
+
+# Best (most supported) status among the strategies that fired on one bet.
+feed_best_status <- function(statuses) {
+  levels <- feed_status_levels()
+  levels[min(match(statuses, levels))]
+}
+
+prob_to_american <- function(p) {
+  p <- pmin(pmax(p, 1e-6), 1 - 1e-6)
+  dplyr::if_else(p >= 0.5, -100 * p / (1 - p), 100 * (1 - p) / p)
+}
+
+american_is_worse <- function(a, b) {
+  # "Worse" means a lower payout, i.e. a higher implied probability.
+  american_to_prob(a) > american_to_prob(b)
+}
+
+# The minimum price at which the bet is still worth taking. Published prices go
+# stale between Tuesday and kickoff, and without this the site has no way to
+# tell a bettor whether a moved number is still playable - which is exactly the
+# situation where a stale price silently turns a positive-EV bet negative.
+#
+# Where a model probability exists the floor is the break-even price implied by
+# it. Where it does not (the spread and total models are regressors and their
+# model_prob is an empirical cover rate, not a calibrated probability), the
+# floor is the quoted price shaded by two points of implied probability. The
+# floor is never better than the quoted price.
+feed_min_price <- function(odds_american, model_prob,
+                           consensus_prob = NA_real_) {
+  shaded <- prob_to_american(american_to_prob(odds_american) + 0.02)
+  breakeven <- prob_to_american(model_prob)
+  floor_price <- dplyr::if_else(is.na(model_prob), shaded, breakeven)
+
+  # Anytime-touchdown bets get a different floor, because the edge there is a
+  # different thing. Re-graded at the consensus price the core tier returns
+  # -13.7% against +9.8% at the best of four, and the model is a *worse*
+  # forecaster than the market on a paired Brier bootstrap. So the bet is not
+  # "the model says this player is underpriced" - it is "one book has drifted
+  # off consensus and we are taking it". Break-even sits at roughly 57% capture
+  # of the gap between the consensus payout and the best available payout, so
+  # the floor is set there rather than at a model-implied break-even that the
+  # Brier result says we should not trust.
+  if (any(!is.na(consensus_prob))) {
+    consensus_payout <- 1 / consensus_prob - 1
+    best_payout <- 1 / american_to_prob(odds_american) - 1
+    capture_payout <- consensus_payout + 0.57 * (best_payout - consensus_payout)
+    capture_price <- prob_to_american(1 / (capture_payout + 1))
+    floor_price <- dplyr::if_else(
+      is.na(consensus_prob) | !is.finite(capture_price),
+      floor_price, capture_price
+    )
+  }
+  # If break-even is better than the quoted price the bet had no edge to begin
+  # with; fall back to the shade so the field is never nonsense.
+  floor_price <- dplyr::if_else(
+    american_is_worse(floor_price, odds_american), floor_price, shaded
+  )
+  round(floor_price)
+}
+
+# The feed may only quote prices from books the bettor can actually reach. This
+# matters more than it looks: the touchdown core tier returns +0.83% on two
+# books, +11.60% on four and +13.75% on eight, so a best-of-eight price quietly
+# inflates the headline by an order of magnitude. Callers must filter before
+# selecting a best price, not after - filtering after selection silently drops
+# bets whose winning quote came from an excluded book instead of re-pricing them
+# at a reachable one.
+feed_assert_books <- function(books, where = "feed") {
+  books <- books[!is.na(books)]
+  if (!length(books)) return(invisible(TRUE))
+  permitted <- unname(feed_books())
+  keys <- names(feed_books())
+  bad <- unique(books[!(books %in% permitted | tolower(books) %in% keys)])
+  if (length(bad)) {
+    stop(
+      sprintf(
+        "%s quotes books outside the permitted four (%s): %s",
+        where, paste(permitted, collapse = ", "), paste(bad, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+# Publish-time gate. Everything here is a defect in the emitter rather than a
+# condition to handle, so each one stops the publish instead of dropping a row.
+feed_assert_publishable <- function(bets) {
+  if (!nrow(bets)) return(invisible(TRUE))
+
+  if ("status" %in% names(bets)) {
+    bad <- bets$status[!bets$status %in% feed_status_levels()]
+    if (length(bad)) {
+      stop("Unknown status: ", paste(unique(bad), collapse = ", "), call. = FALSE)
+    }
+    rejected <- bets[bets$status == "rejected", ]
+    if (nrow(rejected)) {
+      stop(
+        sprintf(
+          "%d rejected-strategy bets reached publish: %s",
+          nrow(rejected), paste(utils::head(rejected$bet_id, 5), collapse = ", ")
+        ),
+        call. = FALSE
+      )
+    }
+  } else {
+    stop("Feed rows carry no status column.", call. = FALSE)
+  }
+
+  required <- c("book", "odds_american", "min_price")
+  for (column in required) {
+    if (!column %in% names(bets)) {
+      stop("Feed rows are missing required column: ", column, call. = FALSE)
+    }
+    if (any(is.na(bets[[column]]))) {
+      stop(
+        sprintf(
+          "%d rows have no %s: %s", sum(is.na(bets[[column]])), column,
+          paste(utils::head(bets$bet_id[is.na(bets[[column]])], 5), collapse = ", ")
+        ),
+        call. = FALSE
+      )
+    }
+  }
+
+  # Every market except anytime-TD is priced against a number. A spread or total
+  # published without one is unplaceable, which has happened here before.
+  needs_line <- !(bets$market == "prop" &
+                    !is.na(bets$stat) & bets$stat == "anytime_td")
+  if (any(needs_line & is.na(bets$line))) {
+    stop(
+      sprintf(
+        "%d spread/total/prop rows have no line: %s",
+        sum(needs_line & is.na(bets$line)),
+        paste(utils::head(bets$bet_id[needs_line & is.na(bets$line)], 5),
+              collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+
+  feed_assert_books(bets$book, "publish")
+
+  # A floor better than the quote would tell a bettor to take a worse number
+  # than the one already found.
+  inverted <- !american_is_worse(bets$min_price, bets$odds_american) &
+    bets$min_price != bets$odds_american
+  if (any(inverted)) {
+    stop(sprintf("%d rows have min_price better than the quote.", sum(inverted)),
+         call. = FALSE)
+  }
+
+  invisible(TRUE)
 }
 
 # ---------------------------------------------------------------------------
@@ -375,8 +554,20 @@ dedupe_feed_bets <- function(candidates) {
   registry <- nfl_bet_strategies()
   tagged <- candidates |>
     dplyr::inner_join(
-      registry |> dplyr::select(strategy = "tag", "tier"), by = "strategy"
+      registry |> dplyr::select(strategy = "tag", "tier", "status"),
+      by = "strategy"
     )
+
+  # Rejected strategies are dropped here rather than at publish, so a bet that
+  # fires only on rejected rules disappears entirely instead of surviving with
+  # its tags stripped. inner_join above also means an unregistered tag drops
+  # out - feed_assert_publishable catches anything that gets past both.
+  dropped <- sum(tagged$status == "rejected")
+  tagged <- dplyr::filter(tagged, .data$status != "rejected")
+  if (dropped) {
+    message(sprintf("Dropped %d candidates from rejected strategies.", dropped))
+  }
+  if (!nrow(tagged)) return(tibble::tibble())
 
   # Where two strategies disagree on the side of the same market, the primary
   # model signal wins and the dissenting overlay is dropped rather than emitted
@@ -415,11 +606,13 @@ dedupe_feed_bets <- function(candidates) {
       player = dplyr::first(.data$player),
       team = dplyr::first(.data$team),
       best_tier = min(.data$tier),
+      status = feed_best_status(.data$status),
       strategies = paste(sort(unique(.data$strategy)), collapse = ","),
       strategy_count = dplyr::n_distinct(.data$strategy),
       .groups = "drop"
     ) |>
     dplyr::mutate(
+      min_price = feed_min_price(.data$odds_american, .data$model_prob),
       stake_units = round(
         feed_stake_units(
           dplyr::if_else(
@@ -451,6 +644,7 @@ feed_bet_object <- function(row) {
   tags <- c(
     if (is_prop) "prop" else row$market,
     if (is_prop) row$stat else NULL,
+    row$status,
     strsplit(row$strategies, ",")[[1]]
   )
 
@@ -465,6 +659,11 @@ feed_bet_object <- function(row) {
     line = if (is.na(row$line)) NULL else as.numeric(row$line),
     odds_american = as.integer(row$odds_american),
     book = row$book,
+    # The site needs both numbers to render a stale price honestly: what we got
+    # and how far it can move before the bet stops being worth taking.
+    min_price = if (is.null(row$min_price) || is.na(row$min_price)) NULL else
+      as.integer(row$min_price),
+    status = row$status,
     model_prob = if (is.na(row$model_prob)) NULL else round(row$model_prob, 4),
     market_prob = if (is.na(row$market_prob)) NULL else round(row$market_prob, 4),
     edge = if (is.na(row$model_prob)) NULL else
@@ -472,6 +671,13 @@ feed_bet_object <- function(row) {
     ev_pct = if (is.na(row$ev_pct)) NULL else round(row$ev_pct, 4),
     stake_units = as.numeric(row$stake_units),
     confidence = row$confidence,
+    # When this bet FIRST entered the ledger. The ledger is append-only and
+    # freezes a bet's terms on first publish, so this is the moment the price
+    # was actually taken - which the file's own generated_at cannot tell you,
+    # because the feed is rewritten on every run. A prop locked in three days
+    # out and one grabbed Sunday morning are different bets.
+    posted_at = if (is.null(row$published_at) || is.na(row$published_at)) NULL else
+      format(as.POSIXct(row$published_at, tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
     tags = as.list(unique(tags)),
     details = if (!is_prop) NULL else compact_list(list(
       player = row$player,
@@ -483,6 +689,10 @@ feed_bet_object <- function(row) {
 
 write_picks_file <- function(bets, slate_date, week, feed_dir = feed_root(),
                              mode = "PAPER", model_version = "nfl-v1") {
+  # Nothing is written unless the whole slate passes. A partial file is worse
+  # than none: the site would show some bets and silently omit others.
+  feed_assert_publishable(bets)
+
   objects <- if (nrow(bets)) {
     lapply(seq_len(nrow(bets)), function(i) feed_bet_object(bets[i, ]))
   } else {
@@ -513,6 +723,32 @@ write_picks_file <- function(bets, slate_date, week, feed_dir = feed_root(),
 }
 
 write_results_file <- function(results, slate_date, feed_dir = feed_root()) {
+  ## Normalize slate_date to an ISO string before it reaches either the
+  ## filename or the payload.
+  ##
+  ## This is defensive against a specific, silent R trap: `for (d in dates)`
+  ## iterates the UNDERLYING ATOMIC VECTOR and drops the Date class, so the
+  ## loop variable arrives here as a bare number. scripts/58 did exactly that
+  ## and shipped `results_20709.json` carrying `"slate_date": 20709` (20709 =
+  ## days since 1970-01-01 = 2026-09-14). Nothing failed locally - the file
+  ## wrote happily - and the Bet Hub then rejected it with
+  ## "slate_date: Expected string, received number", so a full slate of graded
+  ## Week 1 results silently never reached the site.
+  ##
+  ## Fixed at this boundary rather than only at the call site because every
+  ## caller is one `for` loop away from reintroducing it.
+  if (inherits(slate_date, "Date")) {
+    slate_date <- format(slate_date, "%Y-%m-%d")
+  } else if (is.numeric(slate_date)) {
+    slate_date <- format(as.Date(slate_date, origin = "1970-01-01"), "%Y-%m-%d")
+  } else {
+    slate_date <- as.character(slate_date)
+  }
+  if (!grepl("^\\d{4}-\\d{2}-\\d{2}$", slate_date)) {
+    stop("write_results_file(): slate_date must be YYYY-MM-DD, got '",
+         slate_date, "'.", call. = FALSE)
+  }
+
   objects <- lapply(seq_len(nrow(results)), function(i) {
     row <- results[i, ]
     actual <- row$actual[[1]]

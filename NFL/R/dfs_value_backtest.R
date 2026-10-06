@@ -96,7 +96,13 @@ prepare_dk_salary_pool <- function(salaries, main_games) {
   salaries |>
     dplyr::filter(
       .data$site == "DK",
-      .data$position %in% c("QB", "RB", "WR", "TE", "DEF")
+      # RotoGuru codes team defenses "DEF"; the DraftKings draftgroups API
+      # (2022+ recovery, scripts/50) codes them "DST" already. Filtering on
+      # "DEF" alone silently dropped every 2022+ defense before the rename
+      # below ever ran, which meant no DST candidates existed for those
+      # seasons and the lineup optimizer - which treats a DST slot as
+      # mandatory - returned no lineup for any week in that range.
+      .data$position %in% c("QB", "RB", "WR", "TE", "DEF", "DST")
     ) |>
     dplyr::mutate(
       team = normalize_team(.data$team),

@@ -634,24 +634,119 @@ build_fantasy_2026_features <- function(
       .data$game_id %in% upcoming_game_context$game_id
     )
 
-  prepared |>
+  ## QB depth-chart override.
+  ##
+  ## Confirmed bug (2026-10-01): role_score below is recent_opportunity
+  ## (opportunity_r5, a LAGGED rolling average of past usage) plus a
+  ## rookie-only draft_priority. That ranking structurally favours whoever
+  ## played MORE recently, which is exactly backwards right after a starter
+  ## change - a just-benched incumbent still carries his old high usage number
+  ## while the new starter has near-zero recent_opportunity and loses the
+  ## role-rank competition despite being the one who will actually play.
+  ##
+  ## Measured effect: comparing our deployed week-1/2/3 2026 projections against
+  ## who actually started (>=10 pass attempts), the wrong QB was projected for
+  ## 9 of 32 teams in week 1, 12 of 34 in week 2, 6 of 32 in week 3 - including
+  ## missing Josh Allen and Jordan Love ENTIRELY from the week-2 board. QB
+  ## weekly R2 against actual outcomes was 0.019 / 0.030 / 0.025 across those
+  ## three weeks (vs a 0.30 walk-forward validated baseline) while every other
+  ## position tracked or beat its own baseline - this was the mechanism.
+  ##
+  ## R/qb_starter.R's project_qb_starters() already solves exactly this (daily
+  ## depth-chart snapshot + injury report, see that file), and was ALREADY
+  ## being called for the QB-pair-chemistry feature in add_qb_pair_features()
+  ## above - but never consulted here, where the projection board itself
+  ## decides who gets a row. Confirmed by direct test: the resolver correctly
+  ## named Michael Penix Jr. for ATL as of week 3, while this function's
+  ## role_score ranking dropped him from the board entirely that week.
+  ##
+  ## Fix: a QB matched (by normalized name) to the resolver's pick is forced to
+  ## the top of his team's role-rank regardless of role_score. A team the
+  ## resolver has no confident answer for (feed down, or no name match) falls
+  ## straight back to the existing role_score ranking - this only ever
+  ## OVERRIDES in the cases it has evidence for, never removes the fallback.
+  depth_chart_qb <- NULL
+  if (exists("project_qb_starters")) {
+    wk_keys <- upcoming_game_context |>
+      dplyr::distinct(.data$season, .data$week) |>
+      as.data.frame()
+    picks <- purrr::pmap_dfr(wk_keys, function(season, week) {
+      p <- tryCatch(project_qb_starters(season, week), error = function(e) NULL)
+      if (is.null(p) || !nrow(p)) return(NULL)
+      tibble::tibble(season = season, week = week,
+                     team = as.character(p$team),
+                     .qb_key = normalize_prop_player_name(as.character(p$qb)))
+    })
+    if (!is.null(picks) && nrow(picks)) depth_chart_qb <- picks
+  }
+
+  ## draft_priority decay, added 2026-10-01.
+  ##
+  ## draft_priority exists to seed a rookie's role-rank in Week 1, when NO
+  ## player has any in-season data yet and draft capital is the only signal
+  ## available at all. Left undecayed, it keeps doing that in week 4+, where
+  ## the premise is backwards: a player who STILL has zero recorded games by
+  ## then is not "undebuted", he is presumptively a deep-roster/inactive body
+  ## who is not in the rotation - and the absence of data is itself the signal,
+  ## not a gap to paper over with draft capital.
+  ##
+  ## Measured effect without this: Seydou Traore and Justin Joly (TEs, zero
+  ## career games, priced by the market at +3500 / 2.8% implied) got drafted
+  ## -priority role-scores that outranked VETERAN teammates who had actually
+  ## played but recorded zero usage (role_score exactly 0) - and even after
+  ## fixing the feature-imputation side of this bug (zeroing usage features for
+  ## prior_games==0 rows instead of median-imputing them), the board still
+  ## carried a ~2.0 PPR projection for a player who has never taken an NFL
+  ## snap, because the decay toward "not rostered meaningfully" needs to happen
+  ## at the ROLE-RANK stage, not just the feature stage - a zero-history player
+  ## should be excluded from genuinely competing for a board slot once the
+  ## season is underway, not merely scored conservatively if he gets one.
+  ##
+  ## Linear decay to zero by week 4: full weight week 1, 2/3 week 2, 1/3 week
+  ## 3, none from week 4 on. A real role change after week 4 (an injury
+  ## call-up, a trade) is still captured correctly - that player's role_score
+  ## comes from his OWN recent_opportunity once he starts playing, same as
+  ## everyone else; this only removes the artificial boost for someone who has
+  ## NOT started playing.
+  prepared <- prepared |>
     dplyr::mutate(
       recent_opportunity = dplyr::coalesce(.data$opportunity_r5, 0),
+      .draft_priority_weight = pmax(0, 1 - (.data$week - 1) / 3),
       draft_priority = dplyr::if_else(
         .data$prior_games == 0 & is.finite(.data$draft_number),
-        pmax(0, 300 - .data$draft_number) / 100,
+        pmax(0, 300 - .data$draft_number) / 100 * .data$.draft_priority_weight,
         0
       ),
       role_score = .data$recent_opportunity + .data$draft_priority
-    ) |>
+    )
+
+  if (!is.null(depth_chart_qb)) {
+    prepared <- prepared |>
+      dplyr::mutate(.name_key = normalize_prop_player_name(.data$player_display_name)) |>
+      dplyr::left_join(
+        depth_chart_qb |> dplyr::mutate(is_depth_chart_starter = TRUE),
+        by = c("season", "week", "team", ".name_key" = ".qb_key")
+      ) |>
+      dplyr::mutate(
+        is_depth_chart_starter = .data$position == "QB" &
+          dplyr::coalesce(.data$is_depth_chart_starter, FALSE)
+      ) |>
+      dplyr::select(-".name_key")
+  } else {
+    prepared$is_depth_chart_starter <- FALSE
+  }
+
+  prepared |>
     dplyr::arrange(
       .data$team, .data$position,
+      dplyr::desc(.data$is_depth_chart_starter),
       dplyr::desc(.data$role_score),
       .data$draft_number
     ) |>
     dplyr::group_by(.data$game_id, .data$team, .data$position) |>
     dplyr::mutate(preseason_role_rank = dplyr::row_number()) |>
     dplyr::ungroup() |>
+    dplyr::select(-"is_depth_chart_starter", -".draft_priority_weight") |>
     dplyr::filter(
       (.data$position == "QB" & .data$preseason_role_rank <= 1) |
         (.data$position == "RB" & .data$preseason_role_rank <= 4) |
@@ -1294,6 +1389,47 @@ predict_fantasy_deployment <- function(
   future_features,
   blend_weights = NULL
 ) {
+  ## Confirmed bug (2026-10-01): a player with prior_games == 0 - a true
+  ## zero-history debut, not a rookie with a game or two of data - has every
+  ## rolling usage feature (targets_r5, snap_share_r5, opportunity_r5, ...) set
+  ## to NA by design (see the "true rookie debut: no prior at all" comment
+  ## where that happens). fantasy_matrix_pair() then median-imputes those NA
+  ## values using the TRAINING-SET median - i.e. it tells the model this
+  ## player has AVERAGE established usage, when the honest statement is
+  ## "unknown, assume minimal". The baseline (naive rolling-average) has the
+  ## identical failure: it falls back to model$outcome_mean, the population
+  ## average, for the exact same rows.
+  ##
+  ## Measured effect on the live week-4 board: players with zero recorded NFL
+  ## history - e.g. Seydou Traore and Justin Joly, television-irrelevant TEs
+  ## priced at +3500 (2.8% market probability) - were projected at 18.7%
+  ## probability of scoring, near 7x the market, because their draft_priority
+  ## role-score gave them a board slot (see build_fantasy_2026_features()) and
+  ## median imputation then handed them a median starter's usage profile. This
+  ## is WHY so many players showed a positive edge: the live board now prices
+  ## far more fringe players than it used to (430 vs ~108 three weeks ago as
+  ## books filled in their markets), and every zero-history one among them was
+  ## being scored as a league-average contributor rather than a long shot.
+  ##
+  ## Fix: usage-type rolling features are zeroed (not left NA) for true
+  ## zero-history rows BEFORE matrix construction, so they bypass median
+  ## imputation entirely and the model sees "no observed usage" - which is the
+  ## honest state - rather than "average usage". Context features (total_line,
+  ## team_spread, weather, position dummies, the matchup _r5_z columns) do NOT
+  ## carry this suffix pattern and are untouched. The baseline column is a
+  ## _r5-suffixed outcome measure, so this fixes both the model input and the
+  ## baseline fallback in the same place with the same cause.
+  ## coalesce to FALSE: a logical NA used as a `[<-` index assigns into NA
+  ## positions too (R quirk), which would corrupt rows where prior_games
+  ## itself is unexpectedly missing rather than correctly zero.
+  zero_history <- dplyr::coalesce(future_features$prior_games == 0L, FALSE)
+  if (any(zero_history)) {
+    usage_cols <- grep("(_r3|_r5|_r8|_sd5)$", names(future_features), value = TRUE)
+    for (cc in usage_cols) {
+      future_features[[cc]][zero_history] <- 0
+    }
+  }
+
   predictions <- purrr::imap_dfr(models, function(model, target_name) {
     candidates <- fantasy_target_candidates(
       future_features,

@@ -1,12 +1,17 @@
+# Scripts source this file directly, so pull the registry in rather than
+# requiring every caller to remember it.
+if (!exists("registered_game_features")) source("R/feature_registry.R")
+
+# Returns the registered game-model schema, and fails if the data has drifted
+# from it in either direction. This used to be "every numeric column except a
+# blocklist", which meant any new column joined every model silently.
 feature_names <- function(data) {
-  excluded <- c(
-    "game_id", "season", "week", "game_date", "home_team", "away_team",
-    "home_score", "away_score", "home_score_rw", "away_score_rw",
-    "home_margin", "game_total", "home_line", "total_line",
-    "market_margin", "market_total", "surface", "weather", "precip_type"
+  assert_registered_features(
+    data,
+    registered = registered_game_features(),
+    ignore = game_non_feature_columns(),
+    label = "game model"
   )
-  candidates <- setdiff(names(data), excluded)
-  candidates[vapply(data[candidates], is.numeric, logical(1))]
 }
 
 compact_feature_names <- function(data) {
@@ -41,8 +46,16 @@ make_xy <- function(train, test, target, features) {
   )
 }
 
-fit_predict_model <- function(model_name, train, test, target, cfg, features = NULL) {
+# `seed` overrides cfg$backtest$seed for this fit only. Callers that leave it
+# NULL keep the frozen config seed, so every existing backtest reproduces
+# exactly. It exists so the seed-noise study can actually vary the seed: passing
+# a fixed value straight to ranger meant an outer set.seed() was inert, and a
+# noise floor measured that way would have read as identically zero.
+fit_predict_model <- function(model_name, train, test, target, cfg,
+                              features = NULL, seed = NULL) {
   if (is.null(features)) features <- feature_names(train)
+  if (is.null(seed)) seed <- cfg$backtest$seed
+  seed <- as.integer(seed)
   xy <- make_xy(train, test, target, features)
 
   if (model_name == "linear") {
@@ -73,7 +86,7 @@ fit_predict_model <- function(model_name, train, test, target, cfg, features = N
       mtry = max(1L, floor(sqrt(length(features)))),
       min.node.size = 10,
       importance = "permutation",
-      seed = cfg$backtest$seed
+      seed = seed
     )
     return(as.numeric(stats::predict(fit, data = xy$test_x)$predictions))
   }
@@ -81,7 +94,7 @@ fit_predict_model <- function(model_name, train, test, target, cfg, features = N
   if (model_name == "xgboost") {
     # Without this the subsample/colsample draws vary between identical runs,
     # so a "frozen" backtest would not reproduce.
-    set.seed(cfg$backtest$seed)
+    set.seed(seed)
     fit <- xgboost::xgboost(
       data = as.matrix(xy$train_x),
       label = xy$train_y,
@@ -105,6 +118,8 @@ fit_predict_model <- function(model_name, train, test, target, cfg, features = N
     x_test <- scale(xy$test_x, center = xy$center, scale = scales)
     y_center <- mean(xy$train_y)
     y_scale <- stats::sd(xy$train_y)
+    # nnet draws random starting weights, so it needs the seed too.
+    set.seed(seed)
     fit <- nnet::nnet(
       x = x_train,
       y = (xy$train_y - y_center) / y_scale,

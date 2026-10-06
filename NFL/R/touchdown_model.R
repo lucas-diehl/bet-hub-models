@@ -1,3 +1,10 @@
+# fit_td_fundamental() calls assert_td_schema(), so this file needs it in
+# scope regardless of which script sources it - scripts/13 loads
+# td_player_features.rds straight from disk and never sources
+# touchdown_features.R (the only other place touchdown_registry.R gets
+# pulled in), so relying on source order left assert_td_schema undefined here.
+if (!exists("assert_td_schema")) source("R/touchdown_registry.R")
+
 clip_probability <- function(x, lower = 0.005, upper = 0.995) {
   pmin(pmax(as.numeric(x), lower), upper)
 }
@@ -15,7 +22,14 @@ td_model_feature_names <- function(data) {
     "cold_index", "high_wind_index",
     "position_qb", "position_rb", "position_wr", "position_te",
     "wind_receiving_role", "precip_rushing_role",
-    "qb_rush_weather", "favorite_rush_role"
+    "qb_rush_weather", "favorite_rush_role",
+    # Not a rolled _r3/_r5 feature - a raw scalar computed directly in
+    # add_td_carryover_flags(), so it needs an explicit entry here the same
+    # way prior_games/career_td_rate do. Missing on the first schema-lock run
+    # (caught by assert_td_schema() exactly as intended - see
+    # outputs/touchdown_scoring_model_handoff.md and the message this fix
+    # responds to).
+    "days_since_prior_game"
   )
   intersect(unique(c(rolling, context)), names(data))
 }
@@ -53,6 +67,15 @@ td_matrix_pair <- function(train, test, features) {
 
 fit_td_fundamental <- function(train, test, seed = 20260727L) {
   features <- td_model_feature_names(train)
+  # Every fit - walk-forward fold or deployment - goes through here, so this
+  # is the single choke point to guard rather than scripts/13's top level.
+  # allow_additions covers exactly the redzone/carryover columns; anything
+  # else added or removed is scope drift and stops the run.
+  assert_td_schema(
+    features,
+    allow_additions = c(td_redzone_expected_features(),
+                        td_snap_expected_features())
+  )
   matrices <- td_matrix_pair(train, test, features)
   # The R package ignores params$seed and takes its RNG state from R, so
   # subsample/colsample draws are only reproducible via set.seed().
@@ -116,13 +139,71 @@ apply_platt_calibrator <- function(fit, probability) {
   ))
 }
 
+## Positions that get their own blend weight instead of the global one.
+##
+## TE only, and it is earned rather than assumed. Measured on walk-forward
+## predictions, the fundamental model carries materially more information at
+## tight end than anywhere else:
+##
+##   global blend    fundamental 0.155 | market 0.945
+##   TE-specific     fundamental 0.506 | market 0.566
+##
+## i.e. the global weight throws away roughly two thirds of the model's TE
+## signal. Confirmed on a 2025 holdout that was untouched during the search:
+## TE Brier 0.134963 vs 0.135612 global, gain +0.00065, week-block CI
+## [+0.000008, +0.001276], P(gain<=0) = 0.023.
+##
+## Nothing else qualified. A 525-cell scan over position x player archetype x
+## team style x opponent-defense flavor (including RB-vs-pass-defense, WR on
+## short-throwing offenses, TE on run-heavy teams) produced ZERO survivors
+## after BH correction - the nominal winners were the ~26 false positives you
+## expect from 525 tests. QB is actively worse than useless (beta_fundamental
+## -0.036), so it stays on the global weight where the market dominates it.
+td_positional_calibration <- function() "TE"
+
+## The calibrator gains a third input when the fantasy model's TD projection is
+## available (R/td_fantasy_signal.R). Measured on 2023-2025 it is the strongest
+## of the three - the TD fundamental's own coefficient goes NEGATIVE once it is
+## included - so it is used whenever present and simply omitted when not, which
+## keeps every historical artifact and any caller without fantasy data working.
+## Returns a PAIR: the preferred fit (three-input where the fantasy projection
+## is available) and a two-input fallback fit on the same rows.
+##
+## Both are needed because a glm fitted with `fantasy_logit` returns NA for any
+## row missing it, and you cannot simply drop the term from a fitted model - the
+## intercept and the other coefficients were estimated assuming it was there.
+## Players the fantasy model does not cover therefore get scored by a genuine
+## two-input model rather than a mutilated three-input one.
+.fit_one_market_calibrator <- function(frame) {
+  if (nrow(frame) < 500 || length(unique(frame$outcome)) < 2) return(NULL)
+
+  fit_form <- function(form, d) {
+    f <- tryCatch(stats::glm(form, family = stats::binomial(), data = d),
+                  error = function(e) NULL)
+    if (is.null(f) || any(!is.finite(stats::coef(f)))) return(NULL)
+    f
+  }
+  base <- fit_form(outcome ~ fundamental_logit + market_logit, frame)
+  if (is.null(base)) return(NULL)
+
+  full <- NULL
+  if ("fantasy_logit" %in% names(frame) &&
+      sum(is.finite(frame$fantasy_logit)) >= 500) {
+    full <- fit_form(
+      outcome ~ fundamental_logit + market_logit + fantasy_logit, frame
+    )
+  }
+  list(full = full, base = base, uses_fantasy = !is.null(full))
+}
+
 fit_market_calibrator <- function(data) {
-  frame <- data |>
+  base <- data |>
     dplyr::filter(
       !is.na(.data$anytime_td),
       is.finite(.data$fundamental_probability),
       is.finite(.data$consensus_probability)
-    ) |>
+    )
+  frame <- base |>
     dplyr::transmute(
       outcome = as.integer(.data$anytime_td),
       fundamental_logit = stats::qlogis(
@@ -132,29 +213,89 @@ fit_market_calibrator <- function(data) {
         clip_probability(.data$consensus_probability)
       )
     )
-  if (nrow(frame) < 500 || length(unique(frame$outcome)) < 2) return(NULL)
-  fit <- tryCatch(
-    stats::glm(
-      outcome ~ fundamental_logit + market_logit,
-      family = stats::binomial(),
-      data = frame
-    ),
-    error = function(e) NULL
-  )
-  if (is.null(fit) || any(!is.finite(stats::coef(fit)))) return(NULL)
-  fit
+  ## `frame` MUST stay row-aligned with `base`, because the per-position loop
+  ## below subsets it using indices computed against `base`. So the fantasy
+  ## column is added with NA where the fantasy model has no projection, and
+  ## glm's default na.omit drops those rows at fit time - filtering here instead
+  ## would silently shift every positional subset.
+  if ("fantasy_p_td" %in% names(base)) {
+    fl <- rep(NA_real_, nrow(base))
+    ok <- is.finite(base$fantasy_p_td)
+    fl[ok] <- stats::qlogis(clip_probability(base$fantasy_p_td[ok]))
+    frame$fantasy_logit <- fl
+  }
+  global <- .fit_one_market_calibrator(frame)
+  if (is.null(global)) return(NULL)
+
+  ## Per-position calibrators, where the data supports one. Falls back to the
+  ## global fit for any position without enough rows, so a thin season can
+  ## never silently produce a wild positional weight.
+  by_pos <- list()
+  if ("position" %in% names(base)) {
+    for (po in td_positional_calibration()) {
+      idx <- which(base$position == po)
+      if (length(idx) >= 500) {
+        f <- .fit_one_market_calibrator(frame[idx, , drop = FALSE])
+        if (!is.null(f)) by_pos[[po]] <- f
+      }
+    }
+  }
+  structure(list(global = global, by_position = by_pos), class = "td_market_cal")
 }
 
-apply_market_calibrator <- function(fit, fundamental, market) {
+## `position` is optional so every existing caller keeps working, and a fit
+## saved before positional calibration existed (a bare glm rather than a
+## td_market_cal) is still honoured - otherwise reloading an older
+## td_deployment_model.rds would error instead of degrading to the global blend.
+apply_market_calibrator <- function(fit, fundamental, market, position = NULL,
+                                    fantasy = NULL) {
   if (is.null(fit)) return(clip_probability(fundamental))
-  clip_probability(stats::predict(
-    fit,
-    newdata = data.frame(
-      fundamental_logit = stats::qlogis(clip_probability(fundamental)),
-      market_logit = stats::qlogis(clip_probability(market))
-    ),
-    type = "response"
-  ))
+
+  newdata <- data.frame(
+    fundamental_logit = stats::qlogis(clip_probability(fundamental)),
+    market_logit = stats::qlogis(clip_probability(market))
+  )
+  ## A calibrator fitted WITH the fantasy term cannot score rows that lack it.
+  ## Rather than error or silently drop those players, they fall back to a
+  ## two-input prediction built from the same fit's coefficients - see
+  ## .predict_cal() below.
+  if (!is.null(fantasy) && length(fantasy) == nrow(newdata)) {
+    f <- rep(NA_real_, nrow(newdata))
+    okf <- is.finite(fantasy)
+    f[okf] <- stats::qlogis(clip_probability(fantasy[okf]))
+    newdata$fantasy_logit <- f
+  }
+  ## Scores with the three-input fit where the fantasy projection exists and
+  ## with the paired two-input fit everywhere else.
+  predict_with <- function(f, idx = NULL) {
+    nd <- if (is.null(idx)) newdata else newdata[idx, , drop = FALSE]
+    if (!is.list(f) || inherits(f, "glm")) {
+      return(as.numeric(stats::predict(f, newdata = nd, type = "response")))
+    }
+    out <- as.numeric(stats::predict(f$base, newdata = nd, type = "response"))
+    if (isTRUE(f$uses_fantasy) && "fantasy_logit" %in% names(nd)) {
+      ok <- is.finite(nd$fantasy_logit)
+      if (any(ok)) {
+        out[ok] <- as.numeric(stats::predict(
+          f$full, newdata = nd[ok, , drop = FALSE], type = "response"
+        ))
+      }
+    }
+    out
+  }
+
+  ## Legacy shape: a plain glm, no positional component.
+  if (!inherits(fit, "td_market_cal")) return(clip_probability(predict_with(fit)))
+
+  out <- predict_with(fit$global)
+  if (length(fit$by_position) && !is.null(position) &&
+      length(position) == nrow(newdata)) {
+    for (po in names(fit$by_position)) {
+      idx <- which(as.character(position) == po)
+      if (length(idx)) out[idx] <- predict_with(fit$by_position[[po]], idx)
+    }
+  }
+  clip_probability(out)
 }
 
 walk_forward_td_predictions <- function(
@@ -227,6 +368,28 @@ walk_forward_td_predictions <- function(
   }
 
   predictions <- dplyr::bind_rows(season_boards)
+
+  ## Fantasy-model TD projection as a calibrator input. See
+  ## R/td_fantasy_signal.R for the measurement that justifies it: on the 2025
+  ## holdout it is worth +0.00142 Brier, ~22x the TE blend, and it drives the
+  ## TD fundamental's own coefficient negative.
+  if (!exists("td_fantasy_signal_history")) source("R/td_fantasy_signal.R")
+  fsig <- td_fantasy_signal_history()
+  if (!is.null(fsig) && nrow(fsig)) {
+    n_before <- nrow(predictions)
+    predictions <- predictions |>
+      dplyr::left_join(fsig, by = c("game_id", "player_id"))
+    if (nrow(predictions) != n_before) {
+      stop("Fantasy TD signal join changed row count: ", n_before, " -> ",
+           nrow(predictions), call. = FALSE)
+    }
+    message(sprintf("TD fantasy signal: matched %.1f%% of %s walk-forward rows.",
+                    100 * mean(is.finite(predictions$fantasy_p_td)),
+                    format(nrow(predictions), big.mark = ",")))
+  } else {
+    message("TD fantasy signal unavailable; calibrator uses market + fundamental only.")
+  }
+
   predictions$model_probability <- NA_real_
   market_fits <- list()
 
@@ -237,7 +400,13 @@ walk_forward_td_predictions <- function(
     predictions$model_probability[current] <- apply_market_calibrator(
       market_fit,
       predictions$fundamental_probability[current],
-      predictions$consensus_probability[current]
+      predictions$consensus_probability[current],
+      position = predictions$position[current],
+      fantasy = if ("fantasy_p_td" %in% names(predictions)) {
+        predictions$fantasy_p_td[current]
+      } else {
+        NULL
+      }
     )
     market_fits[[as.character(test_season)]] <- market_fit
   }
