@@ -300,16 +300,27 @@ for (d in dates) {
       pf, auto_unbox=TRUE, pretty=TRUE, null="null")
     cat(sprintf("  [sim] picks_%s.json (%d)\n", d, length(day)))
   } else {
-    up <- Filter(function(b) !isTRUE(b$.completed), day)         # only post games not yet started
-    if (length(up) > 0) {
+    up <- Filter(function(b) !isTRUE(b$.completed), day)   # only CONSIDER new bets for games not yet decided
+    # MERGE, never overwrite: picks_%s.json used to be rebuilt from `up` alone every run,
+    # which silently DROPPED any bet whose game finished between two runs -- before it was
+    # ever graded (a date's games finish at different times, e.g. a Saturday slate's noon
+    # games are done while the night games are still live). Confirmed live 2026-10-04: a
+    # 28-bet Saturday picks file was cut to 2, permanently losing the other 26 un-graded.
+    # Posted bets are frozen/immutable once written, so an existing bet_id is NEVER
+    # touched here -- only bet_ids not already in the file are appended.
+    existing <- if (file.exists(pf)) fromJSON(pf, simplifyVector=FALSE)$bets else list()
+    existing_ids <- vapply(existing, function(b) b$bet_id, character(1))
+    new_bets <- Filter(function(b) !(b$bet_id %in% existing_ids), up)
+    if (length(new_bets) > 0 || !file.exists(pf)) {
+      merged <- c(existing, lapply(new_bets, function(b) b[!startsWith(names(b),".")]))
       write_json(list(contract_version="1.0", source="cfb-modeling", sport="cfb", slate_date=d, generated_at=now_iso,
         model_version=MODEL_VER, mode=MODE, event_context=sprintf("Week %d",TW),
         notes="UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
-        bets=lapply(up, function(b) b[!startsWith(names(b),".")])),
+        bets=merged),
         pf, auto_unbox=TRUE, pretty=TRUE, null="null")
-      cat(sprintf("  picks_%s.json (%d upcoming)\n", d, length(up)))
+      cat(sprintf("  picks_%s.json (%d total, %d new)\n", d, length(merged), length(new_bets)))
     }
-    # grade from the PREVIOUSLY-POSTED file (source of truth), if present
+    # grade from the PREVIOUSLY-POSTED file (source of truth) -- safe now that posting is append-only
     posted <- if (file.exists(pf)) fromJSON(pf, simplifyVector=FALSE)$bets else list()
   }
 
