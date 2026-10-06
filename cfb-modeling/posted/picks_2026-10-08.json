@@ -1,0 +1,81 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-10-08",
+  "generated_at": "2026-10-06T18:44:10Z",
+  "model_version": "ppp-ppd-2026",
+  "mode": "PAPER",
+  "event_context": "Week 6",
+  "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
+  "bets": [
+    {
+      "bet_id": "cfb-modeling-2026-wk6-southalabama-arkansasstate-atsopen",
+      "event": "South Alabama @ Arkansas State",
+      "event_start": "2026-10-08T23:30:00Z",
+      "market": "spread",
+      "selection": "Arkansas State",
+      "side": "home",
+      "line": -1.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.58,
+      "market_prob": 0.5238,
+      "edge": 0.0562,
+      "ev_pct": 0.1072,
+      "stake_units": 2,
+      "confidence": "medium",
+      "tags": [
+        "OPEN_ATS",
+        "fav"
+      ],
+      "details": {
+        "proj_margin": 10.1,
+        "open_spread": -1.5,
+        "edge_pts": 8.6,
+        "dvoa_consensus": "4/5",
+        "opened": "2026-10-04T17:13:30Z",
+        "week": 6,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
+        "posted_spread": -1.5,
+        "min_line": -3.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk6-missouristate-westernkentucky-atsopen",
+      "event": "Missouri State @ Western Kentucky",
+      "event_start": "2026-10-08T23:00:00Z",
+      "market": "spread",
+      "selection": "Western Kentucky",
+      "side": "home",
+      "line": -1.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.58,
+      "market_prob": 0.5238,
+      "edge": 0.0562,
+      "ev_pct": 0.1072,
+      "stake_units": 2,
+      "confidence": "medium",
+      "tags": [
+        "OPEN_ATS",
+        "fav"
+      ],
+      "details": {
+        "proj_margin": 13.6,
+        "open_spread": -1.5,
+        "edge_pts": 12.1,
+        "dvoa_consensus": "4/5",
+        "opened": "2026-10-04T17:13:30Z",
+        "week": 6,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
+        "posted_spread": -1.5,
+        "min_line": -3.5
+      }
+    }
+  ]
+}
