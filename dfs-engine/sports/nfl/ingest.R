@@ -80,6 +80,14 @@ nfl_depth_path <- function() dfs_path("data", "raw", "nfl_depth_charts.rds")
 # Cached ~12h (the file is ~50MB; "who's starting" doesn't change within a day). Falls
 # back to a stale cache on fetch failure, and to NULL (caller skips the filter) if
 # there's no cache at all — never blocks the pipeline on a missing/failed external pull.
+# Manual starter overrides: the external depth-chart feed lags real elevations (an
+# injury/benching this week hasn't propagated to pos_rank yet). Keyed by team, one
+# name each -- the override REPLACES that team's depth-chart starter, it doesn't add
+# a second one. Remove an entry once the feed itself catches up (check nfl_depth_path()).
+#   2026-10-08: Jalon Daniels in for Baker Mayfield (TB) -- tonight's showdown slate,
+#   confirmed by the user; depth chart still shows Mayfield QB1.
+NFL_QB_STARTER_OVERRIDES <- c(TB = "jalon daniels")
+
 nfl_qb_starters <- function(max_age_hours = 12) {
   p <- nfl_depth_path()
   fresh <- file.exists(p) && difftime(Sys.time(), file.info(p)$mtime, units = "hours") < max_age_hours
@@ -96,6 +104,12 @@ nfl_qb_starters <- function(max_age_hours = 12) {
   if (is.null(DC) || !nrow(DC) || !all(c("pos_abb", "pos_rank", "team", "player_name", "dt") %in% names(DC))) return(NULL)
   Q <- DC[pos_abb == "QB"]; Q <- Q[dt == max(dt)]                # latest snapshot only
   starters <- Q[pos_rank == 1, unique(norm_name(player_name))]
+  if (length(NFL_QB_STARTER_OVERRIDES)) {
+    ov_teams <- toupper(names(NFL_QB_STARTER_OVERRIDES))
+    depth_chart_team <- toupper(Q$team[match(starters, norm_name(Q$player_name))])
+    starters <- starters[!(depth_chart_team %in% ov_teams)]      # drop that team's stale starter
+    starters <- union(starters, unname(NFL_QB_STARTER_OVERRIDES)) # add the real one
+  }
   if (!length(starters)) return(NULL)
   starters
 }
