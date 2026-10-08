@@ -27,7 +27,40 @@ parse_dk_standings <- function(csv_path) {
     fread(csv_path, check.names = FALSE, na.strings = c("", "NA")),
     warning = function(w) { if (grepl("Stopped early", conditionMessage(w))) warned <<- TRUE; invokeRestart("muffleWarning") })
   nm <- names(raw)
-  if (warned) raw <- fread(csv_path, check.names = FALSE, na.strings = c("", "NA"), fill = TRUE, col.names = nm)
+  if (warned) {
+    # Take the player block as the TRAILING columns, parsed per line.
+    #
+    # The layout is: Rank,EntryId,EntryName,TimeRemaining,Points,Lineup,,Player,
+    # Roster Position,%Drafted,FPTS -- the entrant block on the left, a blank spacer,
+    # then the player block as the last 4 columns. Raggedness only ever comes from
+    # UNQUOTED commas on the LEFT (EntryName like "foo (3/20)" or Showdown Lineup
+    # text), which shifts the player block right but never off the end.
+    #
+    # Two earlier attempts both failed on this:
+    #   col.names = nm  -> "Can't assign 11 names to a 30-column data.table" (the
+    #                      strict pass only saw 11 columns before bailing).
+    #   fill=Inf + skip -> parsed, but column N is a DIFFERENT field on ragged rows, so
+    #                      Lineup tokens landed in Player and we hashed ids for "FLEX",
+    #                      "DK", "Deshaun". That is worse than failing: it wrote
+    #                      plausible garbage that then refused to join (2/31 overlap).
+    # Anchoring on the END is immune to left-side shifting.
+    ln <- readLines(csv_path, warn = FALSE); ln <- ln[nzchar(ln)]
+    hdr <- trimws(strsplit(ln[1], ",", fixed = TRUE)[[1]])
+    tailn <- utils::tail(hdr, 4L)
+    if (length(tailn) == 4L && any(grepl("^player$", tailn, ignore.case = TRUE)) &&
+        any(grepl("drafted", tailn, ignore.case = TRUE))) {
+      parts <- lapply(ln[-1], function(x) {
+        f <- strsplit(x, ",", fixed = TRUE)[[1]]
+        if (length(f) < 4L) rep(NA_character_, 4L) else trimws(utils::tail(f, 4L))
+      })
+      raw <- as.data.table(do.call(rbind, parts))
+      setnames(raw, tailn); nm <- tailn
+    } else {
+      # unexpected shape -- fail loudly rather than invent rows
+      stop("Ragged standings export with an unrecognised trailing player block: ",
+           basename(csv_path))
+    }
+  }
   pick <- function(c) { hit <- nm[tolower(trimws(nm)) %in% c]; if (length(hit)) hit[1] else NA_character_ }
   col_player <- pick(c("player")); col_pct <- pick(c("%drafted", "drafted", "% drafted", "pct_drafted"))
   col_pos <- pick(c("roster position", "position", "roster_position"))
@@ -46,10 +79,17 @@ parse_dk_standings <- function(csv_path) {
   # %Drafted is a percentage (0-100). Only rescale if the values are clearly 0-1
   # FRACTIONS (MAX <= 1). Using the median wrongly fired on large-field slates where
   # most players are legitimately <1% owned, inflating actual ownership ~100x.
-  if (isTRUE(max(p, na.rm = TRUE) <= 1)) p <- p * 100
+  if (any(is.finite(p)) && max(p[is.finite(p)]) <= 1) p <- p * 100
   d[, pct_drafted := p][, norm := norm_name(player_name)]
   unique(d, by = "norm")
 }
+
+# max() over an all-NA group returns -Inf (with a warning), not NA. Two players whose
+# %Drafted failed to parse were stored as actual_pct = -Inf, which then propagated into
+# every correlation and sum that touched their slate -- `sum(actual_pct)` came back -Inf
+# for 13 of 15 NFL slates, silently poisoning the accuracy report rather than failing.
+# Collapse to NA so a missing value stays missing.
+.max_finite <- function(x) { x <- x[is.finite(x)]; if (!length(x)) NA_real_ else max(x) }
 
 resolve_player_ids <- function(d, sport) {
   ref <- tryCatch(db_query("SELECT player_id, name FROM players WHERE sport = ?", list(sport)),
@@ -70,36 +110,77 @@ resolve_player_ids <- function(d, sport) {
 # heuristic forever. Pick the layout whose player pool best matches this contest's CSV.
 .resolve_logged_slate <- function(sport, date, slate, site, player_ids) {
   want <- make_slate_id(sport, site, date, slate)
+  # Search a DATE WINDOW, not just the exact date. The slate is built when DK posts it,
+  # which is routinely the day BEFORE kickoff, while the standings capture is keyed to
+  # the contest/settlement date. Confirmed live: ownership for contest 196151358 landed
+  # on nfl-dk-2026-10-04-main while every salary row for those games sat under
+  # nfl-dk-2026-10-03-*. The exact-date LIKE then returned zero candidates and this
+  # function bailed on the line below BEFORE any matching logic ran, orphaning the
+  # capture. That is why NFL ownership stayed unjoinable (and unmeasurable) even after
+  # the cookie and the parser were fixed -- 7 of 7 recent NFL captures orphaned this way.
+  # +/-2 days covers Thu/Sun/Mon builds without reaching a different slate of games.
+  dts <- format(as.Date(date) + (-2:2), "%Y-%m-%d")
+  like <- paste(sprintf("slate_id LIKE '%s-%s-%s-%%'", sport, site, dts), collapse = " OR ")
   cand <- tryCatch(as.data.table(db_query(sprintf(
-    "SELECT DISTINCT slate_id FROM salaries WHERE slate_id LIKE '%s-%s-%s-%%'",
-    sport, site, format(as.Date(date), "%Y-%m-%d")))), error = function(e) NULL)
+    "SELECT DISTINCT slate_id FROM salaries WHERE %s", like))), error = function(e) NULL)
   if (is.null(cand) || !nrow(cand)) return(want)
   if (want %in% cand$slate_id) return(want)                  # single-layout sport: unchanged
   pid <- unique(player_ids[!is.na(player_ids)])
   if (!length(pid)) return(want)
-  # Score by the FRACTION OF THE CANDIDATE'S OWN POOL matched, not raw overlap count.
-  # Raw count always favors a big classic main slate over the true (small) Showdown
-  # slate for the SAME game, because the Showdown's players are a strict subset of the
-  # main slate's -- confirmed live: a DEN@KC Showdown CSV matched 49/50 players against
-  # a 725-player main slate (overlap count "wins") while the real DEN@KC Showdown slate,
-  # when it existed, matched on far fewer raw players but nearly its ENTIRE roster.
-  # Also require a minimum fraction before accepting at all, so a Showdown game that
-  # never got its own slate built stays correctly unresolved instead of being silently
-  # mis-attached to an unrelated main slate (which would corrupt accuracy/ownership
-  # calibration by comparing Showdown CPT-multiplied actuals against base-slate proj).
-  best <- NULL; best_frac <- -1; best_n <- 0L
-  for (sid in cand$slate_id) {
-    have <- tryCatch(db_query(sprintf(
-      "SELECT DISTINCT player_id FROM salaries WHERE slate_id='%s'", sid))$player_id,
-      error = function(e) NULL)
-    if (is.null(have) || !length(have)) next
-    n <- length(intersect(pid, have)); frac <- n / length(have)
-    if (frac > best_frac) { best_frac <- frac; best <- sid; best_n <- n }
+  # A candidate slate is a plausible home only if it can actually HOST this contest:
+  # nearly all of the contest's drafted players must exist in the slate's pool, AND the
+  # pool must be large enough to seat them.
+  #
+  # The previous test scored candidates by the fraction of the CANDIDATE'S OWN pool that
+  # matched (n / pool). That is direction-safe in one case only -- a 50-player Showdown
+  # CSV against a 748-player main slate -- and badly wrong in the other. A 619-player
+  # CLASSIC contest fully contains a 30-player Showdown pool, so it scored n/pool = 1.00,
+  # the maximum possible, and beat the true ~700-player main slate's 0.88. Eleven NFL
+  # captures were re-keyed onto single-game Showdown slates that way, which then compared
+  # classic actuals against CPT-multiplied Showdown projections and dragged measured NFL
+  # ownership correlation NEGATIVE (-0.066 median) while the correctly-keyed contests sat
+  # at +0.40..+0.61. NFL ownership was never broken -- the slate keying was.
+  #
+  # So gate on CONTAINMENT OF THE CONTEST (n / |contest|), which is direction-safe, plus
+  # the SIZE GUARD the old test lacked: a contest that drafted 619 distinct players cannot
+  # be a 30-man Showdown, whatever the overlap fraction says. Among qualifying slates
+  # prefer the SMALLEST pool, so a Showdown still wins over the main slate it is a
+  # subset of. A Showdown game that never got its own slate built now stays correctly
+  # unresolved rather than being silently mis-attached.
+  MIN_COVER <- 0.60   # share of the CONTEST's players that must exist in the slate
+  MIN_POOL  <- 0.90   # slate pool must be >= this x the contest's drafted-player count
+  # Try the EXACT requested date's candidates first, and only widen to the +/-2 window
+  # if none of them qualify. The NFL player universe barely changes week to week, so a
+  # WRONG-DATE main slate (e.g. the week before) also scores high cover against this
+  # contest's players -- confirmed live: a 2026-09-15 contest's true home (main1, pool
+  # 725, cover .868) lost the smallest-pool tiebreak to 2026-09-14's OWN main2 (pool
+  # 602, cover .767), a different week's games entirely, because both independently
+  # cleared the gate and the wrong one happened to be smaller. Scoping to same-date
+  # candidates first removes the ambiguity before the tiebreak ever has to run.
+  exact_dt <- format(as.Date(date), "%Y-%m-%d")
+  cand_exact <- cand[grepl(sprintf("^%s-%s-%s-", sport, site, exact_dt), slate_id)]
+  .pick_best <- function(sids) {
+    best <- NULL; best_pool <- Inf; best_n <- 0L; best_cover <- 0
+    for (sid in sids) {
+      have <- tryCatch(db_query(sprintf(
+        "SELECT DISTINCT player_id FROM salaries WHERE slate_id='%s'", sid))$player_id,
+        error = function(e) NULL)
+      if (is.null(have) || !length(have)) next
+      n <- length(intersect(pid, have)); cover <- n / length(pid)
+      if (n < 8L || cover < MIN_COVER) next                    # contest not contained here
+      if (length(have) < MIN_POOL * length(pid)) next           # pool too small to seat it
+      if (length(have) < best_pool) {
+        best <- sid; best_pool <- length(have); best_n <- n; best_cover <- cover
+      }
+    }
+    list(best = best, pool = best_pool, n = best_n, cover = best_cover)
   }
-  if (is.null(best) || best_n < 8L || best_frac < 0.5) return(want)
-  msg(sprintf("  ownership: '%s' has no slate; attaching to %s (%d/%d players matched, %.0f%% of its pool)",
-              slate, best, best_n, length(pid), 100 * best_frac))
-  best
+  r <- .pick_best(cand_exact$slate_id)
+  if (is.null(r$best) && nrow(cand_exact) < nrow(cand)) r <- .pick_best(cand$slate_id)
+  if (is.null(r$best)) return(want)
+  msg(sprintf("  ownership: '%s' has no slate; attaching to %s (%d/%d of the contest's players, slate pool %d)",
+              slate, r$best, r$n, length(pid), r$pool))
+  r$best
 }
 
 # Log one DK standings CSV -> raw landing (always) + ownership table (resolved).
@@ -127,7 +208,7 @@ log_ownership_csv <- function(csv, sport, date, slate = "main", contest = NULL,
   own <- as.data.table(data.frame(slate_id = slate_id, sport = sport, player_id = d$player_id,
            contest_id = as.character(contest), projected_pct = NA_real_,
            actual_pct = d$pct_drafted, captured_ts = cap))[
-           , .(projected_pct = NA_real_, actual_pct = max(actual_pct, na.rm = TRUE), captured_ts = cap[1]),
+           , .(projected_pct = NA_real_, actual_pct = .max_finite(actual_pct), captured_ts = cap[1]),
              by = .(slate_id, sport, player_id, contest_id)]
   db_upsert("ownership", own, keys = c("slate_id", "player_id", "contest_id"))
   db_upsert("contest_results", data.frame(contest_id = as.character(contest), slate_id = slate_id,
