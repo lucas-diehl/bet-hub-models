@@ -216,6 +216,27 @@ nfl_project_players <- function(slate) {
       pool <- pool[!drop] }
   }
 
+  # --- manual projection overrides: a just-elevated starter with ~1 game of real data
+  # projects low off history alone (see NFL_QB_STARTER_OVERRIDES above, same situation).
+  # Keyed by normalized name -> new base proj; ceil/floor/sim_sd are rescaled by the same
+  # ratio so the distribution shape survives the bump instead of leaving proj > ceil.
+  # Remove once the player has enough of his own games for the model to catch up.
+  #   2026-10-08: Jalon Daniels (TB) -> 14.0 (was ~5.9), per the user, ahead of tonight's
+  #   showdown slate.
+  NFL_PROJ_OVERRIDES <- c("jalon daniels" = 14.0)
+  if (length(NFL_PROJ_OVERRIDES)) {
+    ov_i <- pool$norm %in% names(NFL_PROJ_OVERRIDES)
+    if (any(ov_i)) {
+      new_proj <- unname(NFL_PROJ_OVERRIDES[pool$norm[ov_i]])
+      ratio <- ifelse(is.finite(pool$proj[ov_i]) & pool$proj[ov_i] > 0, new_proj / pool$proj[ov_i], 1)
+      pool$ceil[ov_i]  <- pool$ceil[ov_i] * ratio
+      pool$floor[ov_i] <- pool$floor[ov_i] * ratio
+      pool$sim_sd[ov_i] <- pool$sim_sd[ov_i] * ratio
+      pool$proj[ov_i] <- new_proj
+      msg(sprintf("  nfl: manual proj override for %s -> %.1f", paste(pool$player_name[ov_i], collapse = ", "), new_proj))
+    }
+  }
+
   # --- projected ownership: TRAINED model (leave-one-slate-out validated 2026-10-08,
   # 12 slates / 1972 rows, 10 of 10 valid folds: mean per-slate corr 0.42->0.69, pooled
   # corr 0.28->0.45, RMSE -52%) when one exists, else the value-rank heuristic (cold-start
