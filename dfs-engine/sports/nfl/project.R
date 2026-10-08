@@ -216,10 +216,20 @@ nfl_project_players <- function(slate) {
       pool <- pool[!drop] }
   }
 
-  # --- cold-start projected ownership (chalk tracks value); refined once trained ------
-  pool[, .val := proj / pmax(salary / 1000, 0.1)]
-  r <- frank(pool$.val) / nrow(pool)
-  pool[, own := pmax(0.005, pmin(0.5, 0.02 + 0.42 * r^2))][, .val := NULL]
+  # --- projected ownership: TRAINED model (leave-one-slate-out validated 2026-10-08,
+  # 12 slates / 1972 rows, 10 of 10 valid folds: mean per-slate corr 0.42->0.69, pooled
+  # corr 0.28->0.45, RMSE -52%) when one exists, else the value-rank heuristic (cold-start
+  # fallback; also the fallback for any sport too data-thin to train, see train_ownership_model).
+  own_pred <- tryCatch(predict_ownership(pool, "nfl"), error = function(e) NULL)
+  if (!is.null(own_pred) && length(own_pred) == nrow(pool)) {
+    pool[, own := pmax(own_pred, 0.005)]
+    msg("  NFL ownership: trained model")
+  } else {
+    pool[, .val := proj / pmax(salary / 1000, 0.1)]
+    r <- frank(pool$.val) / nrow(pool)
+    pool[, own := pmax(0.005, pmin(0.5, 0.02 + 0.42 * r^2))]
+    pool[, .val := NULL]
+  }
 
   persist_salaries(pool, slate$slate_id, "nfl")
   pool[, .(player_id, player_name, dk_id, team, game_id, position,
