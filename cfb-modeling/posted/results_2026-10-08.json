@@ -1,0 +1,33 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-10-08",
+  "graded_at": "2026-10-09T18:37:45Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk6-southalabama-arkansasstate-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0337,
+      "pnl_units": -2,
+      "actual": {
+        "actual_margin": -7,
+        "cover_line": -1.5,
+        "closing_line": -3
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk6-missouristate-westernkentucky-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0673,
+      "pnl_units": 1.82,
+      "actual": {
+        "actual_margin": 21,
+        "cover_line": -1.5,
+        "closing_line": 1.5
+      }
+    }
+  ]
+}
