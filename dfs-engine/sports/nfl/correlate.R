@@ -80,23 +80,41 @@ nfl_correlation <- function(pool) {
   # data does not support it. Left at zero rather than fitted slightly positive
   # because the constraint boundary is where the fit put it.
   #
-  # DST is NOT calibrated - the NFL repo does not project team defenses (its own
-  # analysis found DST scoring ~97% luck), so there are no residuals to fit.
-  # Left at the original hand-set values and flagged as such.
-  # Refreshed after snap-share features were added to the projection model.
-  # The loadings barely moved (QB game .376->.408, WR .177->.175, TE .215->.228),
-  # which is the reassuring outcome: the correlation STRUCTURE is a property of
-  # football, not of whichever point model happens to be current.
+  # DST/K CALIBRATED 2026-10-12 against 2021-2025 real DK scoring (sacks, INTs,
+  # fumble recoveries, safeties, blocked kicks, def TDs, points-allowed tiers for
+  # DST; FG-distance tiers for K, computed from nflreadr team_stats - no model
+  # exists for either position, so there's no "residual"; z-scored DK points
+  # within-season stands in for it, same role the fitted projection plays for
+  # QB/RB/WR/TE). QB/RB/WR/TE loadings held FIXED at their already-calibrated
+  # values; only DST/K's 4 parameters were fit, by the same weighted-least-squares
+  # method as 85_calibrate_correlations.R (see
+  # NFL/scripts/85b_calibrate_dst_k_correlations.R).
+  #
+  # The PRIOR hand-set DST value (game=0.35, team=0.20) was never calibrated and
+  # had the WRONG SIGN on the game factor. Measured DST-QB cross-team correlation
+  # is -0.356 (n=1,864), not positive: DST scoring comes from sacks/INTs/points-
+  # allowed, i.e. the OPPOSING offense doing BADLY - a "shootout" (high shared
+  # game factor, which is what lifts QB/WR/TE together) is the worst case for
+  # BOTH teams' defenses simultaneously, not a boost. The old +0.35 told the
+  # simulator a kicker/DST-heavy lineup was a legitimate correlated-upside GPP
+  # play; it was backwards, and it visibly surfaced as the "too safe" lineups
+  # (kicker + DST loaded for floor) the optimizer kept producing.
+  #
+  # K comes back close to zero on both factors (game -0.046, team 0.109) -
+  # essentially uncorrelated with game script either way, which matches the
+  # mechanism (FG attempts come from stalled drives, not scores either team banks).
   game_ld <- fifelse(pos == "QB", 0.408,
              fifelse(pos == "WR", 0.175,
              fifelse(pos == "TE", 0.228,
              fifelse(pos == "RB", 0.062,
-             fifelse(pos == "DST", 0.35, 0.15)))))                 # DST/other: uncalibrated
+             fifelse(pos == "DST", -0.663,
+             fifelse(pos == "K", -0.046, 0.15))))))                # other: uncalibrated
   team_ld <- fifelse(pos == "QB", 0.619,                           # stack anchor
              fifelse(pos == "WR", 0.229,
              fifelse(pos == "TE", 0.180,
              fifelse(pos == "RB", -0.011,                          # measured: no decoupling
-             fifelse(pos == "DST", 0.20, 0.0)))))                  # DST: uncalibrated
+             fifelse(pos == "DST", 0.331,
+             fifelse(pos == "K", 0.109, 0.0))))))                  # other: uncalibrated
   em <- if ("exp_margin" %in% names(pool)) pool$exp_margin else rep(11.1, nrow(pool))
   em[!is.finite(em)] <- 11.1
   blowout_shrink <- sqrt(0.009 / 0.038)                            # measured blowout/close ratio, on the LOAD
