@@ -77,11 +77,29 @@ suppressPackageStartupMessages({ library(data.table) })
 
 # salary-implied baseline (points-per-$1k), the fallback when the model can't project a
 # player (no nflverse history: rookies, DST, unmatched names).
+#
+# Value-per-$1k is NOT flat across the salary range -- measured directly (NFL
+# fantasy_salary_training_frame, 16,406 player-games, 2021-2025): it's close to HALF
+# the pool-wide median at the price floor, because min salary is a hard DK FLOOR
+# (can't price below ~$3,000), not a value signal -- a buried 4th-string RB and a real
+# committee piece can carry the identical $4,000 tag despite wildly different real
+# expectation. Using one pool-wide median for every fallback player (the old formula)
+# meant distinct deep-bench players at the same price point came out with the exact
+# SAME inflated projection -- confirmed live 2026-10-12: four different RBs across
+# three different teams, all $4,000, all proj=8.8 -- which is also why they kept
+# showing up as "free" GPP value across many optimizer lineups despite being pure
+# roster filler. Measured median value/$1k by tier:
+#   <=3500: 0.76 | 3501-4500: 0.78 | 4501-5500: 1.69 | 5501-6500: 2.14 | 6501-7500: 2.17 | 7501+: 2.16
+.nfl_baseline_tier_val <- function(sal) {
+  fifelse(sal <= 3500, 0.76,
+  fifelse(sal <= 4500, 0.78,
+  fifelse(sal <= 5500, 1.69,
+  fifelse(sal <= 6500, 2.14,
+  fifelse(sal <= 7500, 2.17, 2.16)))))
+}
 .nfl_baseline <- function(pool) {
-  val <- suppressWarnings(median(pool$dk_avg / pmax(pool$salary / 1000, 0.1), na.rm = TRUE))
-  if (!is.finite(val) || val <= 0) val <- 2.2
   proj <- as.numeric(pool$dk_avg); bad <- is.na(proj) | proj <= 0
-  proj[bad] <- (pool$salary[bad] / 1000) * val
+  proj[bad] <- (pool$salary[bad] / 1000) * .nfl_baseline_tier_val(pool$salary[bad])
   sd <- pmax(0.42 * proj, 4)
   data.table(proj = proj, sim_sd = sd, ceil = proj + 0.84 * sd,
              floor = pmax(proj - 1.2 * sd, 0), p_zero = 0.03)
