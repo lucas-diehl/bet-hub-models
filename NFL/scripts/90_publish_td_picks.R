@@ -204,6 +204,10 @@ if (!execute) {
   quit(save = "no", status = 0)
 }
 
+cat(sprintf("DEBUG pre-harmonize: nrow(ledger)=%d ncol(ledger)=%d\n", nrow(ledger), ncol(ledger)))
+if (ncol(ledger)) cat("DEBUG ledger col classes:\n", paste(names(ledger), vapply(ledger, function(x) class(x)[[1]], character(1)), sep=":", collapse="  "), "\n")
+cat("DEBUG new_bets col classes:\n", paste(names(new_bets), vapply(new_bets, function(x) class(x)[[1]], character(1)), sep=":", collapse="  "), "\n")
+
 if (nrow(ledger)) {
   for (nm in intersect(names(ledger), names(new_bets))) {
     if (is.numeric(new_bets[[nm]]) && !is.numeric(ledger[[nm]])) {
@@ -220,6 +224,8 @@ if (nrow(ledger)) {
     }
   }
 }
+cat(sprintf("DEBUG post-harmonize: nrow(ledger)=%d ncol(ledger)=%d\n", nrow(ledger), ncol(ledger)))
+if (ncol(ledger)) cat("DEBUG ledger col classes AFTER:\n", paste(names(ledger), vapply(ledger, function(x) class(x)[[1]], character(1)), sep=":", collapse="  "), "\n")
 ledger <- dplyr::bind_rows(ledger, new_bets)
 readr::write_csv(ledger, ledger_path)
 
