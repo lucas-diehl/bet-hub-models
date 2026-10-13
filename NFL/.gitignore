@@ -17,6 +17,13 @@ outputs/*
 # miss - added 2026-10-13 alongside the TD model resync.
 !data/processed/td_devig_hold_table.rds
 !data/processed/td_drive_concentration_calibrator.rds
+# Redzone/xTD features (scripts/73_td_redzone_features.R) - a HARD dependency
+# of join_td_redzone_features() (R/touchdown_registry.R: stop()s if missing,
+# unlike the graceful-fallback artifacts above). Meant to be refreshed WEEKLY
+# from fresh play-by-play, not frozen - tracked as a bootstrap copy so the
+# very first CI run (before any scheduled refresh has happened) still has it;
+# nfl.yml's publish-spread-total/publish-full jobs refresh it for real.
+!data/processed/td_redzone_features.rds
 !data/processed/.gitkeep
 !outputs/.gitkeep
 

@@ -129,6 +129,7 @@ jobs:
 
           if [ "$JOB" = "publish-spread-total" ] || [ "$JOB" = "publish-full" ]; then
             Rscript scripts/86_build_snap_features.R || echo "Snap-share refresh failed; continuing with the cached file."
+            Rscript scripts/73_td_redzone_features.R || echo "Redzone/xTD feature refresh failed; continuing with the cached file."
             Rscript scripts/57_publish_weekly_picks.R --execute
             Rscript scripts/78_nfl_write_slate.R --execute || echo "Slate board write failed; picks were still published."
             Rscript scripts/21_capture_current_dk_salaries.R || echo "DK salary capture failed; continuing without fresh salaries."
