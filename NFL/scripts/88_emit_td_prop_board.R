@@ -105,6 +105,9 @@ posted_for <- function(player) {
   posted[[key]]
 }
 
+wr_max_odds <- suppressWarnings(as.numeric(cfg$strategy$wr_max_odds))
+rb_min_edge <- suppressWarnings(as.numeric(cfg$strategy$rb_min_edge))
+
 d <- card |>
   mutate(
     .excluded_reason = case_when(
@@ -116,6 +119,16 @@ d <- card |>
         sprintf("shorter than %d", as.integer(floor_odds)),
       is.finite(cap_odds) & .data$best_american_odds > cap_odds ~
         sprintf("longer than +%d", as.integer(cap_odds)),
+      ## WR odds-cap / RB edge-floor, added 2026-10-13 alongside the Thu/Sun/
+      ## Mon publish cadence - spelled out here too, not just reflected in a
+      ## blank "-", matching this board's existing "never a silent gap"
+      ## convention (see file header).
+      toupper(.data$position) == "WR" & is.finite(wr_max_odds) &
+        .data$best_american_odds > wr_max_odds ~
+        sprintf("WR longer than +%d", as.integer(wr_max_odds)),
+      toupper(.data$position) == "RB" & is.finite(rb_min_edge) &
+        .data$relative_edge < rb_min_edge ~
+        sprintf("RB edge below %d%%", as.integer(rb_min_edge * 100)),
       TRUE ~ NA_character_
     ),
     .ev = .data$model_probability * (
@@ -130,68 +143,88 @@ num <- function(x) { x <- suppressWarnings(as.numeric(x)); if (length(x) && is.f
 chr <- function(x) if (length(x) && !is.na(x)) as.character(x) else NULL
 compact <- function(l) l[!vapply(l, is.null, logical(1))]
 
-props <- lapply(seq_len(nrow(d)), function(i) {
-  r <- d[i, ]
-  pb <- posted_for(r$player)
-  compact(list(
-    player = chr(r$player),
-    player_id = chr(r$player_id),
-    position = chr(r$position),
-    team = chr(nick(r$team)),
-    opponent = chr(nick(r$opponent_team)),
-    game_id = chr(r$game_id),
-    event = paste(nick(r$team), "vs", nick(r$opponent_team)),
-    event_start = chr(r$kickoff_utc),
-    best_odds = num(r$best_american_odds),
-    best_book = chr(r$best_book),
-    market_prob = num(r$best_implied_probability),
-    consensus_prob = num(r$consensus_probability),
-    books = if (is.finite(r$books_available)) as.integer(r$books_available) else NULL,
-    model_prob = num(r$model_probability),
-    edge = num(r$model_probability - r$best_implied_probability),
-    relative_edge = num(r$relative_edge),
-    ev = num(r$.ev),
-    tier = chr(r$strategy_tier),
-    is_bet = !is.null(pb),
-    stake = if (!is.null(pb)) num(pb$stake_units) else NULL,
-    ## The price and time the bet was actually LOCKED IN, carried straight from
-    ## the picks feed. This board is rebuilt twice a day against the live
-    ## market, so best_odds above moves while these do not - the gap between
-    ## them is exactly how stale a staked price has gone.
-    posted_at = if (!is.null(pb)) chr(pb$posted_at) else NULL,
-    posted_odds = if (!is.null(pb)) num(pb$odds_american) else NULL,
-    excluded_reason = chr(r$.excluded_reason)
-  ))
-})
+build_props <- function(rows) {
+  lapply(seq_len(nrow(rows)), function(i) {
+    r <- rows[i, ]
+    pb <- posted_for(r$player)
+    compact(list(
+      player = chr(r$player),
+      player_id = chr(r$player_id),
+      position = chr(r$position),
+      team = chr(nick(r$team)),
+      opponent = chr(nick(r$opponent_team)),
+      game_id = chr(r$game_id),
+      event = paste(nick(r$team), "vs", nick(r$opponent_team)),
+      event_start = chr(r$kickoff_utc),
+      best_odds = num(r$best_american_odds),
+      best_book = chr(r$best_book),
+      market_prob = num(r$best_implied_probability),
+      consensus_prob = num(r$consensus_probability),
+      books = if (is.finite(r$books_available)) as.integer(r$books_available) else NULL,
+      model_prob = num(r$model_probability),
+      edge = num(r$model_probability - r$best_implied_probability),
+      relative_edge = num(r$relative_edge),
+      ev = num(r$.ev),
+      tier = chr(r$strategy_tier),
+      is_bet = !is.null(pb),
+      stake = if (!is.null(pb)) num(pb$stake_units) else NULL,
+      ## The price and time the bet was actually LOCKED IN, carried straight from
+      ## the picks feed. This board is rebuilt twice a day against the live
+      ## market, so best_odds above moves while these do not - the gap between
+      ## them is exactly how stale a staked price has gone.
+      posted_at = if (!is.null(pb)) chr(pb$posted_at) else NULL,
+      posted_odds = if (!is.null(pb)) num(pb$odds_american) else NULL,
+      excluded_reason = chr(r$.excluded_reason)
+    ))
+  })
+}
 
-slate_date <- as.character(names(sort(table(as.character(d$game_date)), decreasing = TRUE))[1])
-out <- list(
-  contract_version = CONTRACT_VERSION,
-  source = "nfl-modeling",
-  sport = "nfl",
-  market = "anytime_td",
-  market_label = "Anytime Touchdown",
-  slate_date = slate_date,
-  generated_at = format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-  model_version = "td-v2-fantasy",
-  mode = "PAPER",
-  event_context = sprintf("Week %d", target_week),
-  notes = "Every player the permitted books priced. Model probability blends the touchdown model, the market line and the fantasy projection.",
-  props = props
-)
-
+## One props_<date>.json PER DAY present in this week's card, not one file for
+## the whole week collapsed onto whichever day has the most games. Added
+## 2026-10-13 alongside the day-scoped Thu/Sun/Mon publish cadence
+## (scripts/90_publish_td_picks.R) - a Thursday game's board must never live
+## in the same file as a Sunday game's, and the contract doc
+## (docs/sources/nfl-modeling.md in bet-dashboard) already specifies "one file
+## per game day". This also means the existing twice-daily no-stake
+## td-refresh job keeps ALL of this week's day-boards current automatically,
+## with no changes needed there.
+game_days <- sort(unique(as.character(d$game_date)))
 cat("=== Touchdown prop board ===\n")
-cat("week:", target_week, "| slate:", slate_date, "| players:", length(props), "\n")
+cat("week:", target_week, "| game days:", paste(game_days, collapse = ", "),
+    "| players total:", nrow(d), "\n")
 cat("positive edge:", sum(d$model_probability > d$best_implied_probability, na.rm = TRUE), "\n")
-cat("staked:", sum(vapply(props, function(p) isTRUE(p$is_bet), logical(1))), "\n")
 cat("excluded for a structural reason:", sum(!is.na(d$.excluded_reason)), "\n")
 if (any(!is.na(d$.excluded_reason))) print(table(d$.excluded_reason))
 
+for (slate_date in game_days) {
+  day_rows <- d |> filter(as.character(.data$game_date) == slate_date)
+  props <- build_props(day_rows)
+  out <- list(
+    contract_version = CONTRACT_VERSION,
+    source = "nfl-modeling",
+    sport = "nfl",
+    market = "anytime_td",
+    market_label = "Anytime Touchdown",
+    slate_date = slate_date,
+    generated_at = format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    model_version = "td-v2-fantasy",
+    mode = "PAPER",
+    event_context = sprintf("Week %d", target_week),
+    notes = "Every player the permitted books priced. Model probability blends the touchdown model, the market line and the fantasy projection.",
+    props = props
+  )
+
+  staked <- sum(vapply(props, function(p) isTRUE(p$is_bet), logical(1)))
+  cat(sprintf("\n-- %s: %d players, %d staked --\n", slate_date, length(props), staked))
+
+  if (!execute) next
+  dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+  path <- file.path(outdir, sprintf("props_%s.json", slate_date))
+  jsonlite::write_json(out, path, auto_unbox = TRUE, pretty = TRUE, null = "null")
+  cat("Wrote", length(props), "players to", path, "\n")
+}
+
 if (!execute) {
-  cat("\nDry run. Add --execute to write the feed file.\n")
+  cat("\nDry run. Add --execute to write the feed files.\n")
   quit(save = "no", status = 0)
 }
-dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
-path <- file.path(outdir, sprintf("props_%s.json", slate_date))
-jsonlite::write_json(out, path, auto_unbox = TRUE, pretty = TRUE, null = "null")
-cat("\nWrote", length(props), "players to", path, "\n")

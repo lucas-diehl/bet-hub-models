@@ -9,6 +9,14 @@ outputs/*
 !data/processed/game_features.rds
 !data/processed/td_game_context.rds
 !data/processed/td_deployment_model.rds
+# De-vig hold-by-price-band table (scripts/146) and the drive-concentration
+# recalibration coefficients (scripts/117) -- both frozen, one-time-fitted
+# artifacts with no CI step that rebuilds them. Without these tracked, the
+# live board silently degrades to no-de-vig / no-recalibration (both paths
+# have a graceful fallback) rather than failing loudly, so this is easy to
+# miss - added 2026-10-13 alongside the TD model resync.
+!data/processed/td_devig_hold_table.rds
+!data/processed/td_drive_concentration_calibrator.rds
 !data/processed/.gitkeep
 !outputs/.gitkeep
 

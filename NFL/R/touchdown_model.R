@@ -162,18 +162,39 @@ apply_platt_calibrator <- function(fit, probability) {
 td_positional_calibration <- function() "TE"
 
 ## The calibrator gains a third input when the fantasy model's TD projection is
-## available (R/td_fantasy_signal.R). Measured on 2023-2025 it is the strongest
-## of the three - the TD fundamental's own coefficient goes NEGATIVE once it is
-## included - so it is used whenever present and simply omitted when not, which
-## keeps every historical artifact and any caller without fantasy data working.
-## Returns a PAIR: the preferred fit (three-input where the fantasy projection
-## is available) and a two-input fallback fit on the same rows.
+## available (R/td_fantasy_signal.R). It is used whenever present and simply
+## omitted when not, which keeps every historical artifact and any caller
+## without fantasy data working. Returns a PAIR: the preferred fit (three-input
+## where the fantasy projection is available) and a two-input fallback fit on
+## the same rows.
 ##
 ## Both are needed because a glm fitted with `fantasy_logit` returns NA for any
 ## row missing it, and you cannot simply drop the term from a fitted model - the
 ## intercept and the other coefficients were estimated assuming it was there.
 ## Players the fantasy model does not cover therefore get scored by a genuine
 ## two-input model rather than a mutilated three-input one.
+##
+## HOW MUCH THE FANTASY TERM IS ACTUALLY WORTH. This comment previously said it
+## was "the strongest of the three" and that the TD fundamental's coefficient
+## "goes NEGATIVE once it is included". That was measured in-sample on one fit
+## and does not reproduce. Walk-forward (2026-10-08), the MARKET is the only
+## significant input (p < 1e-16 in both folds); the fantasy term is +0.080
+## (p = 0.549) and +0.142 (p = 0.147), and the fundamental is POSITIVE. The
+## fantasy term's real worth is +0.000040 (2024) / +0.000070 (2025)
+## out-of-sample Brier, not the +0.00142 once recorded. Full derivation, and the
+## collinearity that made the old numbers meaningless, in R/td_fantasy_signal.R.
+##
+## NOT STABLY IDENTIFIED - OPEN QUESTION. The three input logits correlate
+## 0.86-0.90 (VIFs 6.09 / 4.75 / 7.02), so this glm pins down the blended
+## prediction much better than it pins down the individual weights: a 4% change
+## in the fantasy input swung its coefficient +0.658 -> +0.134 while market
+## moved +0.648 -> +0.855 and the fundamental flipped sign. Do NOT read the
+## fitted coefficients here as evidence about any input's information content -
+## judge terms on out-of-sample Brier only. A ridge or market-anchored
+## reformulation would be the principled fix; it has NOT been attempted and is
+## left for a deliberate decision, not a drive-by. Removing the fantasy term
+## outright is a small loss (-0.00004 / -0.00007), so that is not the answer
+## either.
 .fit_one_market_calibrator <- function(frame) {
   if (nrow(frame) < 500 || length(unique(frame$outcome)) < 2) return(NULL)
 
@@ -196,12 +217,22 @@ td_positional_calibration <- function() "TE"
   list(full = full, base = base, uses_fantasy = !is.null(full))
 }
 
-fit_market_calibrator <- function(data) {
+## market_col, added 2026-10-11 (external audit, Priority 3/4 -- approved
+## production change). Defaults to the de-vigged market probability
+## (R/touchdown_features.R's build_td_prop_board(), Shin method + hold-by-
+## band, validated in R/td_devig_full_pipeline.R before shipping) rather
+## than the raw, vig-inflated consensus_probability this calibrator always
+## used before today. Falls back to "consensus_probability" automatically
+## if `data` doesn't carry the de-vigged column (an older cached board, or
+## any caller that hasn't rebuilt from the updated build_td_prop_board()),
+## so nothing that already works can break.
+fit_market_calibrator <- function(data, market_col = "consensus_probability_devig") {
+  if (!market_col %in% names(data)) market_col <- "consensus_probability"
   base <- data |>
     dplyr::filter(
       !is.na(.data$anytime_td),
       is.finite(.data$fundamental_probability),
-      is.finite(.data$consensus_probability)
+      is.finite(.data[[market_col]])
     )
   frame <- base |>
     dplyr::transmute(
@@ -210,7 +241,7 @@ fit_market_calibrator <- function(data) {
         clip_probability(.data$fundamental_probability)
       ),
       market_logit = stats::qlogis(
-        clip_probability(.data$consensus_probability)
+        clip_probability(.data[[market_col]])
       )
     )
   ## `frame` MUST stay row-aligned with `base`, because the per-position loop
@@ -393,6 +424,17 @@ walk_forward_td_predictions <- function(
   predictions$model_probability <- NA_real_
   market_fits <- list()
 
+  ## market_probability_col: the de-vigged column when walk_forward_td_
+  ## predictions() has it (it will, via build_td_prop_board() -> prop_board
+  ## -> season_board above), matching exactly what fit_market_calibrator()
+  ## is about to be fit on below -- added 2026-10-11, same de-vig change as
+  ## fit_market_calibrator()'s new market_col default. Falls back to
+  ## consensus_probability so this keeps working against an older board.
+  market_probability_col <- if ("consensus_probability_devig" %in% names(predictions)) {
+    "consensus_probability_devig"
+  } else {
+    "consensus_probability"
+  }
   for (test_season in test_seasons) {
     current <- predictions$season == test_season
     prior <- predictions$season < test_season
@@ -400,7 +442,7 @@ walk_forward_td_predictions <- function(
     predictions$model_probability[current] <- apply_market_calibrator(
       market_fit,
       predictions$fundamental_probability[current],
-      predictions$consensus_probability[current],
+      predictions[[market_probability_col]][current],
       position = predictions$position[current],
       fantasy = if ("fantasy_p_td" %in% names(predictions)) {
         predictions$fantasy_p_td[current]

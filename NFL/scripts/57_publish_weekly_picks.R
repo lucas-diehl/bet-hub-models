@@ -309,81 +309,16 @@ for (i in seq_len(nrow(scored))) {
 }
 
 # --------------------------------------------------------------------------
-# Anytime touchdown: CORE and EXPANDED tiers
+# Anytime touchdown props: moved OUT of this script on 2026-10-13.
 #
-# The board is refreshed by scripts/15, which prices against the four permitted
-# books and applies its own 10-day window.
-#
-# EXPANDED was previously withheld because "its validation ROI went negative
-# once the model was seeded reproducibly". Re-measured 2026-09-29 against the
-# current model - which now carries the fantasy TD signal - and with the QB,
-# +400-band and -150 price-floor exclusions applied, that is no longer true:
-#
-#   CORE      318 bets  ROI +51.1%  +162.4u  P(ROI<=0) 0.000
-#   EXPANDED  230 bets  ROI +30.7%   +70.7u  P(ROI<=0) 0.003
-#   combined  548 bets  ROI +42.5%  +233.0u  P(ROI<=0) 0.000
-#
-# CAVEAT, recorded rather than buried: EXPANDED is materially weaker in the
-# more recent season (2024 +44.1%, P=0.004; 2025 +13.9%, CI spans zero,
-# P=0.144), and its heavy-favorite-only subset is marginal (+27.9%, P=0.054).
-# CORE is the robust tier; EXPANDED is staked at the same per-bet size but
-# should be the first thing dropped if live results disappoint.
+# TD staking is now day-scoped (scripts/90_publish_td_picks.R, run on its own
+# Thu 9am / Sun 6am / Mon 9am ET cadence, one game-day at a time) instead of
+# week-scoped. Running it from here too - on this script's Tue/Sun cadence -
+# would duplicate-stake the same props through a second, week-wide path. This
+# script now only ever handles spread/total.
 # --------------------------------------------------------------------------
 
-td_card_path <- "outputs/td_2026_bet_card.csv"
-td_candidates <- list()
-if (file.exists(td_card_path)) {
-  card <- readr::read_csv(td_card_path, show_col_types = FALSE)
-  core <- if (nrow(card)) {
-    card |>
-      dplyr::filter(
-        tolower(dplyr::coalesce(.data$strategy_tier, "")) %in% c("core", "expanded"),
-        .data$week == target_week,
-        is.finite(.data$best_american_odds),
-        tolower(.data$best_book) %in% tolower(unname(feed_books()))
-      )
-  } else card
-
-  cat("Touchdown bets on the card (core + expanded):", nrow(core), "\n")
-  if (nrow(core)) print(table(tolower(core$strategy_tier)))
-  if (nrow(core)) {
-    proper_book <- stats::setNames(
-      unname(feed_books()), tolower(unname(feed_books()))
-    )
-    for (i in seq_len(nrow(core))) {
-      row <- core[i, ]
-      slate <- format(as.Date(row$game_date))
-      td_candidates[[length(td_candidates) + 1L]] <- tibble::tibble(
-        bet_id = sprintf("nfl-modeling-%s-%s-anytimetd", slate,
-                         feed_slug(row$player)),
-        slate_date = slate, week = as.integer(row$week),
-        event = paste(row$opponent_team, "@", row$team),
-        event_start = NA_character_, market = "prop",
-        market_label = "Anytime TD",
-        selection = paste(row$player, "Anytime TD"),
-        side = "yes", line = NA_real_,
-        edge = row$relative_edge,
-        odds_american = as.integer(row$best_american_odds),
-        book = unname(proper_book[tolower(row$best_book)]),
-        model_prob = row$model_probability,
-        # Carried so the price floor can be set from the consensus rather than
-        # from a model probability the Brier test says is worse than the
-        # market's. See scripts/69.
-        consensus_prob = if ("consensus_probability" %in% names(row)) {
-          row$consensus_probability
-        } else {
-          NA_real_
-        },
-        stat = "anytime_td", player = row$player, team = row$team,
-        strategies = "td_core_upgraded,td_core_baseline"
-      )
-    }
-  }
-} else {
-  cat("No touchdown bet card found; run scripts/15 first.\n")
-}
-
-fresh <- dplyr::bind_rows(c(candidates, td_candidates))
+fresh <- dplyr::bind_rows(candidates)
 
 # bind_rows() of an empty list returns a frame with no columns, so a week where
 # nothing qualifies used to blow up on the ledger join rather than reporting a
@@ -393,10 +328,9 @@ if (!nrow(fresh)) {
   fresh <- tibble::tibble(
     bet_id = character(), slate_date = character(), week = integer(),
     event = character(), event_start = character(), market = character(),
-    market_label = character(), selection = character(), side = character(),
+    selection = character(), side = character(),
     line = numeric(), edge = numeric(), odds_american = integer(),
-    book = character(), model_prob = numeric(), consensus_prob = numeric(),
-    stat = character(), player = character(), team = character(),
+    book = character(), model_prob = numeric(),
     strategies = character()
   )
 }

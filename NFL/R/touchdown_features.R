@@ -1,4 +1,10 @@
 if (!exists("assert_td_schema")) source("R/touchdown_registry.R")
+## De-vig support, added 2026-10-11 (external audit, Priority 3/4 -- approved
+## production change, scoped to adding consensus_probability_devig in
+## build_td_prop_board() below). Reuses the validated Shin-method/hold-by-
+## band functions from R/td_devig_methods.R as-is -- that file is the source
+## of truth for the de-vig math itself and is not reimplemented here.
+if (!exists("td_devig_one_sided")) source("R/td_devig_methods.R")
 
 normalize_prop_player_name <- function(x) {
   x <- iconv(as.character(x), from = "", to = "ASCII//TRANSLIT")
@@ -498,6 +504,48 @@ build_td_prop_board <- function(odds, player_features, player_directory = NULL) 
     )
 
   mapped <- dplyr::bind_rows(matched, unmatched)
+
+  ## De-vigged market probability, added 2026-10-11 (external audit,
+  ## Priority 3/4). consensus_probability above carries the FULL bookmaker
+  ## overround with no vig removal -- measured to over-predict the actual TD
+  ## rate in EVERY price band (n-weighted mean |predicted-actual| 0.038,
+  ## scripts/142_td_devig_audit.R), 4.4x worse than Shin's method (0.0087),
+  ## the best of four de-vig methods compared. This is ADDITIVE, NOT a
+  ## replacement: consensus_probability is untouched and still used
+  ## everywhere it already was; consensus_probability_devig is a new column,
+  ## consumed specifically as fit_market_calibrator()'s market input
+  ## (R/touchdown_model.R) -- relative_edge/probability_edge stay on
+  ## best_implied_probability throughout (R/touchdown_model.R,
+  ## R/touchdown_deploy.R), unaffected by this change.
+  ##
+  ## Shin's method + the hold-by-band estimate are the exact validated logic
+  ## from R/td_devig_methods.R (sourced above) -- not re-derived here. The
+  ## hold-by-band table (data/processed/td_devig_hold_table.rds,
+  ## scripts/146_build_td_devig_hold_table.R) is a frozen, one-time
+  ## calibration estimated from 1,462 genuinely two-sided anytime-TD markets
+  ## in the historical odds cache (one book posts both Yes and No) -- a
+  ## market-structure constant, not something refit per board build, same
+  ## convention as this project's other small fitted artifacts (e.g.
+  ## td_drive_concentration_calibrator.rds).
+  devig_hold_table <- tryCatch(
+    readRDS("data/processed/td_devig_hold_table.rds"),
+    error = function(e) NULL
+  )
+  mapped$consensus_probability_devig <- mapped$consensus_probability
+  if (!is.null(devig_hold_table)) {
+    devigged <- td_devig_one_sided(
+      mapped$consensus_probability, mapped$best_american_odds,
+      devig_hold_table, "shin"
+    )
+    mapped$consensus_probability_devig <- dplyr::coalesce(
+      devigged, mapped$consensus_probability
+    )
+  } else {
+    message(
+      "data/processed/td_devig_hold_table.rds not found; ",
+      "consensus_probability_devig falls back to the raw consensus for this build."
+    )
+  }
 
   feature_columns <- setdiff(
     names(player_features),

@@ -1,19 +1,74 @@
 season: 2026
 mode: "paper"
 
+## ===========================================================================
+## PROVENANCE WARNING, 2026-10-08.
+##
+## Every selected-bet ROI figure recorded in this file before today was
+## measured on the 2026-09-29 walk-forward artifact, whose model_probability
+## column is now known to be contaminated. That artifact's market calibrator
+## consumed fantasy_prop_walk_forward.rds as it stood on 09-29, i.e. BEFORE
+## the NGS receiving collapse was repaired (NGS was disabled 2026-10-01 and
+## the fantasy walk-forward rebuilt at 13:27 the same day). It weighted
+## fantasy_logit at +0.53 / +0.61 with fundamental_logit NEGATIVE.
+##
+## The 2026-10-08 refit of that calibrator on the repaired fantasy input gives
+## fantasy_logit +0.0804 (p = 0.549) and +0.1421 (p = 0.147), fundamental_logit
+## positive again, and market_logit at +0.99 / +0.88. The term's honest
+## out-of-sample Brier contribution is +0.00008 (fit on 2024, evaluated on
+## 2025) against the +0.00142 the old comments claimed.
+##
+## HONEST CURRENT PERFORMANCE of the strategy configured below, measured on
+## the refit artifact at 4-book (live-bettable) prices over 2024-25:
+##
+##     210 bets, ROI +11.9%, week-block CI [-10.0%, +38.3%],
+##     P(ROI <= 0) = 0.155, hit-rate z = 0.26, 5%-trimmed ROI -18.4%,
+##     44% of weeks profitable. 2024 alone is -3.1%.
+##
+## That is CONSISTENT WITH ZERO and UNDERPOWERED - not a demonstrated edge.
+## n = 210 does not rule out a real +20% edge either, so the honest reading is
+## "no longer evidence of an edge", not "proven dead". mode stays "paper".
+##
+## Superseded figures are kept in place below, dated, rather than deleted.
+## ===========================================================================
+
 market:
   region: "us"
   minimum_books: 2
   # Price floor raised from -300 to -150 (2026-09-29). Bets priced worse than
   # -150 returned -7.8% over 67 selected bets in 2024-25; all but a handful were
   # short-priced RB props, where the market is efficient and the model adds
-  # nothing. See outputs/td_price_band_performance.csv.
+  # nothing.
+  #
+  # [2026-10-08] The -7.8% is a contaminated-generation figure; indicative only.
+  # The floor survives on BLIND market evidence, which needs no model: at
+  # 4-book prices over 2023-25, betting every row in -150..-101 returned -6.7%
+  # (n = 562) and everything shorter than -150 returned -3.9% (n = 214).
+  # The original citation here was outputs/td_price_band_performance.csv, which
+  # DOES NOT EXIST anywhere in this repo - removed rather than left dangling.
   minimum_american_odds: -150
   # Left at 700 deliberately. 1,298 of the 1,339 selected bets at +700-or-longer
   # sit ABOVE this cap, and that tail's apparent +18.9% ROI collapses to -4.1%
   # once the ten best winners are removed (week-block CI [-0.026, +0.418]).
   # Inside the cap the same period returns +17.6% with P(ROI<=0) = 0.000. The
   # cap is load-bearing, not an oversight.
+  #
+  # [2026-10-08] CONFIRMED load-bearing, and for a second reason the original
+  # comment did not know about. A proposal to raise this to 900 was tested and
+  # REJECTED. On the 09-29 artifact the +701..+999 slice looked strong (n = 105,
+  # 22 wins vs 11.1 expected, hit-rate z = 2.46, 4-book); on the refit the same
+  # slice is n = 90, 10 wins vs 9.5 expected, z = 0.18, and 2025 lift is
+  # NEGATIVE. The gate set in advance was "pooled z > 2 AND positive lift in
+  # both seasons"; it failed both. Twelve of the 22 winners that carried the
+  # case were selected only by the insignificant fantasy term.
+  #
+  # The second reason: this ceiling is currently the ONLY thing containing a
+  # live model defect. On the 2026-10-05 board, rescored with the refit model,
+  # the positive-edge rate is 0.0% at <=+399 and 2.4% at +400..+999, then 36.8%
+  # at +1000..+1999 and 83.3% at +2000+. That is a model-probability FLOOR
+  # colliding with 2-5% market prices, not an edge. See the live-feature
+  # coverage note in score_td_deployment_board() in R/touchdown_deploy.R.
+  # DO NOT raise this ceiling until that floor is fixed.
   maximum_american_odds: 700
   refresh_window_days: 10
 
@@ -23,17 +78,68 @@ strategy:
   # 2024-25 returned -14.8% ROI (-28.3u), and it is the one position with a
   # negative Brier edge vs best price (-0.00064). Removing it lifted overall
   # selected ROI from +16.1% to +18.2%.
+  #
+  # [2026-10-08] The -14.8% / +16.1% -> +18.2% figures are contaminated-
+  # generation numbers and should not be quoted as evidence. The exclusion is
+  # retained on the narrower claim that still holds: QB is the position where
+  # the fundamental model is known to be worse than useless (see
+  # td_positional_calibration() in R/touchdown_model.R, beta_fundamental
+  # -0.036), so there is no mechanism by which it could beat the price.
   exclude_positions: ["QB"]
-  # Price band barred outright. The +400s are the worst-priced region of the
-  # whole market (-13.5% betting blind, the largest drag of any band) AND the
-  # model fails to rescue it: 228 selected bets returned -8.1% (-18.4u).
-  # Both ends are inclusive of the 400s and exclusive of 500.
+  # Price band barred outright. Both ends are inclusive of the 400s and
+  # exclusive of 500.
+  #
+  # [2026-10-08] JUSTIFICATION REPLACED. The original reason given here was
+  # "228 selected bets returned -8.1% (-18.4u)". That DOES NOT REPLICATE: on
+  # the seasons where a calibrator exists it is 155 bets at -2.7%, week-block
+  # CI [-32%, +27%], P(ROI<=0) = 0.56, and it flips sign between seasons
+  # (2024 -22.4%, 2025 +16.3%). It was noise fitted to one slice.
+  #
+  # What the band IS supported by is the BLIND market - no model, no
+  # calibrator, immune to the 09-29 contamination. Betting every priced row in
+  # +400..+499 at 4-book prices over 2023-25:
+  #
+  #     n = 1,288, actual 15.4% vs implied 18.6% (market high by 21.2%),
+  #     blind ROI -17.8%, hit-rate z = -3.28,
+  #     and it replicates in all three seasons (2023 -16.7%, 2024 -19.3%,
+  #     2025 -9.0%).
+  #
+  # Caveats stated honestly: 10 price bands were tested, so z = -3.28 is only
+  # about Bonferroni-marginal, and the mispricing is NON-CONTIGUOUS (the +500s
+  # are fine at z = -0.40 while the +600s are bad at z = -3.11), which fits
+  # noisy band estimates better than clean structure. The 3/3 seasonal
+  # replication is what carries it.
+  #
+  # Widening the band was tested and rejected: at any ceiling, 400-699 is
+  # ROI-neutral and costs ~19% of bets, 300-699 costs ~36% of PnL. With TD
+  # props staked flat by feed_stake_units(), PnL is the objective, so widening
+  # is a straight loss. Keep it at exactly the 400s.
   exclude_odds_low: 400
   exclude_odds_high: 499
   expanded_edge: 0.02
   core_edge: 0.05
   low_total_max: 42
   heavy_favorite_max_spread: -6
+  # Position-specific gates, added 2026-10-13 at the user's explicit direction
+  # for the re-launched site publishing (see R/touchdown_deploy.R core_signal/
+  # expanded_signal). Each is ADDITIVE on top of the existing edge/situational
+  # logic above, not a replacement. TE gets no new gate -- it keeps exactly the
+  # core_edge/expanded_edge + low_total/tight_end logic as before.
+  #
+  # wr_max_odds: a real multi-year walk-forward backtest (2023-25, 759 EXPANDED
+  # bets) found the +551-or-longer WR bucket alone at 53 bets, 5.7% win rate,
+  # ROI -54.7%, bootstrap CI [-100%, +5.7%] -- the closest thing to a
+  # statistically confident NEGATIVE result found this session. WR's claimed-
+  # edge/real-ROI relationship also INVERTS at the high end (2-5% claimed edge:
+  # -0.4% ROI; 30%+ claimed edge: -66.7% ROI, 1 win in 24) -- the model's own
+  # edge number is actively misleading for WR longshots, not merely noisy.
+  wr_max_odds: 500
+  # rb_min_edge: the same backtest split RB's EXPANDED-tier bets by whether they
+  # also cleared the tighter 5% CORE threshold: edge 2-5% ("also_core" FALSE) ran
+  # 87 bets at ROI -15.1%; edge >=5% ran 204 bets at ROI +15.7%. Unlike WR, RB's
+  # edge number points the right direction -- this floor just closes off RB's
+  # worst-performing segment (the 2-5% EXPANDED tier) rather than RB as a whole.
+  rb_min_edge: 0.05
   # Weekly cap on CORE+EXPANDED bets actually published, added 2026-10-01 -
   # this is what the bankroll section's old "daily_or_weekly_cap: null" was a
   # placeholder for; moved here next to the other qualification knobs and
@@ -49,6 +155,38 @@ strategy:
   # R/touchdown_deploy.R for how the cap is applied (CORE first, then
   # EXPANDED ordered by SMALLEST edge first - deliberately inverted, since
   # this week's extreme edges are the least trustworthy ones).
+  #
+  # [2026-10-08] The anomaly this cap was built for is now EXPLAINED, and the
+  # cap turns out not to have been the thing containing it. Three corrections:
+  #
+  #   1. The "+51.1% CORE vs +30.7% EXPANDED" tier comparison above is a
+  #      contaminated-generation figure. Do not quote it.
+  #
+  #   2. The comparison that motivated the cap was apples-to-oranges. This cap
+  #      is applied to the WHOLE board, and the board spans
+  #      refresh_window_days: 10 - i.e. up to two NFL weeks (the 10-05 card
+  #      held weeks 4 AND 5 with exactly 20 CORE+EXPANDED). The 15.2-20.6
+  #      baseline it was compared against is PER WEEK. Historically, 2024-25
+  #      single weeks run mean 20.6 / max 38, while two consecutive weeks run
+  #      mean 41.4 / max 70 - so the live 66-77 is the 97th percentile of the
+  #      two-week distribution, not an off-the-charts event. Making the cap
+  #      per-week is the correct fix but is deliberately NOT applied: under
+  #      the refit calibrator no historical week in 2024-25 reaches 20 at all
+  #      (max 18, mean 6.9/week), so the change would be cosmetic today.
+  #
+  #   3. The real anomaly was the fantasy-signal contamination described in
+  #      the provenance block at the top of this file. It inflated bet volume
+  #      roughly 3x: frac(relative_edge >= 0.02) over 2024-25 was 8.6% before
+  #      the term existed, 24.8% on the contaminated generation, and 14.4%
+  #      after the refit. Posted volume under this config fell from
+  #      20.6/week to 6.9/week on identical market data. The "zero-history
+  #      player imputation bug, fixed, but it didn't explain the bulk of the
+  #      shift" note above was correct that it was not the main cause.
+  #
+  # A proposal to raise this cap to 30 was tested and WITHDRAWN. On the 09-29
+  # artifact, cap=20 bumped 94 bets worth +55.8% ROI / +52.5u; on the refit it
+  # bumps ZERO bets across all 36 weeks of 2024-25. The evidence for raising
+  # it does not exist any more. Left at 20, where it is currently inert.
   weekly_bet_cap: 20
 
 bankroll:

@@ -21,6 +21,18 @@ stats_path <- "data/raw/player_stats_2021_2026.rds"
 events_path <- "data/raw/td_2026_current_events.rds"
 lines_path <- "data/raw/td_2026_current_game_lines.rds"
 props_dir <- "data/raw/odds_api_td_2026_current"
+## Timestamped, non-destructive snapshot ARCHIVE, added 2026-10-10 (audit
+## Priority 1). Confirmed: props_dir above is overwritten in place every run
+## (one file per event_id, single mtime) -- every prior run's price for that
+## event is gone the moment the next run lands, so CLV (closing-line value:
+## price at bet time vs. price at close) has never been computable from any
+## historical run; there is nothing to retroactively fix, only to start
+## capturing going forward. props_archive_dir accumulates a NEW file per
+## successful fetch per event (never overwritten) so a later run can pick
+## whichever snapshot sat closest to that event's kickoff and treat it as
+## the closing price. Purely additive -- props_dir itself, and everything
+## downstream of it, is unchanged.
+props_archive_dir <- "data/raw/td_2026_odds_history/props"
 dir.create(props_dir, recursive = TRUE, showWarnings = FALSE)
 
 if (execute || !file.exists(schedule_path)) {
@@ -120,6 +132,20 @@ if (execute && nrow(upcoming_events)) {
       saveRDS(
         result$data,
         file.path(props_dir, paste0(event$event_id, ".rds"))
+      )
+      ## Archive snapshot -- see props_archive_dir comment above.
+      archive_event_dir <- file.path(props_archive_dir, event$event_id)
+      dir.create(archive_event_dir, recursive = TRUE, showWarnings = FALSE)
+      saveRDS(
+        list(
+          data = result$data,
+          fetched_at_utc = now_utc,
+          commence_utc = event$commence,
+          minutes_to_kickoff = as.numeric(
+            difftime(event$commence, now_utc, units = "mins")
+          )
+        ),
+        file.path(archive_event_dir, paste0(format(now_utc, "%Y%m%dT%H%M%SZ"), ".rds"))
       )
       quota_used <- result$quota$last
       quota_remaining <- result$quota$remaining

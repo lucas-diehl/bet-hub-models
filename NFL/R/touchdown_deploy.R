@@ -434,10 +434,22 @@ score_td_deployment_board <- function(prop_board, deployment) {
                     sum(is.finite(fantasy_p)), nrow(prop_board)))
   }
 
+  ## Train/apply consistency fix, 2026-10-12. deployment$market_fit was fit (via
+  ## fit_td_deployment_model() -> fit_market_calibrator()) against
+  ## consensus_probability_devig, the Shin-de-vigged market logit -- but this live
+  ## board was still passing the RAW consensus_probability here, a mismatch between
+  ## what the calibrator learned and what it was being applied to. Use the de-vigged
+  ## column when build_td_prop_board() produced one; fall back to raw otherwise,
+  ## mirroring fit_market_calibrator()'s own market_col fallback convention exactly.
+  market_input <- if ("consensus_probability_devig" %in% names(prop_board)) {
+    prop_board$consensus_probability_devig
+  } else {
+    prop_board$consensus_probability
+  }
   model_probability <- apply_market_calibrator(
     deployment$market_fit,
     fundamental_probability,
-    prop_board$consensus_probability,
+    market_input,
     position = prop_board$position,
     fantasy = fantasy_p
   )
@@ -523,6 +535,14 @@ prepare_td_2026_bet_card <- function(
       ## money; together they lift selected ROI from +16.1% to +21.1% and PnL
       ## from +482.7u to +534.7u over 2,533 bets, week-block CI [+10.8%, +32.5%].
       ##
+      ## [2026-10-08] The figures above were measured on the 2026-09-29 walk-
+      ## forward artifact, now known to be contaminated (see the provenance
+      ## block atop config/td_2026.yml). Do not quote them. The honest current
+      ## read on the refit artifact: 210 selected bets, ROI +11.9%, week-block
+      ## CI [-10.0%, +38.3%], hit-rate z = 0.26 -- consistent with zero, not a
+      ## demonstrated edge. The individual exclusions below are retained on
+      ## narrower, still-supported claims (see config/td_2026.yml for each).
+      ##
       ##   QB           192 bets, -14.8% ROI, the only position with a negative
       ##                Brier edge against the best available price
       ##   +400..+499   228 bets, -8.1%; also the worst-priced band in the
@@ -536,11 +556,39 @@ prepare_td_2026_bet_card <- function(
         toupper(.data$position) %in% .excl_pos |
         (.data$best_american_odds >= .excl_lo &
            .data$best_american_odds <= .excl_hi),
+      ## Minimum-history gate, added 2026-10-08. The live board applies no history
+      ## filter at all (only !is.na(player_id) & current_game_match upstream in
+      ## scripts/15), while the fantasy-signal rolling features it feeds on
+      ## (touches_r5 etc.) are NA for a true zero-usage player and get median-
+      ## imputed to a typical backup's value rather than 0. Confirmed live on the
+      ## 2026-10-05 board: Bauer Sharp (2 career games, 0.0 average targets) priced
+      ## +5000 at relative_edge +3.64, marked PASS only because the +700 ceiling
+      ## happened to catch it -- same pattern for Carsen Ryan, Seydou Traore, Max
+      ## Klare, Payne Durham, E.J. Jenkins, Oscar Delp, Treyton Welch, Tanner
+      ## Koziol, Sam Roush, Quintin Morris, Jackson Hawes. TE and +1000 edge rates
+      ## stayed 2-4x the no-fantasy baseline even after the 2026-10-08 calibrator
+      ## refit, so this is independent of that fix and still needed.
+      ##
+      ## Deliberately NOT a flat prior_games floor -- that would also delete a
+      ## real bet: a rookie who takes over a backfield in week 3 has few career
+      ## games but genuine recent usage. Gate on the ABSENCE of recent usage
+      ## instead, with career games as a fallback for a player merely missing a
+      ## single recent game (bye, minor injury): excluded only if BOTH prior_games
+      ## < 4 AND there is no recent touch volume at all.
+      ##
+      ## The historical walk-forward cannot fully validate this threshold -- it
+      ## filters prior_games >= 1 (R/touchdown_model.R) and has almost no coverage
+      ## of the specific zero-history-at-long-odds class this targets, because
+      ## that class is largely absent from the backtest's own universe. That is
+      ## the honest limitation, not a number the data can currently support.
+      history_ready = dplyr::coalesce(.data$prior_games, 0L) >= 4L |
+        dplyr::coalesce(.data$touches_r5, 0) > 0,
       eligible_price = .data$books_available >=
         config$market$minimum_books &
         .data$best_american_odds >= config$market$minimum_american_odds &
         .data$best_american_odds <= config$market$maximum_american_odds &
-        !.data$excluded_segment,
+        !.data$excluded_segment &
+        .data$history_ready,
       low_total = .data$total_line <= config$strategy$low_total_max,
       tight_end = .data$position == "TE",
       heavy_favorite = .data$team_spread <=
@@ -563,14 +611,33 @@ prepare_td_2026_bet_card <- function(
       ## Adding it improves BOTH axes, which is rare: 548 -> 740 bets,
       ## ROI +42.5% -> +44.5%, PnL +233.0u -> +329.0u, CI [+0.291, +0.596].
       ## RB deliberately still has to clear a situational reason.
+      ##
+      ## [2026-10-08] The +42.5%/+44.5% figures are contaminated-generation
+      ## numbers (see config/td_2026.yml provenance block) -- do not quote them.
+      ## Whether the WR carve-out itself still earns its keep has NOT been
+      ## re-measured in isolation on the refit artifact; only the strategy as a
+      ## whole has (+11.9% ROI, CI [-10.0%, +38.3%], z = 0.26, n = 210). Left
+      ## in place rather than reverted, since removing it was not tested either.
       wide_receiver = .data$position == "WR",
+      ## Position-specific gates, added 2026-10-13 at the user's explicit
+      ## direction for the re-launched site publishing. Each is ADDITIVE on
+      ## top of the core/expanded logic above -- never widens eligibility,
+      ## only narrows it for the two named positions. TE gets no new gate.
+      ## See the dated comment in config/td_2026.yml (strategy.wr_max_odds /
+      ## strategy.rb_min_edge) for the backtest evidence behind each number.
+      wr_odds_ok = .data$position != "WR" |
+        .data$best_american_odds <= config$strategy$wr_max_odds,
+      rb_edge_ok = .data$position != "RB" |
+        .data$relative_edge >= config$strategy$rb_min_edge,
       core_signal = .data$eligible_price &
         .data$relative_edge >= config$strategy$core_edge &
-        (.data$low_total | .data$tight_end),
+        (.data$low_total | .data$tight_end) &
+        .data$wr_odds_ok & .data$rb_edge_ok,
       expanded_signal = .data$eligible_price &
         .data$relative_edge >= config$strategy$expanded_edge &
         (.data$low_total | .data$tight_end | .data$heavy_favorite |
-           .data$wide_receiver),
+           .data$wide_receiver) &
+        .data$wr_odds_ok & .data$rb_edge_ok,
       strategy_tier = dplyr::case_when(
         .data$core_signal ~ "CORE",
         .data$expanded_signal ~ "EXPANDED",
@@ -647,6 +714,10 @@ prepare_td_2026_bet_card <- function(
   ##
   ## CORE fills the cap first - it is the better-validated tier (2024-25 ROI
   ## +51.1% vs EXPANDED's +30.7%, and existed before any of today's changes).
+  ## [2026-10-08] That tier split is a contaminated-generation figure (see
+  ## config/td_2026.yml provenance block); not re-measured in isolation on the
+  ## refit. CORE-first fill order is kept as the more conservative default,
+  ## not because the split is still known to hold.
   ## Any EXPANDED slots remaining are filled by LOWEST relative_edge among
   ## EXPANDED qualifiers, not highest - the inverted priority is deliberate:
   ## this week's own data shows the model's claimed edge is currently the LEAST
@@ -657,36 +728,60 @@ prepare_td_2026_bet_card <- function(
   ## tracked, never staked - not silently dropped.
   cap <- suppressWarnings(as.integer(config$strategy$weekly_bet_cap))
   if (length(cap) && is.finite(cap)) {
-    core_idx <- which(scored$strategy_tier == "CORE")
-    core_keep <- core_idx
-    remaining <- max(0L, cap - length(core_keep))
-    exp_idx <- which(scored$strategy_tier == "EXPANDED")
-    exp_order <- exp_idx[order(scored$relative_edge[exp_idx])]  # smallest edge first
-    exp_keep <- utils::head(exp_order, remaining)
-    exp_bump <- setdiff(exp_idx, exp_keep)
-    if (length(core_keep) > cap) {
-      # CORE alone exceeds the cap - keep the cap's worth, smallest edge first,
-      # for the same reason EXPANDED does; bump the rest to WATCHLIST too.
-      core_order <- core_idx[order(scored$relative_edge[core_idx])]
-      core_keep <- utils::head(core_order, cap)
-      scored$strategy_tier[setdiff(core_idx, core_keep)] <- "WATCHLIST"
+    ## Confirmed bug (2026-10-09, external audit of today's work). This cap
+    ## was applied across the WHOLE `scored` frame in a single pass -- i.e.
+    ## per BOARD-BUILD CALL, not per NFL week as the config key's own name
+    ## ("weekly_bet_cap") promises. scripts/15's upcoming-events window is not
+    ## guaranteed to hold exactly one week: it can legitimately straddle two
+    ## (e.g. next week's early-posted Thursday-night line arriving before this
+    ## week's Monday-night game has been played). Before this fix, such a
+    ## board shared ONE pool of `cap` slots across both weeks combined instead
+    ## of `cap` slots EACH week -- silently under-filling whichever week's
+    ## rows lost the tie-break, with no error or warning. Fixed by applying
+    ## the identical CORE-first / smallest-EXPANDED-edge-first logic
+    ## independently within each (season, week) group actually present in
+    ## `scored`, keyed on those columns rather than on "the board" as a whole.
+    week_keys <- unique(scored[, c("season", "week")])
+    for (wk in seq_len(nrow(week_keys))) {
+      wk_season <- week_keys$season[[wk]]
+      wk_week <- week_keys$week[[wk]]
+      week_mask <- which(scored$season == wk_season & scored$week == wk_week)
+
+      core_idx <- week_mask[scored$strategy_tier[week_mask] == "CORE"]
+      core_keep <- core_idx
+      remaining <- max(0L, cap - length(core_keep))
+      exp_idx <- week_mask[scored$strategy_tier[week_mask] == "EXPANDED"]
+      exp_order <- exp_idx[order(scored$relative_edge[exp_idx])]  # smallest edge first
+      exp_keep <- utils::head(exp_order, remaining)
+      exp_bump <- setdiff(exp_idx, exp_keep)
+      if (length(core_keep) > cap) {
+        # CORE alone exceeds the cap - keep the cap's worth, smallest edge first,
+        # for the same reason EXPANDED does; bump the rest to WATCHLIST too.
+        core_order <- core_idx[order(scored$relative_edge[core_idx])]
+        core_keep <- utils::head(core_order, cap)
+        scored$strategy_tier[setdiff(core_idx, core_keep)] <- "WATCHLIST"
+      }
+      if (length(exp_bump)) scored$strategy_tier[exp_bump] <- "WATCHLIST"
+      n_bumped <- length(exp_bump) + max(0L, length(core_idx) - length(core_keep))
+      if (n_bumped > 0) {
+        message(sprintf(
+          "Weekly bet cap (%d) for season %s week %s: %d bet(s) bumped CORE/EXPANDED -> WATCHLIST.",
+          cap, wk_season, wk_week, n_bumped
+        ))
+      }
     }
-    if (length(exp_bump)) scored$strategy_tier[exp_bump] <- "WATCHLIST"
-    n_bumped <- length(exp_bump) + max(0L, length(core_idx) - length(core_keep))
-    if (n_bumped > 0) {
-      message(sprintf(
-        "Weekly bet cap (%d): %d bet(s) bumped CORE/EXPANDED -> WATCHLIST.",
-        cap, n_bumped
-      ))
-      scored <- scored |>
-        dplyr::mutate(
-          units = dplyr::if_else(.data$strategy_tier %in% c("CORE", "EXPANDED"),
-                                 .data$units, 0),
-          recommended_stake = .data$units * .data$unit_value,
-          execution_status = dplyr::if_else(.data$strategy_tier == "WATCHLIST",
-                                            "WATCHLIST", .data$execution_status)
-        )
-    }
+    ## Recompute units/stake/execution_status once, over the WHOLE frame,
+    ## after every week's cap has been applied -- identical to the single
+    ## recompute the pre-fix code ran, just moved outside the per-week loop
+    ## since it only needs to happen once.
+    scored <- scored |>
+      dplyr::mutate(
+        units = dplyr::if_else(.data$strategy_tier %in% c("CORE", "EXPANDED"),
+                               .data$units, 0),
+        recommended_stake = .data$units * .data$unit_value,
+        execution_status = dplyr::if_else(.data$strategy_tier == "WATCHLIST",
+                                          "WATCHLIST", .data$execution_status)
+      )
   }
 
   scored |>

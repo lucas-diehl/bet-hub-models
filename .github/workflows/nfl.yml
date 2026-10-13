@@ -1,29 +1,39 @@
 name: nfl
 
 # NFL published-picks pipeline for the Bet Hub feed.
-#   publish       Tue 9am ET + Sun 6am ET  — full weekly refresh: snap features,
-#                 TD board, publish picks, slate board, TD prop board, DK salary
-#                 capture, fantasy projections + DFS feeds, grade last week.
-#                 Sunday's run is the "lock-in" pass: new TD plays that clear
-#                 the board only once books open Sunday markets get staked here,
-#                 on top of (never replacing) anything already posted Tuesday -
+#   publish-spread-total  Tue 9am ET — spread/total weekly refresh (snap
+#                 features, publish picks, slate board, DK salary capture,
+#                 fantasy projections + DFS feeds, grade last week). No TD
+#                 staking here any more (moved to td-publish, 2026-10-13) -
 #                 the ledger is append-only and frozen per bet, so re-running
 #                 publish is always safe.
-#   td-refresh    2x daily (~9am/~2pm ET) — repost the TD board + prop feed
-#                 WITHOUT staking anything, so the Touchdowns tab tracks the
-#                 live market between publish runs.
+#   publish-full  Sun 6am ET — publish-spread-total's full step list PLUS the
+#                 day-scoped TD publish for today (Sunday's games only).
+#   td-publish    Thu 9am ET + Mon 9am ET — TD board refresh + day-scoped TD
+#                 staking + Touchdowns-tab board, for TODAY'S games only (a
+#                 Sunday game never gets staked on this Thursday's run). Does
+#                 NOT touch the spread/total model at all (skips the ~15-20
+#                 min seed-averaged RF refit) - cheap, TD-only.
+#   td-refresh    2x daily (~9am/~2pm ET) — repost the Touchdowns-tab board
+#                 (one props_<date>.json per game day this week) WITHOUT
+#                 staking anything, so it tracks the live market between
+#                 publish/td-publish runs.
 #   capture-close Thu + Sun — snapshot near-kickoff lines for closing-line
 #                 value (CLV).
 #   grade         available via workflow_dispatch for an ad hoc regrade.
 #
-# NFL is STATEFUL: the frozen-pick ledger (data/processed/published_picks_ledger.csv)
-# and the closing-line capture (data/processed/closing_line_capture.csv) must survive
-# between runs, so NFL/data is cached with a rolling key (restored newest, saved each run).
-# Best-effort cron (GitHub may fire 5-20 min late); fine for daily/weekly picks.
+# NFL is STATEFUL: the frozen-pick ledger (data/processed/published_picks_ledger.csv),
+# the closing-line capture (data/processed/closing_line_capture.csv), and the latest
+# fantasy-prop projections (NFL/outputs, needed by the TD fantasy signal on the
+# td-publish days that don't run scripts/17 themselves) must survive between runs,
+# so NFL/data AND NFL/outputs are cached with a rolling key (restored newest, saved
+# each run). Best-effort cron (GitHub may fire 5-20 min late); fine for daily/weekly picks.
 on:
   schedule:
-    - cron: "0 14 * * 2"   # Tue ~09:00 ET — full publish + grade last week
-    - cron: "0 10 * * 0"   # Sun ~06:00 ET — lock-in: full publish again
+    - cron: "0 14 * * 2"   # Tue ~09:00 ET — spread/total publish + grade last week
+    - cron: "0 10 * * 0"   # Sun ~06:00 ET — full publish (spread/total + TD for today)
+    - cron: "0 14 * * 4"   # Thu ~09:00 ET — td-publish (TD for today only)
+    - cron: "0 14 * * 1"   # Mon ~09:00 ET — td-publish (TD for today only)
     - cron: "0 13 * * *"   # ~09:00 ET daily — td-refresh (board only, no stakes)
     - cron: "0 18 * * *"   # ~14:00 ET daily — td-refresh (board only, no stakes)
     - cron: "0 23 * * 4"   # Thu ~19:00 ET — capture close before TNF (~20:15 ET kickoff)
@@ -31,7 +41,10 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "publish | td-refresh | capture-close | grade (blank = pick from the schedule)"
+        description: "publish-spread-total | publish-full | td-publish | td-refresh | capture-close | grade (blank = pick from the schedule)"
+        required: false
+      day:
+        description: "YYYY-MM-DD game day for td-publish/publish-full (blank = today, America/New_York)"
         required: false
       season:
         description: "NFL_SEASON (blank = auto)"
@@ -65,12 +78,20 @@ jobs:
           key: rlib-nfl-${{ runner.os }}-${{ hashFiles('.github/workflows/nfl.yml') }}
           restore-keys: rlib-nfl-${{ runner.os }}-
 
-      # Rolling key: restore the newest prior NFL/data (nflverse cache + ledger +
-      # closing-line capture), save a fresh copy each run so state accumulates.
-      - name: Restore NFL data (nflverse cache + ledger + CLV snapshots)
+      # Rolling key: restore the newest prior NFL/data + NFL/outputs (nflverse
+      # cache + ledger + closing-line capture + latest fantasy-prop
+      # projections), save a fresh copy each run so state accumulates.
+      # NFL/outputs added 2026-10-13: the Thu/Mon td-publish runs don't run
+      # scripts/17 (fantasy projections) themselves, so without this the TD
+      # fantasy signal would silently degrade to market+fundamental-only on
+      # those two days every week - carrying Sunday's outputs/ forward instead
+      # lands within td_fantasy_signal_live()'s own 8-day staleness tolerance.
+      - name: Restore NFL data + outputs (nflverse cache, ledger, CLV, fantasy projections)
         uses: actions/cache/restore@v4
         with:
-          path: NFL/data
+          path: |
+            NFL/data
+            NFL/outputs
           key: nfl-data-${{ github.run_id }}
           restore-keys: nfl-data-
 
@@ -79,45 +100,48 @@ jobs:
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("nflfastR","nflreadr","dplyr","tidyr","purrr","slider","readr","stringr","lubridate","yaml","jsonlite","httr2","ranger","xgboost","nnet","ggplot2","data.table","mgcv","tibble"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
-      - name: Run NFL job (publish / td-refresh / capture-close / grade)
+      - name: Run NFL job (publish-spread-total / publish-full / td-publish / td-refresh / capture-close / grade)
         working-directory: NFL
         run: |
           JOB="${{ github.event.inputs.job }}"
+          DAY_ARG=""
+          if [ -n "${{ github.event.inputs.day }}" ]; then
+            DAY_ARG="--day=${{ github.event.inputs.day }}"
+          fi
           if [ -z "$JOB" ]; then
             case "${{ github.event.schedule }}" in
-              "0 14 * * 2") JOB="publish" ;;
-              "0 10 * * 0") JOB="publish" ;;
+              "0 14 * * 2") JOB="publish-spread-total" ;;
+              "0 10 * * 0") JOB="publish-full" ;;
+              "0 14 * * 4") JOB="td-publish" ;;
+              "0 14 * * 1") JOB="td-publish" ;;
               "0 13 * * *") JOB="td-refresh" ;;
               "0 18 * * *") JOB="td-refresh" ;;
               *)            JOB="capture-close" ;;
             esac
           fi
-          echo "NFL job = $JOB"
-          # 15_build_2026_td_board.R hard-requires data/processed/td_redzone_features.rds
-          # (built by scripts/73) and has been failing EVERY run on Actions since that
-          # feature was added -- it was only ever generated by a local-machine task that
-          # has since been disabled, so the file never existed on the runner and was never
-          # in the cached NFL/data to begin with. Confirmed live 2026-10-08: every td-refresh
-          # run errored "Missing data/processed/td_redzone_features.rds", so 15 silently fell
-          # through to its `|| echo` fallback, the board never rebuilt, and the site kept
-          # re-serving the prior week's stale TD props indefinitely. Cheap (~1 min locally,
-          # full 2018-2026 PBP pull via nflreadr) -- run it before BOTH board-build call
-          # sites so a cold cache self-heals instead of failing forever.
-          if [ "$JOB" = "publish" ] || [ "$JOB" = "td-refresh" ]; then
-            Rscript scripts/73_td_redzone_features.R || echo "Red-zone feature refresh failed; TD board build will likely fail too."
-          fi
-          if [ "$JOB" = "publish" ]; then
+          echo "NFL job = $JOB  day = ${DAY_ARG:-<today>}"
+
+          run_td_publish() {
+            Rscript scripts/15_build_2026_td_board.R --execute --refresh-stats || echo "TD board refresh failed; nothing to stake this run."
+            Rscript scripts/90_publish_td_picks.R --execute $DAY_ARG
+            Rscript scripts/88_emit_td_prop_board.R --execute || echo "Touchdown prop board failed; picks were still published."
+          }
+
+          if [ "$JOB" = "publish-spread-total" ] || [ "$JOB" = "publish-full" ]; then
             Rscript scripts/86_build_snap_features.R || echo "Snap-share refresh failed; continuing with the cached file."
-            Rscript scripts/15_build_2026_td_board.R --execute --refresh-stats || echo "TD board refresh failed; publishing game-level bets only."
             Rscript scripts/57_publish_weekly_picks.R --execute
             Rscript scripts/78_nfl_write_slate.R --execute || echo "Slate board write failed; picks were still published."
-            Rscript scripts/88_emit_td_prop_board.R --execute || echo "Touchdown prop board failed; picks were still published."
             Rscript scripts/21_capture_current_dk_salaries.R || echo "DK salary capture failed; continuing without fresh salaries."
             Rscript scripts/81_build_current_salary_table.R || echo "Salary table build failed; capture archive is still saved."
             Rscript scripts/17_build_fantasy_prop_models.R --execute || echo "Fantasy projection refresh failed; picks were still published."
             Rscript scripts/59_emit_dfs_projection_json.R || echo "DFS ENGINE projection JSON failed; CSV projections still written."
             Rscript scripts/82_emit_dfs_values_feed.R --execute || echo "DFS values feed failed; projections still written."
+            if [ "$JOB" = "publish-full" ]; then
+              run_td_publish
+            fi
             Rscript scripts/58_grade_published_picks.R --grade --execute || echo "grade: nothing final to grade yet"
+          elif [ "$JOB" = "td-publish" ]; then
+            run_td_publish
           elif [ "$JOB" = "td-refresh" ]; then
             Rscript scripts/15_build_2026_td_board.R --execute || echo "Touchdown board refresh failed; prop board not rebuilt."
             Rscript scripts/88_emit_td_prop_board.R --execute || echo "Touchdown prop board failed."
@@ -138,9 +162,11 @@ jobs:
           x-access-token: ${{ secrets.X_ACCESS_TOKEN }}
           x-access-token-secret: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
 
-      - name: Save NFL data (persist ledger + CLV snapshots)
+      - name: Save NFL data + outputs (persist ledger + CLV snapshots + fantasy projections)
         if: always()
         uses: actions/cache/save@v4
         with:
-          path: NFL/data
+          path: |
+            NFL/data
+            NFL/outputs
           key: nfl-data-${{ github.run_id }}
