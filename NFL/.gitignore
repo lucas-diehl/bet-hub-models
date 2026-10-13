@@ -24,6 +24,14 @@ outputs/*
 # very first CI run (before any scheduled refresh has happened) still has it;
 # nfl.yml's publish-spread-total/publish-full jobs refresh it for real.
 !data/processed/td_redzone_features.rds
+# Snap-share features (scripts/86_build_snap_features.R) - the trained
+# td_deployment_model.rds expects snap_share_r3/r5 + offense_snaps_r3/r5 among
+# its features, and score_td_deployment_board() hard-errors (subscript out of
+# bounds) if touchdown_features.R couldn't add them because this file was
+# simply absent, rather than imputing. Same bootstrap-copy + weekly-refresh
+# pattern as td_redzone_features.rds above (refreshed by scripts/86, already
+# in the publish-spread-total/publish-full job sequence).
+!data/processed/nfl_snap_features.rds
 !data/processed/.gitkeep
 !outputs/.gitkeep
 

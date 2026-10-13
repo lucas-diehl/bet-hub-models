@@ -465,7 +465,14 @@ if (!execute) {
 # double clash. The ledger is read back with `.default = col_character()`, so
 # consensus_prob returns as character on every single run regardless of what
 # was written - which means this harmonization has to be unconditional.
-if (nrow(ledger)) {
+#
+# [2026-10-13] Also NOT gated on nrow(ledger) (fixed - was the actual bug a
+# live run hit in scripts/90, which copied this block): nrow(ledger) == 0 is a
+# real case (a ledger that exists but currently holds zero rows still has its
+# declared column types, including consensus_prob as character), and `if (0)`
+# is FALSE in R, so the old gate skipped the cast exactly when it was needed.
+# Gate on column presence instead.
+if (length(names(ledger))) {
   for (nm in intersect(names(ledger), names(new_bets))) {
     if (is.numeric(new_bets[[nm]]) && !is.numeric(ledger[[nm]])) {
       old <- ledger[[nm]]

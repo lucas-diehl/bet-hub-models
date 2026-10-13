@@ -204,11 +204,27 @@ if (!execute) {
   quit(save = "no", status = 0)
 }
 
-cat(sprintf("DEBUG pre-harmonize: nrow(ledger)=%d ncol(ledger)=%d\n", nrow(ledger), ncol(ledger)))
-if (ncol(ledger)) cat("DEBUG ledger col classes:\n", paste(names(ledger), vapply(ledger, function(x) class(x)[[1]], character(1)), sep=":", collapse="  "), "\n")
-cat("DEBUG new_bets col classes:\n", paste(names(new_bets), vapply(new_bets, function(x) class(x)[[1]], character(1)), sep=":", collapse="  "), "\n")
-
-if (nrow(ledger)) {
+## BUG FOUND 2026-10-13 via a live workflow_dispatch run: this was gated on
+## `if (nrow(ledger))`, which is the WRONG condition - it has to run whenever
+## ledger HAS THE COLUMN, regardless of row count. A ledger that exists but
+## currently holds zero rows (e.g. the very first run against a fresh cache)
+## still reads consensus_prob back as character (0-length, but character) via
+## the `.default = col_character()` spec, and `nrow(ledger) == 0` is FALSE in
+## R, so the cast never ran and bind_rows died on the same character/double
+## clash the comment below describes - just via a different gate than the one
+## that comment was guarding against. Gating on column presence instead of
+## row count fixes it for both the zero-row and populated cases. (scripts/57
+## has the identical `if (nrow(ledger))` gate and the identical latent bug -
+## just never yet observed there, since that ledger has never started from
+## empty in practice. Worth the same fix there.)
+##
+## NOT gated on nrow(new_bets) either: vctrs type-checks the bind even when
+## the new frame is EMPTY, so a run with nothing to add still died on the
+## character/double clash. The ledger is read back with
+## `.default = col_character()`, so consensus_prob returns as character on
+## every single run regardless of what was written - which means this
+## harmonization has to be unconditional on BOTH row counts.
+if (length(names(ledger))) {
   for (nm in intersect(names(ledger), names(new_bets))) {
     if (is.numeric(new_bets[[nm]]) && !is.numeric(ledger[[nm]])) {
       old <- ledger[[nm]]
@@ -224,8 +240,6 @@ if (nrow(ledger)) {
     }
   }
 }
-cat(sprintf("DEBUG post-harmonize: nrow(ledger)=%d ncol(ledger)=%d\n", nrow(ledger), ncol(ledger)))
-if (ncol(ledger)) cat("DEBUG ledger col classes AFTER:\n", paste(names(ledger), vapply(ledger, function(x) class(x)[[1]], character(1)), sep=":", collapse="  "), "\n")
 ledger <- dplyr::bind_rows(ledger, new_bets)
 readr::write_csv(ledger, ledger_path)
 
