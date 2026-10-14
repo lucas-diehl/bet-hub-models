@@ -26,14 +26,14 @@ actual_player_points <- function(csv_path, sport) {
 # our archived projection (latest version) for a slate, joined to salary
 slate_projection <- function(slate_id) {
   p <- as.data.table(db_query(sprintf(
-    "SELECT player_id, proj_mean AS proj, ceil, version_ts FROM projections WHERE slate_id='%s'", slate_id)))
+    "SELECT player_id, proj_mean AS proj, sim_sd, ceil, version_ts FROM projections WHERE slate_id='%s'", slate_id)))
   if (!nrow(p)) return(p)
   p <- p[order(version_ts)][, .SD[.N], by = player_id]           # newest per player
   s <- tryCatch(as.data.table(db_query(sprintf(
     "SELECT player_id, salary FROM salaries WHERE slate_id='%s'", slate_id))), error = function(e) NULL)
   if (!is.null(s) && nrow(s)) p <- merge(p, unique(s, by = "player_id"), by = "player_id", all.x = TRUE)
   if (!"salary" %in% names(p)) p[, salary := NA_real_]
-  p[, .(player_id, proj, ceil, salary)]
+  p[, .(player_id, proj, sim_sd, ceil, salary)]
 }
 
 # join projections to actuals across every settled slate -> tidy per-player table.

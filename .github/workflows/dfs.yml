@@ -7,6 +7,14 @@ on:
   schedule:
     - cron: "0 11 * * *"   # ~07:00 ET — early, so morning slates are fresh
     - cron: "0 14 * * *"   # ~10:00 ET
+    - cron: "40 15 * * 0"  # ~11:40 ET, SUNDAY ONLY — closes the pre-1pm-kickoff inactive
+                           # gap. ESPN's injury feed (apply_inactives(), the only inactive-
+                           # detection in the daily path) is freshness-dependent by design;
+                           # official NFL inactives land ~90 min before kickoff (~11:30 ET
+                           # for the 1pm window), which used to sit stranded between the
+                           # 10:00 and 13:00 ET runs — the 10:00 build had no idea who was
+                           # about to be scratched, and by 13:00 the 1pm slate was already
+                           # locked. This run refreshes right after that announcement window.
     - cron: "0 17 * * *"   # ~13:00 ET
     - cron: "0 20 * * *"   # ~16:00 ET
     - cron: "0 23 * * *"   # ~19:00 ET

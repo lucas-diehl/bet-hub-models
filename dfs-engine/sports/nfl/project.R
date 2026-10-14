@@ -125,7 +125,7 @@ suppressPackageStartupMessages({ library(data.table) })
 .nfl_baseline <- function(pool) {
   proj <- as.numeric(pool$dk_avg); bad <- is.na(proj) | proj <= 0
   proj[bad] <- (pool$salary[bad] / 1000) * .nfl_baseline_tier_val(pool$salary[bad])
-  sd <- pmax(0.42 * proj, 4)
+  sd <- pmax(0.42 * proj, 4) * 1.15   # same measured widening as the external-model path above
   data.table(proj = proj, sim_sd = sd, ceil = proj + 0.84 * sd,
              floor = pmax(proj - 1.2 * sd, 0), p_zero = 0.03)
 }
@@ -155,11 +155,21 @@ nfl_project_players <- function(slate) {
     # producer changes its interval definition. Scaled by k to this site's
     # scoring, same as the bands. Falls back to the derived value when absent.
     if (!"sim_sd" %in% names(ext)) ext[, sim_sd := NA_real_]
+    # WIDENING_FACTOR 1.15: measured 2026-10-14 against 1,620 real settled NFL
+    # player-games (10 slates, post Best-Ball-contamination purge -- see
+    # ownership.R's parse_dk_standings() guard). z = (actual-proj)/sim_sd came
+    # back sd(z)=1.15 (ideal is 1.00 => sim_sd running ~15% too narrow), and that
+    # was consistent in DIRECTION across 7 of 10 independently-built slates (range
+    # 0.75-1.34), concentrated in the 5-15 projected-point tier (role players),
+    # not studs or scrubs. 10 slates is thin for a precise multiplier, so this
+    # applies the measured value rather than rounding up further -- re-measure via
+    # projection_actuals() as more slates settle and adjust.
+    WIDENING_FACTOR <- 1.15
     ext[, `:=`(e_floor = pmax(k * ppr_low, 0),
                e_ceil  = pmax(k * ppr_high, e_proj),
                e_sd    = pmax(fifelse(is.finite(sim_sd) & sim_sd > 0,
                                       k * sim_sd,
-                                      k * (ppr_high - ppr_low) / 2.563), 4))]
+                                      k * (ppr_high - ppr_low) / 2.563), 4) * WIDENING_FACTOR)]
     # p_zero: prefer the external model's per-player inactive probability when it
     # supplies one. It is graded off the current injury report (Out ~0.97,
     # Doubtful ~0.68, Questionable ~0.24, healthy 0.03) rather than the flat 0.03

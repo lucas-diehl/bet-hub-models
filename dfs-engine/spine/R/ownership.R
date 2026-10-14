@@ -10,6 +10,23 @@ suppressPackageStartupMessages({ library(data.table) })
 
 # Parse the ownership block (Player / %Drafted) from a DK standings export.
 parse_dk_standings <- function(csv_path) {
+  # Reject Best Ball / Snake Draft exports outright. Those lineups carry a "BN"
+  # (bench) slot that no DK Classic or Showdown NFL/NCAAF lineup ever has (Classic
+  # is QB/RB/RB/WR/WR/WR/TE/FLEX/DST, Showdown is CPT+5 FLEX; neither has a bench).
+  # A Best Ball contest's "%Drafted" comes from a tiny snake-draft field (observed:
+  # 12 entries, every pct an exact multiple of 8.33%) and its weekly FPTS reflects
+  # Best Ball's own scoring, not a real GPP's actual ownership or outcome. Confirmed
+  # live: 5 Best Ball contests got silently attached to two real NFL Classic slates
+  # (nfl-dk-2026-09-08-main2, nfl-dk-2026-09-10-main2) via the containment-based
+  # slate matching in .resolve_logged_slate() below -- a Best Ball draft pulls from
+  # the same real player universe as that week's Classic slate, so it "contained"
+  # cleanly. That poisoned 1,167 of 6,132 NFL ownership rows (19%), including
+  # FPTS=0 against star players (Henry, Allen, Burrow...) that looked like missed-
+  # inactive bugs but were really Best Ball's scoring, not the real game result.
+  first_lines <- tryCatch(readLines(csv_path, warn = FALSE), error = function(e) character(0))
+  if (any(grepl(" BN ", first_lines, fixed = TRUE)))
+    stop("DK export looks like Best Ball / Snake Draft (bench 'BN' slot found in a ",
+         "lineup), not a Classic/Showdown GPP -- refusing to import: ", basename(csv_path))
   # DK standings have two side-by-side blocks (entrants | players). Plain fread stops
   # once the shorter (player) block ends — which is fine, every player row comes first
   # so none are lost. (fill=TRUE is WRONG as the FIRST read here: it reads the full
@@ -81,6 +98,15 @@ parse_dk_standings <- function(csv_path) {
   # most players are legitimately <1% owned, inflating actual ownership ~100x.
   if (any(is.finite(p)) && max(p[is.finite(p)]) <= 1) p <- p * 100
   d[, pct_drafted := p][, norm := norm_name(player_name)]
+  # fpts/Points was never cast to numeric -- on the RAGGED (warned) parse path above,
+  # every column of `raw` is built from strsplit() text, so `fpts` stays CHARACTER.
+  # That's invisible until this frame is rbind-ed with a slate that parsed cleanly
+  # (numeric fpts): rbindlist(fill=TRUE) in projection_actuals() then unifies the
+  # WHOLE combined `actual` column to character to avoid lossy coercion, which
+  # silently turns every cor()/mean()/sd() in projection_accuracy() into NA across
+  # ALL sports, not just the one ragged contest -- found live 2026-10-14 chasing an
+  # unrelated NFL variance question ("non-numeric argument to binary operator").
+  if ("fpts" %in% names(d)) d[, fpts := suppressWarnings(as.numeric(as.character(fpts)))]
   unique(d, by = "norm")
 }
 
@@ -229,6 +255,7 @@ auto_import_ownership <- function(dir = dfs_path("data", "ownership_inbox")) {
   files <- list.files(dir, pattern = "\\.csv$", full.names = TRUE)
   if (!length(files)) { msg("ownership inbox empty:", dir); return(invisible(0L)) }
   done <- file.path(dir, "processed"); dir.create(done, showWarnings = FALSE)
+  rejected <- file.path(dir, "rejected"); dir.create(rejected, showWarnings = FALSE)
   n <- 0L
   for (f in files) {
     cid <- gsub("\\D", "", basename(f))
@@ -241,12 +268,19 @@ auto_import_ownership <- function(dir = dfs_path("data", "ownership_inbox")) {
     # %Drafted joins the projected ownership + salaries on (slate_id, player_id);
     # contest_id still distinguishes each contest. (Showdown sub-slates are the one
     # case this over-attaches — those players just won't match the main pool.)
+    err_msg <- NULL
     ok <- tryCatch({ log_ownership_csv(f, sport = sport,
             date = if (!is.null(ct)) ct$date else Sys.Date(), slate = "main", contest = cid,
             type = "gpp", fee = if (!is.null(ct)) ct$entry_fee else NA,
             field = if (!is.null(ct)) ct$field_size else NA); TRUE },
-          error = function(e) { msg("  import failed:", conditionMessage(e)); FALSE })
-    if (ok) { file.rename(f, file.path(done, basename(f))); n <- n + 1L }
+          error = function(e) { err_msg <<- conditionMessage(e); msg("  import failed:", err_msg); FALSE })
+    if (ok) {
+      file.rename(f, file.path(done, basename(f))); n <- n + 1L
+    } else if (!is.null(err_msg) && grepl("Best Ball", err_msg, fixed = TRUE)) {
+      # Permanently un-importable format, not a transient failure -- move it out of
+      # the inbox so it isn't retried (and re-logged as a failure) on every run.
+      file.rename(f, file.path(rejected, basename(f)))
+    }
   }
   msg("auto-imported", n, "ownership file(s)")
   invisible(n)
