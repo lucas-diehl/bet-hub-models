@@ -127,10 +127,20 @@ dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Docum
 }
 
 # ── VALUE view (fallback) ─────────────────────────────────────────────────────
+# Both LIKE patterns below use "-main%" (not "-main") because multi-layout sports
+# (nfl, ncaaf; occasionally wnba) get tagged main1/main2 by dk_slate_options()
+# whenever DK posts more than one classic slate that day -- plain "main" only
+# happens on a single-layout day. Anchoring on the literal "-main" suffix meant
+# EVERY main1/main2 day was invisible to this query, so the "latest slate"
+# fallback silently skipped straight past them to whatever older date last
+# happened to be single-layout -- confirmed live 2026-10-14: NFL's value feed
+# was serving Oct 12, NCAAF's Oct 9, both stuck because every day since had
+# been tagged main1/main2. "-main%" still can't match "-showdown%"/"-captain%"
+# (this feed is the Classic pool only), so that exclusion is unaffected.
 .dfs_latest_slate_id <- function(sport, site = "dk") {
   q <- "SELECT slate_id FROM projections WHERE slate_id LIKE ?
         GROUP BY slate_id ORDER BY MAX(version_ts) DESC LIMIT 1"
-  r <- tryCatch(with_db(function(con) DBI::dbGetQuery(con, q, params = list(paste0(sport, "-", site, "-%-main"))),
+  r <- tryCatch(with_db(function(con) DBI::dbGetQuery(con, q, params = list(paste0(sport, "-", site, "-%-main%"))),
                         read_only = TRUE), error = function(e) NULL)
   if (is.null(r) || !nrow(r)) NULL else r$slate_id[1]
 }
@@ -138,9 +148,24 @@ dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Docum
 # not projections — run_slate makes projections on the fly — so the FD gate keys off salaries.)
 .dfs_has_slate <- function(sport, site = "fd") {
   q <- "SELECT 1 FROM salaries WHERE slate_id LIKE ? GROUP BY slate_id LIMIT 1"
-  r <- tryCatch(with_db(function(con) DBI::dbGetQuery(con, q, params = list(paste0(sport, "-", site, "-%-main"))),
+  r <- tryCatch(with_db(function(con) DBI::dbGetQuery(con, q, params = list(paste0(sport, "-", site, "-%-main%"))),
                         read_only = TRUE), error = function(e) NULL)
   !is.null(r) && nrow(r) > 0
+}
+# Which "main" LAYOUT TAG (main, main1, main2, ...) actually has today's salaries for
+# this sport+site -- the PRIMARY optimizer path below needs the real tag up front
+# (run_slate() has no fallback-search of its own; it just fails to find the CSV, same
+# root cause as the two LIKE patterns above). Picks the layout with the most salary
+# rows (the full/biggest classic slate), defaulting to "main" when nothing is found
+# yet today so a brand-new slate's first build behaves exactly as before.
+.dfs_resolve_main_slate_tag <- function(sport, date, site = "dk") {
+  dt <- format(as.Date(date), "%Y-%m-%d")
+  pfx <- sprintf("%s-%s-%s-", sport, site, dt)
+  q <- "SELECT slate_id, COUNT(*) n FROM salaries WHERE slate_id LIKE ?
+        GROUP BY slate_id ORDER BY n DESC LIMIT 1"
+  r <- tryCatch(with_db(function(con) DBI::dbGetQuery(con, q, params = list(paste0(pfx, "main%"))),
+                        read_only = TRUE), error = function(e) NULL)
+  if (is.null(r) || !nrow(r)) "main" else sub(paste0("^", pfx), "", r$slate_id[1])
 }
 .dfs_value_pool <- function(slate_id) {
   q <- "WITH latest AS (
@@ -181,8 +206,12 @@ dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Docum
 write_dfs_values_sport <- function(sport, site = "dk") {
   site_label <- if (tolower(site) %in% c("fd", "fanduel")) "fanduel" else "draftkings"
   vals <- NULL; bypos <- NULL; slate_date <- NULL; slate_label <- "Main"
-  # PRIMARY: run the GPP optimizer for today's slate at this site (read-only: never persists)
-  rs <- tryCatch(run_slate(sport, Sys.Date(), site = site, n_sims = 2500L, n_cand = 400L,
+  # PRIMARY: run the GPP optimizer for today's slate at this site (read-only: never persists).
+  # run_slate()'s own default slate="main" only exists on a single-layout day -- resolve
+  # the real tag (main/main1/main2) first so a multi-layout day doesn't fail the lookup
+  # and silently fall through to the (possibly stale) value-view fallback below.
+  main_tag <- tryCatch(.dfs_resolve_main_slate_tag(sport, Sys.Date(), site), error = function(e) "main")
+  rs <- tryCatch(run_slate(sport, Sys.Date(), slate = main_tag, site = site, n_sims = 2500L, n_cand = 400L,
                            n_lineups = 8L, field_n = 500L, persist = FALSE),   # n>=3 (build_portfolio needs n_bal>=0)
                  error = function(e) { msg("dfs values:", sport, site_label, "- optimizer:", conditionMessage(e)); NULL })
   if (!is.null(rs) && !is.null(rs$res)) {
