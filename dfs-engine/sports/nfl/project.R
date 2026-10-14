@@ -52,27 +52,52 @@ suppressPackageStartupMessages({ library(data.table) })
   setorder(d, -projected_ppr); unique(d, by = "norm")[]
 }
 
+# Warn (not fail) when the chosen projection file is stale relative to the slate
+# being built -- a silently multi-week-stale read is exactly how the 2026-10-12
+# bug below went unnoticed for this long. Visible in the build log, never blocks it.
+.nfl_warn_if_stale <- function(path, date, max_days = 7) {
+  age <- suppressWarnings(as.numeric(difftime(as.Date(date), as.Date(file.mtime(path)), units = "days")))
+  if (length(age) && is.finite(age) && age > max_days) {
+    msg(sprintf(
+      "NFL projections: using %s, %.0f day(s) old relative to slate date %s - check for a newer week's file.",
+      basename(path), age, as.character(date)))
+  }
+}
+
 .nfl_read_ext <- function(dir, date) {
   od <- file.path(dir, "outputs")
-  # PREFER the JSON contract (site-agnostic components); fall back to the wide CSV. Both
-  # return the identical shape. NB: no game_date filter — the DK slate pool defines slate
-  # membership and a main slate spans Thu/Sun/Mon; extra names here simply won't match.
+  # Prefer whichever of the JSON/CSV contracts is actually NEWEST -- NOT "any JSON
+  # over any CSV" unconditionally, which was a real bug (found 2026-10-13): on
+  # 2026-10-12 (Week 6, no week-6 file existed yet) a 2026-10-03 Week-4 JSON was
+  # still being preferred over a 2026-10-06 Week-5 CSV, silently scoring that
+  # Monday-night slate off 9-day-stale data. Both formats return the identical
+  # shape, so "newest file wins" is the correct rule regardless of format.
+  # NB: still no game_date filter — the DK slate pool defines slate membership
+  # and a main slate spans Thu/Sun/Mon; extra names here simply won't match.
   js <- list.files(od, pattern = "fantasy_prop_.*week\\d+_projections\\.json$", full.names = TRUE)
   latest <- file.path(od, "dfs_projections_latest.json")
   if (file.exists(latest)) js <- c(latest, js)
-  if (length(js)) {
-    f <- js[which.max(file.mtime(js))]
-    d <- tryCatch(.nfl_json_to_dt(f), error = function(e) NULL)
-    if (!is.null(d) && nrow(d)) { attr(d, "file") <- basename(f); return(d[]) }
-  }
   fs <- list.files(od, pattern = "fantasy_prop_.*week\\d+_projections\\.csv$", full.names = TRUE)
-  if (!length(fs)) return(NULL)
-  f <- fs[which.max(file.mtime(fs))]                       # newest week file = current week
-  d <- tryCatch(as.data.table(fread(f)), error = function(e) NULL)
+
+  newest_json <- if (length(js)) js[which.max(file.mtime(js))] else NA_character_
+  newest_csv  <- if (length(fs)) fs[which.max(file.mtime(fs))] else NA_character_
+  prefer_json <- !is.na(newest_json) &&
+    (is.na(newest_csv) || file.mtime(newest_json) >= file.mtime(newest_csv))
+
+  if (prefer_json) {
+    d <- tryCatch(.nfl_json_to_dt(newest_json), error = function(e) NULL)
+    if (!is.null(d) && nrow(d)) {
+      .nfl_warn_if_stale(newest_json, date)
+      attr(d, "file") <- basename(newest_json); return(d[])
+    }
+  }
+  if (is.na(newest_csv)) return(NULL)
+  d <- tryCatch(as.data.table(fread(newest_csv)), error = function(e) NULL)
   if (is.null(d) || !all(c("projected_ppr", "player") %in% names(d))) return(NULL)
   d[, norm := norm_name(player)]
   setorder(d, -projected_ppr); d <- unique(d, by = "norm")  # one row per name (keep the starter)
-  attr(d, "file") <- basename(f); d[]
+  .nfl_warn_if_stale(newest_csv, date)
+  attr(d, "file") <- basename(newest_csv); d[]
 }
 
 # salary-implied baseline (points-per-$1k), the fallback when the model can't project a

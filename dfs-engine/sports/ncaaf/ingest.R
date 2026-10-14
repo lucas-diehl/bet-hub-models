@@ -147,6 +147,20 @@ cfb_ingest <- function(years = (as.integer(format(Sys.Date(), "%Y")) - 2):as.int
   D[, dk_pts := cfb_dk_scoring(.SD)]
   dir.create(dirname(cfb_weekly_path()), recursive = TRUE, showWarnings = FALSE)
   saveRDS(D, cfb_weekly_path())
+  # Loud, not cheerful, when a call that was asked to cover the CURRENT season came
+  # back with nothing new -- added 2026-10-14. The single success-style msg() below
+  # used to fire identically whether this pulled a full new season or silently did
+  # nothing, which is exactly how ncaaf_weekly.rds went undetected-stale since
+  # 2026-09-04 (every week in the loop above fails fast with no key and is swallowed,
+  # n_new stays 0, and "(0 new)" still reads like a normal, successful run).
+  if (n_new == 0L && max(years) >= as.integer(format(Sys.Date(), "%Y"))) {
+    reason <- if (!nzchar(Sys.getenv("CFB_API_KEY", ""))) "CFB_API_KEY is not set" else "the API returned nothing new"
+    cur <- D[season == max(season, na.rm = TRUE)]
+    msg(sprintf(
+      "  ncaaf ingest WARNING: 0 new player-games for season(s) %s - %s. %s is still only current through season %d, week %d.",
+      paste(years, collapse = ","), reason, basename(cfb_weekly_path()),
+      max(cur$season, na.rm = TRUE), max(cur$wk, na.rm = TRUE)))
+  }
   msg(sprintf("  ncaaf ingest: %d player-games cached (%d new) -> %s", nrow(D), n_new, cfb_weekly_path()))
   invisible(D)
 }

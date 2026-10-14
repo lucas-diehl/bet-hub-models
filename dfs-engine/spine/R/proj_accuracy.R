@@ -56,20 +56,30 @@ slate_projection <- function(slate_id) {
 # So classify BOTH sides by how many rounds they score and require them to agree.
 # Unknown-vs-known is rejected, not assumed compatible: a missing measurement is
 # recoverable, a confidently wrong one sends us fixing a model that is fine.
-.scale_class_contest <- function(name) {
+.scale_class_contest <- function(name, sport = NA_character_) {
   n <- tolower(name %||% "")
   if (!nzchar(n)) return(NA_character_)
   # Cup FIRST: "Presidents Cup Showdown" is match-play scoring, not a round slate,
   # and testing "showdown" before "cup" would file it as one.
   if (grepl("presidents cup|ryder cup", n)) return("cup")      # match play, own scale
   # DK golf single-round products: "Showdown", "Captain", or an explicit "Round N"
-  if (grepl("showdown|captain|\\bround\\s*[1-4]\\b|\\br[1-4]\\s*tour\\b", n)) return("round")
+  # score only ONE of the 4 rounds -- a genuinely different point scale from the
+  # full event, same field. That distinction is GOLF-SPECIFIC. For every other
+  # sport "Showdown"/"Captain Mode" is a roster-construction format (single game,
+  # 6-man, CPT at 1.5x salary/points), not a different per-player scoring formula:
+  # an NFL showdown box score and that same game's main-slate box score use
+  # identical DK stat scoring. Gating this on sport=="golf" fixed a real bug
+  # (2026-10-13): every NFL Showdown contest was classifying as "round" with no
+  # round-scale NFL slate to re-point at, so it was silently dropped from the
+  # accuracy scorecard entirely rather than graded against its own main slate.
+  if (identical(sport, "golf") &&
+      grepl("showdown|captain|\\bround\\s*[1-4]\\b|\\br[1-4]\\s*tour\\b", n)) return("round")
   "event"
 }
-.scale_class_slate <- function(slate_id) {
+.scale_class_slate <- function(slate_id, sport = NA_character_) {
   s <- tolower(slate_id %||% "")
   if (grepl("presidents|cup", s)) return("cup")
-  if (grepl("golf-round|captain|showdown|_r[1-4]\\b", s)) return("round")
+  if (identical(sport, "golf") && grepl("golf-round|captain|showdown|_r[1-4]\\b", s)) return("round")
   "event"
 }
 
@@ -114,7 +124,7 @@ projection_actuals <- function(min_frac = 0.40, min_match = 8L, strict_scale = T
     "SELECT DISTINCT sport, slate_id FROM projections")), error = function(e) NULL)
   if (!is.null(allsl) && nrow(allsl)) {
     allsl[, sdate := .slate_date(slate_id), by = slate_id]
-    allsl[, scale := .scale_class_slate(slate_id), by = slate_id]
+    allsl[, scale := .scale_class_slate(slate_id, sport), by = .(sport, slate_id)]
   } else allsl <- data.table(sport = character(0), slate_id = character(0),
                              sdate = as.Date(character(0)), scale = character(0))
 
@@ -138,12 +148,12 @@ projection_actuals <- function(min_frac = 0.40, min_match = 8L, strict_scale = T
       f <- file.path(sdir, sprintf("contest-standings-%s.csv", cid)); if (!file.exists(f)) next
       use_sid <- sid
       if (strict_scale) {
-        got <- .scale_class_contest(cmap[[as.character(cid)]] %||% NA_character_)
+        got <- .scale_class_contest(cmap[[as.character(cid)]] %||% NA_character_, sp)
         if (is.na(got)) {
           msg(sprintf("  accuracy: skipping contest %s (no name -> scoring scale unverifiable)", cid))
           next
         }
-        if (!identical(got, .scale_class_slate(sid))) {
+        if (!identical(got, .scale_class_slate(sid, sp))) {
           alt <- .slate_for_scale(allsl, sp, sdte, got)
           if (!length(alt)) {
             msg(sprintf("  accuracy: skipping contest %s ('%s' scale) - no '%s'-scale slate archived near %s",

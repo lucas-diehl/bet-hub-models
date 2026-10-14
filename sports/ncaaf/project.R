@@ -33,6 +33,25 @@ ncaaf_project_players <- function(slate) {
   W <- if (exists("cfb_weekly_path") && file.exists(cfb_weekly_path())) as.data.table(readRDS(cfb_weekly_path())) else NULL
   m <- if (exists("NCAAF_MODEL_PATH") && file.exists(NCAAF_MODEL_PATH())) readRDS(NCAAF_MODEL_PATH()) else NULL
 
+  # Staleness guard, added 2026-10-14 -- the NCAAF analog of .nfl_warn_if_stale()
+  # (sports/nfl/project.R). Found by direct inspection: data/raw/ncaaf_weekly.rds had
+  # been frozen since 2026-09-04 (CFB_API_KEY unset -> cfb_ingest()'s current-season
+  # pull fails per-week and is silently swallowed), so it held ONLY 2024-2025 history.
+  # file.exists() alone was the only gate below, and the success-path log line only
+  # says a model loaded, never how current it is -- every NCAAF player's rolling form
+  # was quietly being built off last season's games with no visible signal. Warn, don't
+  # block: a real freshman/transfer slate still needs the salary-baseline fallback to
+  # work exactly as before.
+  if (!is.null(W) && "season" %in% names(W)) {
+    target_season <- suppressWarnings(as.integer(format(as.Date(slate$date), "%Y")))
+    max_season <- suppressWarnings(max(W$season, na.rm = TRUE))
+    if (is.finite(target_season) && is.finite(max_season) && max_season < target_season) {
+      msg(sprintf(
+        "  NCAAF WARNING: %s has no %d data (newest season on file: %d) - every player's rolling form is being built off a PRIOR season's games. Run cfb_ingest(refresh=TRUE) (needs CFB_API_KEY) to refresh.",
+        basename(cfb_weekly_path()), target_season, max_season))
+    }
+  }
+
   if (!is.null(W) && !is.null(m)) {
     ref <- unique(W[, .(athlete_id, norm = norm_name(player))])
     g <- W[, .(games = .N), by = athlete_id]

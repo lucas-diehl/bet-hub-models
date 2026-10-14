@@ -127,6 +127,19 @@ run_contest <- function(contest_id, sport = NULL, date = Sys.Date(), n_lineups =
     picks <- build_portfolio(res, gates, n = n_lineups)
     cap_board <- NULL; pool_out <- base
   }
+  # Archive projections + recommended lineups, same as run_slate() (pipeline.R)
+  # does for the regular main-slate path. Added 2026-10-13: run_contest() previously
+  # persisted ownership only (line above) and nothing else, so EVERY showdown/
+  # single-game build left no trace of what it actually built or why -- a real
+  # 2026-10-12 BUF@LAR Monday-night build could not be reconstructed afterward
+  # (0 rows in projections/recommended_lineups for that slate_id). `base` (not
+  # exp_pool) for projections -- the real per-player numbers, not the CPT/FLEX-
+  # duplicated roster pool. `pool_out` for lineups because `picks[[i]]$idx`
+  # indexes into whichever pool actually built the candidates (exp_pool for
+  # showdown, base otherwise) -- same pool `io_export.R`'s writer already keys off.
+  tryCatch(persist_projections(base, slate_obj$slate_id, sport), error = function(e) NULL)
+  tryCatch(persist_recommended_lineups(picks, pool_out, slate_obj$slate_id, sport, date), error = function(e) NULL)
+  tryCatch(mark_slate_built(slate_obj$slate_id), error = function(e) NULL)
   msg(sprintf("Contest %s (%s%s): %d lineups, field %s, $%s entry",
               contest$contest_id, sport, if (showdown) " SHOWDOWN" else "",
               length(picks), fsize, contest$entry_fee))
