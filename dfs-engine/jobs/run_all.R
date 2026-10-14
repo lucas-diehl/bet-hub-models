@@ -100,5 +100,27 @@ if (!interactive()) {
       msg("round DFS feed:", if (length(out)) tail(out, 1) else "(done)")
     }
   }, error = function(e) msg("round DFS feed error:", conditionMessage(e)))
+  # Contest selection (P3, 2026-08-18) — WHERE to enter, not who to play. Built and
+  # validated live back in August (confirmed 150-max mega-GPPs run 15-16% rake vs
+  # 5-11% for single-/small-max) but never actually wired into anything run daily
+  # until now — it only ever ran if you remembered to type the command yourself.
+  # Same system2 pattern as the other auxiliary jobs above; writes a dated, readable
+  # report next to the HTML dashboard rather than editing dashboard.html's JS to add
+  # a section (lower risk, and the output is a plain ranked list, not a chart).
+  tryCatch({
+    cs <- dfs_path("jobs", "contest_select.R")
+    if (file.exists(cs)) {
+      rs3 <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
+      cs_sports <- intersect(sports, c("nfl", "ncaaf", "wnba", "golf", "tennis"))
+      if (length(cs_sports)) {
+        out <- system2(rs3, c(shQuote(cs), "--sports", paste(cs_sports, collapse = ",")),
+                       stdout = TRUE, stderr = TRUE)
+        outdir <- dfs_path("data", "reports"); dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+        cf <- file.path(outdir, sprintf("contest_selection_%s.txt", Sys.Date()))
+        writeLines(out, cf)
+        msg("Contest selection ->", cf)
+      }
+    }
+  }, error = function(e) msg("contest selection error:", conditionMessage(e)))
   msg("Done. Open:", f)
 }
