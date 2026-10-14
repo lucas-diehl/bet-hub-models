@@ -112,11 +112,20 @@ jobs:
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
-          Rscript -e 'p<-c("nflfastR","nflreadr","dplyr","tidyr","purrr","slider","readr","stringr","lubridate","yaml","jsonlite","httr2","ranger","xgboost","nnet","ggplot2","data.table","mgcv","tibble"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
-          # TEMP diagnostic (2026-10-14): confirming whether this runner's xgboost
-          # differs from the version the cached td_deployment_model.rds was saved
-          # under (1.7.9.1 locally) -- xgb.load.raw() has been failing on every
-          # run that touches the TD board since at least 2026-10-11.
+          Rscript -e 'p<-c("nflfastR","nflreadr","dplyr","tidyr","purrr","slider","readr","stringr","lubridate","yaml","jsonlite","httr2","ranger","nnet","ggplot2","data.table","mgcv","tibble"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+          # xgboost is pinned, not left to float to CRAN's latest. The deployment
+          # model (data/processed/td_deployment_model.rds) is saved as a PORTABLE
+          # raw payload specifically because a trained booster doesn't survive
+          # save/load across xgboost releases (R/utilities.R's revive_booster()
+          # says so directly) -- but that payload isn't guaranteed to decode under
+          # a DIFFERENT xgboost version than the one that wrote it either. This
+          # runner had drifted to 3.2.1.1 against a model saved under 1.7.9.1 (the
+          # version scripts/13_train_td_model.R was last run with), and
+          # xgb.load.raw() silently failed on every run touching the TD board from
+          # at least 2026-10-11 until this was found and pinned (2026-10-14).
+          # Bump this pin deliberately, together with a fresh retrain-td run,
+          # never by letting it float.
+          Rscript -e 'if (!identical(tryCatch(as.character(packageVersion("xgboost")), error=function(e) NA), "1.7.9.1")) { if (!("remotes" %in% rownames(installed.packages()))) install.packages("remotes"); remotes::install_version("xgboost", version = "1.7.9.1", upgrade = "never", repos = "https://cran.r-project.org") }'
           Rscript -e 'cat("xgboost version installed:", as.character(packageVersion("xgboost")), "\n")'
 
       - name: Run NFL job (publish-spread-total / publish-full / td-publish / td-refresh / capture-close / grade)
