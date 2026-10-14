@@ -21,6 +21,20 @@ name: nfl
 #   capture-close Thu + Sun — snapshot near-kickoff lines for closing-line
 #                 value (CLV).
 #   grade         available via workflow_dispatch for an ad hoc regrade.
+#   retrain-td    workflow_dispatch only. Re-fits + re-saves data/processed/
+#                 td_deployment_model.rds under whatever xgboost version THIS
+#                 runner currently has installed. xgb.save.raw()'s raw JSON
+#                 payload is not guaranteed stable across xgboost releases
+#                 (R/utilities.R's revive_booster() says so directly), and
+#                 something (the R-package cache evicting/rolling onto a
+#                 newer xgboost build is the leading suspect, but the exact
+#                 trigger wasn't pinned down) made xgb.load.raw() start
+#                 failing on every run that touches the TD board -- found
+#                 2026-10-14, confirmed failing on every run back through at
+#                 least 2026-10-11 (td-refresh included), entirely silently
+#                 because every step here is wrapped in `|| echo`. Run this
+#                 once whenever that happens again (new runner image, an
+#                 xgboost CRAN bump, a cache eviction).
 #
 # NFL is STATEFUL: the frozen-pick ledger (data/processed/published_picks_ledger.csv),
 # the closing-line capture (data/processed/closing_line_capture.csv), and the latest
@@ -41,7 +55,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "publish-spread-total | publish-full | td-publish | td-refresh | capture-close | grade (blank = pick from the schedule)"
+        description: "publish-spread-total | publish-full | td-publish | td-refresh | capture-close | grade | retrain-td (blank = pick from the schedule)"
         required: false
       day:
         description: "YYYY-MM-DD game day for td-publish/publish-full (blank = today, America/New_York)"
@@ -148,6 +162,8 @@ jobs:
             Rscript scripts/88_emit_td_prop_board.R --execute || echo "Touchdown prop board failed."
           elif [ "$JOB" = "grade" ]; then
             Rscript scripts/58_grade_published_picks.R --grade --execute
+          elif [ "$JOB" = "retrain-td" ]; then
+            Rscript scripts/13_train_td_model.R
           else
             Rscript scripts/58_grade_published_picks.R --capture-close --execute
           fi
