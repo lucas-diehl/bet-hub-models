@@ -11,7 +11,26 @@
 suppressPackageStartupMessages({ library(data.table) })
 
 OWN_MODEL_PATH <- function(sport) dfs_path("data", "models", sprintf("own_model_%s.rds", sport))
-OWN_FEATS <- c("vr", "sr", "pr", "value", "salary")
+# Feature set revised 2026-10-14. The original 5 (vr, sr, pr, value, salary) were
+# measured to have real multicollinearity -- `sr` is literally rank(salary) and
+# `salary` is salary, so a plain lm() has to split credit between two near-
+# duplicate columns, and in the live NFL fit this produced a nonsense-signed,
+# significant coefficient on `sr` (-10.3, i.e. "more expensive -> LESS owned",
+# backwards from reality) purely from that collinearity, not a real effect. Same
+# disease, same diagnosis as the TD model's 3-input market calibrator earlier
+# this session. Leave-one-slate-out on the real NFL dataset (1,985 rows, 12
+# slates) compared candidates directly:
+#   vr+sr+pr+value+salary (old)      corr 0.449
+#   sr+value+salary                  corr 0.458
+#   sr+value+salary+position (NEW)   corr 0.466  <- best, also simplest
+#   proj+salary+value+position       corr 0.454
+#   vr+sr+pr+position (ranks only)   corr 0.325  -- raw salary/value carry real
+#                                        signal that pure within-slate rank loses
+#   heuristic (own = 0.02+0.42*vr^2) corr 0.238  -- every model variant clears it
+# `position` was never in the feature set at all before -- DK NFL ownership is
+# structurally stratified by role (a chalk RB and a chalk QB look nothing alike)
+# and adding it was a real, measured gain on top of fixing the collinearity.
+OWN_FEATS <- c("sr", "value", "salary", "position")
 
 # assemble training data: logged actual %Drafted + salary + latest projection per slate/player
 ownership_training_data <- function(sport = NULL) {
@@ -20,19 +39,27 @@ ownership_training_data <- function(sport = NULL) {
     WITH act AS (SELECT sport, slate_id, player_id, MAX(actual_pct) actual FROM ownership
                  WHERE contest_id <> '_projected' AND actual_pct IS NOT NULL GROUP BY 1,2,3),
          sal AS (SELECT slate_id, player_id, MAX(salary) salary FROM salaries GROUP BY 1,2),
+         posn AS (SELECT slate_id, player_id, MAX(position) AS pos FROM salaries GROUP BY 1,2),
          prj AS (SELECT slate_id, player_id, proj_mean AS proj FROM projections
                  QUALIFY ROW_NUMBER() OVER (PARTITION BY slate_id, player_id ORDER BY version_ts DESC)=1)
-    SELECT a.sport, a.slate_id, a.player_id, s.salary, p.proj, a.actual
+    SELECT a.sport, a.slate_id, a.player_id, s.salary, po.pos AS position, p.proj, a.actual
     FROM act a JOIN sal s ON a.slate_id=s.slate_id AND a.player_id=s.player_id
                JOIN prj p ON a.slate_id=p.slate_id AND a.player_id=p.player_id
+               LEFT JOIN posn po ON a.slate_id=po.slate_id AND a.player_id=po.player_id
     WHERE s.salary > 0 AND p.proj > 0 AND a.actual >= 0 %s", where))), error = function(e) NULL)
   D
 }
 
-# per-slate features (identical in train + predict): value + within-slate ranks
+# per-slate features (identical in train + predict): value + within-slate ranks + position.
+# position is normalized the same way whether it arrives from the DB (training) or a
+# live pool (predict) -- a blank/NA position (a player row with no salaries match) is
+# bucketed "FLEX" rather than dropped, so predict_ownership() never loses a row to an
+# unseen factor level.
 .own_features <- function(D) {
   D <- as.data.table(copy(D))
   if (!"slate_id" %in% names(D)) D[, slate_id := "_one"]
+  if (!"position" %in% names(D)) D[, position := NA_character_]
+  D[, position := fifelse(is.na(position) | position == "", "FLEX", toupper(position))]
   D[, value := proj / pmax(salary / 1000, 0.1)]
   D[, `:=`(vr = frank(value) / .N, sr = frank(salary) / .N, pr = frank(proj) / .N), by = slate_id]
   D

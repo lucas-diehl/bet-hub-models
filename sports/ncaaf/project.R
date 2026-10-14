@@ -15,11 +15,32 @@ suppressPackageStartupMessages({ library(data.table) })
 
 # salary-implied baseline (points-per-$1k) — fallback when the model can't project a
 # player (no CFBD history: true freshmen, transfers, name mismatches).
+#
+# Value-per-$1k is NOT flat across the salary range -- the same finding
+# sports/nfl/project.R's .nfl_baseline_tier_val() was already fixed for, now
+# measured directly for CFB too (2026-10-14, 803 real player-games across 3
+# settled NCAAF slates). The OLD single pool-wide-median formula assigned
+# every fallback player the SAME ~1.8 proj pts at the $3,500 floor regardless
+# of who they were -- but the real median outcome there is 0.0 (a buried
+# backup and a committee piece can carry the identical price tag, same as the
+# NFL case). It simultaneously UNDER-projected the TOP of the fallback range:
+# a $7,500+ player with no CFBD match is usually a real name-match miss
+# (transfer, nickname, suffix), not a scrub -- real median outcome there is
+# 18.1, the flat formula gave 3.8. Measured median value/$1k by tier:
+#   <=3500: 0.00 | 3501-4500: 0.42 | 4501-5500: 0.83 | 5501-6500: 1.52 | 6501-7500: 1.58 | 7501+: 2.06
+# Small sample (43-278 player-games per tier, only 3 settled slates) -- a
+# first measurement, not a settled constant the way NFL's is (16,406 games).
+# Re-measure as more NCAAF slates settle.
+.ncaaf_baseline_tier_val <- function(sal) {
+  fifelse(sal <= 3500, 0.00,
+    fifelse(sal <= 4500, 0.42,
+      fifelse(sal <= 5500, 0.83,
+        fifelse(sal <= 6500, 1.52,
+          fifelse(sal <= 7500, 1.58, 2.06)))))
+}
 .ncaaf_baseline <- function(pool) {
-  val <- suppressWarnings(median(pool$dk_avg / pmax(pool$salary / 1000, 0.1), na.rm = TRUE))
-  if (!is.finite(val) || val <= 0) val <- 2.0
   proj <- as.numeric(pool$dk_avg); bad <- is.na(proj) | proj <= 0
-  proj[bad] <- (pool$salary[bad] / 1000) * val
+  proj[bad] <- (pool$salary[bad] / 1000) * .ncaaf_baseline_tier_val(pool$salary[bad])
   sd <- pmax(0.45 * proj, 4)
   data.table(proj = proj, sim_sd = sd, ceil = proj + 0.84 * sd, floor = pmax(proj - 1.2 * sd, 0), p_zero = 0.04)
 }
