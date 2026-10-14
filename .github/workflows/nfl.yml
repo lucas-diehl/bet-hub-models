@@ -23,18 +23,22 @@ name: nfl
 #   grade         available via workflow_dispatch for an ad hoc regrade.
 #   retrain-td    workflow_dispatch only. Re-fits + re-saves data/processed/
 #                 td_deployment_model.rds under whatever xgboost version THIS
-#                 runner currently has installed. xgb.save.raw()'s raw JSON
-#                 payload is not guaranteed stable across xgboost releases
-#                 (R/utilities.R's revive_booster() says so directly), and
-#                 something (the R-package cache evicting/rolling onto a
-#                 newer xgboost build is the leading suspect, but the exact
-#                 trigger wasn't pinned down) made xgb.load.raw() start
-#                 failing on every run that touches the TD board -- found
-#                 2026-10-14, confirmed failing on every run back through at
-#                 least 2026-10-11 (td-refresh included), entirely silently
-#                 because every step here is wrapped in `|| echo`. Run this
-#                 once whenever that happens again (new runner image, an
-#                 xgboost CRAN bump, a cache eviction).
+#                 runner currently has installed, via scripts/13_train_td_model.R.
+#                 xgb.save.raw()'s raw JSON payload is not guaranteed stable
+#                 across xgboost releases (R/utilities.R's revive_booster() says
+#                 so directly) -- this runner had drifted to xgboost 3.2.1.1
+#                 against a model saved under 1.7.9.1, and xgb.load.raw() failed
+#                 on every run touching the TD board from at least 2026-10-11
+#                 until found + fixed 2026-10-14, entirely silently because
+#                 every step here is wrapped in `|| echo`. Fixed for now by
+#                 PINNING xgboost (see the install step below) rather than by
+#                 running this job -- scripts/13 needs data/processed/
+#                 td_player_features.rds + td_prop_board.rds, and neither is in
+#                 this workflow's cache (confirmed: a 2026-10-14 dispatch of
+#                 this job failed on a missing td_player_features.rds). Treat
+#                 retrain-td as aspirational until whatever script(s) produce
+#                 those two files are also wired in here; the version PIN is
+#                 the real fix today.
 #
 # NFL is STATEFUL: the frozen-pick ledger (data/processed/published_picks_ledger.csv),
 # the closing-line capture (data/processed/closing_line_capture.csv), and the latest
