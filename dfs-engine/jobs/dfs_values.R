@@ -27,8 +27,12 @@ suppressWarnings(suppressPackageStartupMessages({ library(data.table); library(D
 VALUES_CONTRACT_VERSION <- "1.0"
 VALUE_MAX_SAL_PCTILE    <- 0.80          # value fallback: exclude priciest ~20%
 N_VALUES                <- 10L           # top N players emitted
-N_ENTRIES               <- 20L           # GPP entries for the exposure build
-MAX_EXPOSURE            <- 0.40          # per-player exposure cap
+N_ENTRIES               <- 20L           # GPP entries for the exposure build (build_gpp20()'s n)
+# Informational only -- matches build_gpp20()'s own exp_cap default (portfolio.R).
+# run_slate() doesn't forward an exp_cap override for gpp_mode="gpp20", and this
+# file intentionally doesn't change that shared/stable function's signature just
+# for a display feed; update this constant if that default ever changes instead.
+MAX_EXPOSURE            <- 0.50
 DFS_SPORTS              <- c("golf", "wnba", "tennis", "nfl", "ncaaf")
 # Slight bust-risk discount on proj-per-$ value/leverage rankings. Raw proj/$
 # has no penalty for role instability -- a rock-bottom-salary player with ANY
@@ -50,31 +54,39 @@ dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Docum
   if (!nchar(s)) "Main" else paste0(toupper(substr(s, 1, 1)), substr(s, 2, nchar(s))) }
 
 # ── EXPOSURE view (primary) ───────────────────────────────────────────────────
-# greedy exposure-capped GPP portfolio from graded candidates (res from run_slate).
-# Picks the best-EV lineup that keeps every player at/under the 40% cap, up to 20.
-.exposure_counts <- function(res, n = N_ENTRIES, max_exp = MAX_EXPOSURE) {
-  res <- as.data.table(res)
-  if (!nrow(res) || !"idx" %in% names(res)) return(NULL)
-  if ("gpp_ev" %in% names(res)) res <- res[order(-gpp_ev)]
-  cap <- max(1L, floor(n * max_exp))                       # 8 lineups/player at 20 & 0.40
-  expo <- integer(0); seen <- character(0); built <- 0L
-  cnt <- function(k) { v <- expo[k]; if (is.na(v)) 0L else v }
-  for (i in seq_len(nrow(res))) {
-    if (built >= n) break
-    idx <- res$idx[[i]]; key <- paste(sort(idx), collapse = "-")
-    if (key %in% seen) next
-    if (!all(vapply(idx, function(j) cnt(as.character(j)) < cap, logical(1)))) next
-    seen <- c(seen, key); built <- built + 1L
-    for (j in idx) { k <- as.character(j); expo[k] <- cnt(k) + 1L }
-  }
-  if (!length(expo)) return(NULL)
-  data.table(idx = as.integer(names(expo)), cnt = as.integer(expo), n_built = built)
+# Tallies real per-player exposure across rs$picks -- the GUARANTEED-size,
+# exposure-capped 20-entry GPP portfolio build_gpp20() already produces (called
+# via run_slate(gpp_mode = "gpp20"), same tool the real portfolio builder uses.
+#
+# This REPLACES a hand-rolled greedy counter that used to run here (reject the
+# whole candidate lineup if ANY of its players was already at cap, scanning the
+# raw n_cand candidates). That has no guarantee of reaching N_ENTRIES: confirmed
+# live 2026-10-14 on a real 445-player NFL pool with 400 genuinely distinct
+# candidates -- it stalled at 10 of a requested 20 lineups, because a handful of
+# elite-value players appear in nearly every one of the top-ranked candidates,
+# hit cap early, and then almost everything left in the pool still touched one
+# of them. That's the EXACT failure mode build_gpp20()'s own "exposure-aware
+# direct solve" backfill exists to fix (it has a comment describing this same
+# pattern measured on a different real slate) -- it re-solves the ILP with
+# capped players explicitly excluded instead of just resampling a static pool,
+# so it reliably reaches the real target. Using the old counter's result also
+# divided by the FIXED CONSTANT N_ENTRIES rather than how many lineups actually
+# got built, which understated exposure whenever the build came up short (a
+# player in all 8 capped-out lineups of a stalled 10-lineup build showed "40%"
+# when it was really 80% of what was actually built) -- together these looked
+# exactly like "the exposure cap isn't working" and "players missing entirely".
+.dfs_exposure_counts <- function(picks) {
+  if (is.null(picks) || !length(picks)) return(NULL)
+  all_idx <- unlist(lapply(picks, function(p) p$idx[[1]]))
+  if (!length(all_idx)) return(NULL)
+  tab <- table(all_idx)
+  data.table(idx = as.integer(names(tab)), cnt = as.integer(tab), n_built = length(picks))
 }
 
-.dfs_exposure_items <- function(pool, res, sport) {
-  ec <- .exposure_counts(res); if (is.null(ec)) return(NULL)
+.dfs_exposure_items <- function(pool, picks, sport) {
+  ec <- .dfs_exposure_counts(picks); if (is.null(ec)) return(NULL)
   pool <- as.data.table(pool)
-  ec[, exposure := cnt / N_ENTRIES]
+  ec[, exposure := cnt / n_built]                       # vs what was ACTUALLY built, not a fixed constant
   ec <- ec[order(-exposure, -cnt)][seq_len(min(N_VALUES, .N))]
   individual <- sport %in% c("golf", "tennis")
   nmcol <- if ("player_name" %in% names(pool)) "player_name" else "name"
@@ -96,9 +108,9 @@ dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Docum
 # individual (no positions) so this is skipped there. Groups the exposure portfolio by
 # roster position, top-2 per position by EXPOSURE (the optimizer's actual lean), value as
 # the tiebreak; a FLEX group (top-2 flex-eligible not already shown) when the roster has one.
-.dfs_by_position <- function(pool, res, rr, sport) {
-  ec <- .exposure_counts(res); if (is.null(ec)) return(NULL)
-  pool <- as.data.table(pool); ec[, exposure := cnt / N_ENTRIES]
+.dfs_by_position <- function(pool, picks, rr, sport) {
+  ec <- .dfs_exposure_counts(picks); if (is.null(ec)) return(NULL)
+  pool <- as.data.table(pool); ec[, exposure := cnt / ec$n_built[1]]
   nmcol <- if ("player_name" %in% names(pool)) "player_name" else "name"
   P <- pool[ec$idx]
   P[, `:=`(.exp = ec$exposure, .row = .I,
@@ -211,15 +223,19 @@ write_dfs_values_sport <- function(sport, site = "dk") {
   # the real tag (main/main1/main2) first so a multi-layout day doesn't fail the lookup
   # and silently fall through to the (possibly stale) value-view fallback below.
   main_tag <- tryCatch(.dfs_resolve_main_slate_tag(sport, Sys.Date(), site), error = function(e) "main")
+  # gpp_mode="gpp20" + n_lineups=N_ENTRIES: the REAL 20-entry GPP builder (same tool
+  # used for actual play), so rs$picks is a guaranteed-size, exposure-capped
+  # portfolio -- see .dfs_exposure_counts() above for why this replaced a separate,
+  # weaker counter that used to run here.
   rs <- tryCatch(run_slate(sport, Sys.Date(), slate = main_tag, site = site, n_sims = 2500L, n_cand = 400L,
-                           n_lineups = 8L, field_n = 500L, persist = FALSE),   # n>=3 (build_portfolio needs n_bal>=0)
+                           n_lineups = N_ENTRIES, field_n = 500L, persist = FALSE, gpp_mode = "gpp20"),
                  error = function(e) { msg("dfs values:", sport, site_label, "- optimizer:", conditionMessage(e)); NULL })
-  if (!is.null(rs) && !is.null(rs$res)) {
-    vals <- tryCatch(.dfs_exposure_items(rs$pool, rs$res, sport), error = function(e) NULL)
+  if (!is.null(rs) && !is.null(rs$picks) && length(rs$picks)) {
+    vals <- tryCatch(.dfs_exposure_items(rs$pool, rs$picks, sport), error = function(e) NULL)
     if (!is.null(vals) && length(vals)) { slate_date <- .dfs_slate_date(rs$slate_id); slate_label <- .dfs_slate_label(rs$slate_id) }
     # team sports (NFL/WNBA) also get the position-grouped "2 per position" view
     if (!(sport %in% c("golf", "tennis")) && !is.null(vals) && length(vals))
-      bypos <- tryCatch(.dfs_by_position(rs$pool, rs$res, rs$rr, sport), error = function(e) NULL)
+      bypos <- tryCatch(.dfs_by_position(rs$pool, rs$picks, rs$rr, sport), error = function(e) NULL)
   }
   # FALLBACK: value view from the freshest logged slate at this site (no exposure field)
   if (is.null(vals) || !length(vals)) {
@@ -259,11 +275,11 @@ write_dfs_round_values <- function(round = NULL, site = "dk") {
   rnd <- round %||% lr$round
   extra <- list(single_round = TRUE, round = rnd, draft_group_id = lr$draft_group_id)
   rs <- tryCatch(run_slate("golf", Sys.Date(), slate = paste0("r", rnd), site = site,
-                           n_sims = 2500L, n_cand = 400L, n_lineups = 8L, field_n = 500L,
-                           persist = FALSE, extra = extra),
+                           n_sims = 2500L, n_cand = 400L, n_lineups = N_ENTRIES, field_n = 500L,
+                           persist = FALSE, extra = extra, gpp_mode = "gpp20"),
                  error = function(e) { msg("dfs round values: optimizer:", conditionMessage(e)); NULL })
-  vals <- if (!is.null(rs) && !is.null(rs$res))
-            tryCatch(.dfs_exposure_items(rs$pool, rs$res, "golf"), error = function(e) NULL) else NULL
+  vals <- if (!is.null(rs) && !is.null(rs$picks) && length(rs$picks))
+            tryCatch(.dfs_exposure_items(rs$pool, rs$picks, "golf"), error = function(e) NULL) else NULL
   if (is.null(vals) || !length(vals)) { msg("dfs round values: no exposure items for R", rnd); return(invisible(NULL)) }
   # event name (best-effort) from the exported round projection meta
   event <- tryCatch({ d <- Sys.getenv("GOLF_MODEL_DIR", ""); if (!nzchar(d)) d <- file.path(DFS_ROOT, "..", "golf-modeling")
