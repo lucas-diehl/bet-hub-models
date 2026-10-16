@@ -156,7 +156,27 @@ build_sim_payload <- function(r, K = 1000L, opt_sims = 50000L) {
   P <- as.data.table(r$sim$pool)
   own <- if ("own" %in% names(P)) pmax(P$own, 1e-4) else rep(0.05, nrow(P))
   fs <- length(r$field$idx)
-  u <- r$field$idx[!duplicated(r$field$keys)]; if (length(u) > 2500L) u <- u[seq_len(2500L)]  # candidate set (1-based)
+  # Candidate set for the browser optimizer (1-based). This USED to be ONLY r$field$idx
+  # -- simulate_field()'s own lineups, a model of what OPPONENTS will likely roster
+  # (field_sim.R biases every draw toward ownership via an explicit "popularity pull"
+  # term). The hypothesis (2026-10-16) was that swapping to r$res (make_candidates(),
+  # deliberately diversified by construction) alone would fix a real complaint -- a
+  # thin 3-game NCAAF slate at a 25% cap / 20 lineups only ever built 8-12, with lots
+  # of modest-projection players never appearing. MEASURED against that exact real
+  # slate before shipping: r$res ALONE was a regression (7 of 20 built, 22 distinct
+  # players, vs 12/34 from the field sim) -- make_candidates()'s 300 candidates
+  # converge on a SMALLER core of players than the field sim's larger, multi-tier-noise
+  # 1200-lineup sample does in practice, despite being "diversified by construction."
+  # The UNION of both, deduped, measured strictly no worse than the field sim alone on
+  # that same slate (same 12/34 in order, 13/37 with tie-break order randomized -- never
+  # below the field-sim-only baseline) and costs nothing extra (r$res is already
+  # computed as part of this same build) -- so take both, not a swap.
+  u_field <- r$field$idx[!duplicated(r$field$keys)]
+  u <- if (!is.null(r$res) && "idx" %in% names(r$res)) {
+    u2 <- c(u_field, r$res$idx)
+    u2[!duplicated(vapply(u2, function(ix) paste(sort(ix), collapse = "-"), character(1)))]
+  } else u_field
+  if (length(u) > 2500L) u <- u[seq_len(2500L)]
   cand_metrics <- tryCatch(dash_cand_metrics_hi(r, u, NBIG = opt_sims), error = function(e) NULL)
   rr <- r$rr
   # positional structure (flat-n for golf/tennis; slot-based for team sports)
@@ -444,7 +464,7 @@ build_golf_captain_card <- function(date = Sys.Date(), opts = load_bankroll_opts
   # and build_contest_card() paths use. This card builds esim/field/rr/exp_pool itself
   # (rather than via run_contest()), so assemble the minimal r-like list build_sim_payload()
   # and dash_cand_metrics_hi() actually read (sim, field, rr, pool, sport).
-  sim_r <- list(sim = esim, field = field, rr = rr, pool = exp_pool, sport = "golf")
+  sim_r <- list(sim = esim, field = field, rr = rr, pool = exp_pool, sport = "golf", res = res)
   sim_payload <- tryCatch(build_sim_payload(sim_r), error = function(e) { msg("  sim payload skipped:", conditionMessage(e)); NULL })
   if (!is.null(sim_payload))
     sim_payload$contests <- tryCatch(dash_contest_options("golf", sim_payload$field_size), error = function(e) NULL)
@@ -515,7 +535,7 @@ build_golf_presidents_cup_card <- function(date = Sys.Date(), opts = load_bankro
   # and dash_cand_metrics_hi() actually read (sim, field, rr, pool, sport). Without this,
   # publish_pools() silently drops the card (card$sim stays NULL) and it never reaches
   # the site's optimizer feed even though the card itself is status="ready".
-  sim_r <- list(sim = esim, field = field, rr = rr, pool = exp_pool, sport = "golf")
+  sim_r <- list(sim = esim, field = field, rr = rr, pool = exp_pool, sport = "golf", res = res)
   sim_payload <- tryCatch(build_sim_payload(sim_r), error = function(e) { msg("  sim payload skipped:", conditionMessage(e)); NULL })
   if (!is.null(sim_payload))
     sim_payload$contests <- tryCatch(dash_contest_options("golf", sim_payload$field_size), error = function(e) NULL)
