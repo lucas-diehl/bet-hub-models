@@ -1,0 +1,33 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-10-15",
+  "graded_at": "2026-10-16T17:07:52Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk7-eastcarolina-uab-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 13,
+        "cover_line": 5.5,
+        "closing_line": 5.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk7-georgiasouthern-olddominion-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0113,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": -8,
+        "cover_line": 3.5,
+        "closing_line": 3
+      }
+    }
+  ]
+}
