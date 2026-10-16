@@ -160,6 +160,59 @@ print_my_contests <- function(r) {
   invisible(r)
 }
 
+# ── FEED: publish today's ranked contests to the bet site (NEW 2026-10-16) ───────
+# score_contests() has been live in the daily job since 2026-10-14 but only ever
+# printed a text board to a local report file nobody saw day-to-day -- "which GPP
+# to enter" is the project's own highest-confidence ROI lever (mega-GPP rake vs a
+# soft single-/small-max field dwarfs any plausible projection edge) and it was
+# sitting completely unused. Writes the SAME JSON-feed pattern as dfs_values.R:
+#   <FEED_DIR>/dfs-engine/<sport>/contests_<YYYY-MM-DD>.json
+.contest_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Documents/dashboard_feed")
+write_contest_feed <- function(sport, top = 8L, ...) {
+  sc <- tryCatch(score_contests(sport, ...), error = function(e) {
+    msg("contest feed:", sport, "- score_contests error:", conditionMessage(e)); NULL })
+  dir <- file.path(.contest_feed_dir(), "dfs-engine", sport)
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  f <- file.path(dir, sprintf("contests_%s.json", Sys.Date()))
+  if (is.null(sc) || !nrow(sc)) {
+    # still publish an empty, dated file so a slow/off day doesn't leave the site
+    # showing a STALE prior day's board (same "honest empty, not stale" discipline
+    # as dfs_values.R's fallback path).
+    out <- list(contract_version = "1.0", source = "dfs-engine", sport = sport,
+                slate_date = as.character(Sys.Date()),
+                generated_at = format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"),
+                contests = list())
+    txt <- as.character(jsonlite::toJSON(out, auto_unbox = TRUE, pretty = TRUE, null = "null"))
+    txt <- sub('"contests"\\s*:\\s*\\{\\s*\\}', '"contests": []', txt)
+    writeLines(txt, f, useBytes = TRUE)
+    msg("contest feed:", sport, "-> ", basename(f), "(0 contests)")
+    return(invisible(f))
+  }
+  s <- head(sc, top)
+  items <- lapply(seq_len(nrow(s)), function(i) {
+    it <- list(rank = i, name = s$name[i], entry_fee = s$fee[i], field_size = as.integer(s$field[i]),
+               score = s$score[i], verdict = s$verdict[i])
+    if (is.finite(s$cap[i]))        it$max_entries      <- as.integer(s$cap[i])
+    if (!is.na(s$guaranteed[i]))    it$guaranteed        <- isTRUE(s$guaranteed[i])
+    if (is.finite(s$rake[i]))       it$rake_pct          <- s$rake[i]
+    if (is.finite(s$fill[i]))       it$fill_pct          <- s$fill[i]
+    if (is.finite(s$first_pct[i]))  it$first_place_pct   <- s$first_pct[i]
+    if (nzchar(s$start[i] %||% "")) it$start             <- s$start[i]
+    it
+  })
+  out <- list(contract_version = "1.0", source = "dfs-engine", sport = sport,
+              slate_date = as.character(Sys.Date()),
+              generated_at = format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"),
+              contests = items)
+  writeLines(as.character(jsonlite::toJSON(out, auto_unbox = TRUE, pretty = TRUE, null = "null")), f, useBytes = TRUE)
+  msg("contest feed:", sport, "->", basename(f), sprintf("(%d contests)", length(items)))
+  invisible(f)
+}
+write_contest_feeds <- function(sports = c("wnba", "golf", "nfl", "tennis", "ncaaf")) {
+  invisible(lapply(sports, function(sp) tryCatch(write_contest_feed(sp),
+    error = function(e) msg("contest feed", sp, "error:", conditionMessage(e)))))
+}
+
 # pretty-print the ranked recommendation
 print_contest_board <- function(sc, top = 10L) {
   if (is.null(sc) || !nrow(sc)) { cat("no contests to rank\n"); return(invisible()) }
