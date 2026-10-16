@@ -35,7 +35,9 @@ for (sp in sports) {
 cat("\nRule of thumb: prefer rake <14%, single-/small-max fields (softer), and guaranteed pools\n",
     "filling slowly (overlay). 150-max mega-GPPs are the highest-rake, shark-heaviest format.\n")
 
-# Publish the same ranking to the bet site (dfs-engine/<sport>/contests_<date>.json),
-# unfiltered by this script's own cap/fee CLI flags (those are for the human-readable
-# board above; the site should always show the full, default-range ranking).
-write_contest_feeds(sports)
+# NOTE 2026-10-16: this used to also publish to the bet site
+# (dfs-engine/<sport>/contests_<date>.json) via write_contest_feeds(sports) --
+# removed by explicit direction ("take it off the site, I don't want it on
+# there"). write_contest_feed()/score_cash_contests() are still defined in
+# spine/R/contest_select.R if this is ever wanted again; this script now only
+# prints the human-readable board above, same as before that feed existed.
