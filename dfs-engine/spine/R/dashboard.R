@@ -146,6 +146,72 @@ dash_contest_options <- function(sport, fs) {
   c(live, presets)
 }
 
+# ── PRECOMPUTED preset sets (NEW 2026-10-16) ──────────────────────────────────────
+# The browser optimizer has always built its own lineup sets LIVE from a static
+# candidate list via a greedy approximation -- no real solver, so on a tight
+# exposure cap / thin slate it can silently come up short of the requested count
+# (confirmed live: 8-12 of a requested 20). Meanwhile build_gpp20()/build_portfolio()
+# -- the REAL functions that generate the actual daily recommended lineups, with a
+# true ILP-based "exposure-aware direct solve" guarantee -- are right there, already
+# computed as part of this same build, and never used by the interactive tool at all.
+#
+# Precompute N_ALT independent, GUARANTEED, exposure-respecting sets per STANDARD
+# contest-type preset (matching apps/web/lib/optimizer's ContestType) so the browser
+# can show a real one directly for the common "just pick a type" case, instead of
+# approximating. N_ALT=50 (not a handful) by explicit direction -- a small handful
+# "doesn't account for variance," and MEASURED cost (reusing the already-computed
+# res/pool/rr, no re-simulation) is ~1 min total across all 4 presets even on the
+# worst thin-slate case tested, so there's no real reason to skimp.
+#
+# build_gpp20()/build_portfolio() are NOT touched or reimplemented here -- same
+# "be careful changing the stable stuff" discipline as everywhere else in this
+# codebase. The ONLY new behavior is jittering a COPY of res$proj before each call:
+# build_gpp20()'s static ranking pass is otherwise deterministic (ranks by -proj,
+# no randomness of its own), so 50 calls on a frozen, unjittered res would mostly
+# just rediscover the identical set each time (confirmed: on the test slate, only
+# the exposure-aware-direct-solve BACKFILL portion varied run to run -- 3 of 20 for
+# gpp20, meaning 17 of 20 lineups would've been identical across all 50 "alternates"
+# without this). A light per-draw jitter (+/-4%, same spirit as make_candidates()'s
+# own noise injection) reorders which near-tied candidates get picked each time,
+# so variety shows up across the WHOLE set, not just the fallback tail.
+N_ALT_SETS <- 50L
+.alt_lineup_sets <- function(res, gates, pool, rr, caps, n_alt = N_ALT_SETS, n = 20L,
+                             exp_cap = 0.50, jitter_sd = 0.04, use_gpp20 = TRUE, seed0 = 7000L) {
+  if (is.null(res) || !nrow(res)) return(list())
+  lapply(seq_len(n_alt), function(i) {
+    set.seed(seed0 + i)
+    rj <- copy(res)
+    # Jitter BOTH ranking columns build_gpp20()/build_portfolio() can key off, not just
+    # proj -- the cash preset (build_portfolio()'s "Cash anchor" tier) ranks by p_cash,
+    # which proj-only jitter never touched. Confirmed live: all 50 "cash" sets came back
+    # byte-identical before this -- p_cash is the one that actually needed it.
+    rj[, proj   := proj   * (1 + stats::rnorm(.N, 0, jitter_sd))]
+    if ("p_cash" %in% names(rj)) rj[, p_cash := p_cash * (1 + stats::rnorm(.N, 0, jitter_sd))]
+    picks <- tryCatch(
+      if (use_gpp20) build_gpp20(rj, gates, n = n, exp_cap = exp_cap, pool = pool, rr = rr, caps = caps)
+      else build_portfolio(rj, gates, n = n),
+      error = function(e) list())
+    # idx (0-based, for the browser) + win (P[1st], from res's own un-jittered grading --
+    # the pick's OTHER columns besides the one we perturbed above are untouched, so this
+    # is the real value, not distorted by the jitter used to pick which candidate won).
+    lapply(picks, function(p) list(idx = as.integer(p$idx[[1]] - 1L), win = round(p$p_top1 %||% 0, 4)))
+  })
+}
+# Standard presets, matching apps/web/lib/optimizer/index.ts's CONTESTS exactly
+# (n + exposure per type) so a precomputed set is a drop-in replacement for what the
+# client would otherwise have approximated for that same preset.
+.preset_sets <- function(r) {
+  if (is.null(r$res) || !("idx" %in% names(r$res)) || !nrow(r$res)) return(NULL)
+  gates <- r$gates %||% list(cash_enabled = FALSE, gpp_enabled = FALSE)
+  caps <- tryCatch(load_exposure_overrides(r$sport), error = function(e) NULL)
+  list(
+    cash   = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 5L,  exp_cap = 1.00, use_gpp20 = FALSE),
+    single = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 1L,  exp_cap = 1.00, use_gpp20 = TRUE),
+    gpp20  = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 20L, exp_cap = 0.50, use_gpp20 = TRUE),
+    large  = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 60L, exp_cap = 0.30, use_gpp20 = TRUE)
+  )
+}
+
 build_sim_payload <- function(r, K = 1000L, opt_sims = 50000L) {
   scores <- r$sim$scores
   if (is.null(scores) || !nrow(scores)) return(NULL)
@@ -200,7 +266,12 @@ build_sim_payload <- function(r, K = 1000L, opt_sims = 50000L) {
     # per-candidate metrics graded on a FULL 50k-sim draw (aligned to cands) — the Optimize
     # and Top-ROI selection use these so ranking rests on 50,000 sims, not the light K draws.
     opt_k = if (!is.null(cand_metrics)) opt_sims else Kc,
-    cand_metrics = cand_metrics)
+    cand_metrics = cand_metrics,
+    # 50 precomputed, GUARANTEED-correct alternate sets per standard contest-type preset
+    # (cash/single/gpp20/large) -- see .preset_sets() above. NULL (never a partial/wrong
+    # result) if r$res isn't available for this build; the client falls back to its own
+    # live approximation from `cands` in that case, same as it always has.
+    preset_sets = tryCatch(.preset_sets(r), error = function(e) { msg("  preset sets skipped:", conditionMessage(e)); NULL }))
 }
 
 # LIGHTWEIGHT daily projection logging — for each sport with a live slate, project the
