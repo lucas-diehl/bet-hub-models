@@ -130,6 +130,23 @@ ncaaf_project_players <- function(slate) {
   } else msg("  NCAAF game script: no Vegas lines for this date -> flat 18.8 prior")
   pool[, exp_margin := em]
 
+  # --- DROP backup QBs (won't play, so their model/baseline "value" is fictional) -----
+  # See ncaaf_backup_qb_ids() in sports/ncaaf/model.R for the detection + full rationale
+  # (NCAAF analog of sports/nfl/project.R's nfl_qb_starters() drop, inferred from real
+  # recent CFBD pass volume since CFB has no reliable depth-chart feed). Skips (never
+  # blocks the build) whenever W wasn't loaded or no team has a clear enough signal.
+  if ("cfb_id" %in% names(pool)) {
+    backup_ids <- tryCatch(ncaaf_backup_qb_ids(W), error = function(e) NULL)
+    if (!is.null(backup_ids)) {
+      drop <- pool$position == "QB" & pool$cfb_id %in% backup_ids
+      if (any(drop)) {
+        msg(sprintf("  ncaaf: dropped %d backup QB(s) (%s)", sum(drop),
+                     paste(head(pool$player_name[drop], 5), collapse = ", ")))
+        pool <- pool[!drop]
+      }
+    }
+  }
+
   # cold-start projected ownership (chalk tracks value); refined once trained (train_ownership_model)
   own_pred <- tryCatch(predict_ownership(pool, "ncaaf"), error = function(e) NULL)
   if (!is.null(own_pred)) { pool[, own := own_pred]; msg("  NCAAF ownership: trained model") }

@@ -91,6 +91,41 @@ ncaaf_entering_features <- function(W, athlete_ids, window = 5L) {
   agg
 }
 
+# ── Starting-QB detection (NCAAF analog of sports/nfl/ingest.R's nfl_qb_starters()) ──
+# QB is a clean 1-starter-per-team position (unlike RB/WR/TE committees), so a backup's
+# model/baseline projection is otherwise fictional -- confirmed live 2026-10-16: a single
+# NCAAF slate listed 4 separate Purdue QBs, EACH independently projected 20+ pts, with
+# nothing anywhere saying only one of them actually plays. CFB has no reliable
+# depth-chart feed the way NFL's ESPN source gives (CFBD's roster endpoint doesn't
+# expose one), so the starter is inferred from REAL RECENT PASSING VOLUME instead,
+# reusing the SAME CFBD box-score history (W) project_players() already loaded --
+# no new data pull.
+#
+# Restricted to the player's CURRENT team (their most recent game's team) so a
+# mid-season transfer's prior-school pass yards never count toward their new team --
+# otherwise a backup who started elsewhere before transferring could look like the
+# incumbent. Only acts when there's a REAL, clear gap (the leader clears min_yds AND
+# the gap is at least `margin`x) -- a genuine QB competition, a true job battle, or a
+# team with too little recent data is left alone rather than guessed at wrong, same
+# "skip, never block" discipline as every other fallback in this pipeline.
+ncaaf_backup_qb_ids <- function(W, lookback_games = 5L, min_yds = 150, margin = 2.5) {
+  if (is.null(W) || !nrow(W) || !all(c("athlete_id", "team", "pass_yds", "season", "wk") %in% names(W))) return(NULL)
+  Q <- unique(as.data.table(W)[, .(athlete_id, team, season, wk, pass_yds)])
+  setorder(Q, athlete_id, -season, -wk)
+  Q[, g := seq_len(.N), by = athlete_id]
+  cur_team <- Q[g == 1, .(athlete_id, cur_team = team)]
+  recent <- merge(Q[g <= lookback_games], cur_team, by = "athlete_id")[team == cur_team]
+  agg <- recent[, .(yds = sum(pass_yds, na.rm = TRUE)), by = .(athlete_id, team)]
+  agg <- agg[yds > 0]
+  if (!nrow(agg)) return(NULL)
+  setorder(agg, team, -yds)
+  agg[, rk := seq_len(.N), by = team]
+  top <- agg[rk == 1, .(team, top_yds = yds)]
+  agg <- merge(agg, top, by = "team")
+  drop <- agg[rk > 1 & top_yds >= min_yds & yds * margin < top_yds, athlete_id]
+  if (!length(drop)) NULL else drop
+}
+
 # Predict dk_pts for a feature-built pool (must have pos + CFB_FEATS columns).
 ncaaf_predict <- function(pool) {
   m <- if (file.exists(NCAAF_MODEL_PATH())) readRDS(NCAAF_MODEL_PATH()) else NULL

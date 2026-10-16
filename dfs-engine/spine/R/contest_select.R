@@ -104,6 +104,44 @@ score_contests <- function(sport, draft_group = NULL, fee_min = 0, fee_max = Inf
   ct[]
 }
 
+# ── CASH games (50/50s, double-ups): a different format, scored differently ──────
+# GPP structure (overlay, payout top-heaviness) doesn't apply to a 50/50 or double-up
+# -- roughly half the field cashes at a flat multiple, so the only real lever is RAKE,
+# with field size as a soft tiebreak (smaller/more predictable fields swing less on
+# chalk busts). Pure rake-only scoring, same verdict/field shape as score_contests()
+# so write_contest_feed() can treat both the same way.
+score_cash_contests <- function(sport, draft_group = NULL, fee_min = 0, fee_max = Inf, min_field = 5L) {
+  ct <- dk_list_contests(sport, draft_group)
+  if (is.null(ct) || !nrow(ct)) { msg("contest-select: no live ", sport, " contests"); return(NULL) }
+  ct <- ct[(double_up | fifty) & field >= min_field & fee >= fee_min & fee <= fee_max]
+  if (!nrow(ct)) { msg("contest-select: no ", sport, " cash games in fee/field range"); return(NULL) }
+  ct[, rake := round(pmax(0, 1 - prize / (field * fee)), 4)]
+  ct[, fill := round(entries / field, 3)]
+  # cash-game rake runs much lower than GPP rake structurally (DK's own 50/50s are
+  # typically ~10-12%) -- a tighter 5-15% band so the score still discriminates,
+  # instead of every cash game bunching up near 100 under the GPP band (10-25%).
+  ct[, s_rake  := pmax(0, pmin(1, (0.15 - rake) / (0.15 - 0.05)))]
+  ct[, s_field := pmax(0, pmin(1, 1 - (log10(pmax(field, 10)) - 1) / 3))]
+  ct[, score := round(100 * (0.80*s_rake + 0.20*s_field), 1)]
+  setorder(ct, -score, rake)
+  ct[, `:=`(cap = NA_integer_, first_pct = NA_real_, paid_pct = NA_real_)]
+  ct[, verdict := sprintf("%s; rake %.0f%%; field %s", fifelse(fifty, "50/50", "double-up"), 100*rake,
+                           format(field, big.mark = ","))]
+  attr(ct, "sport") <- sport
+  ct[]
+}
+
+# ── per-contest-type top-N, matching the browser optimizer's contest presets ─────
+# (apps/web/lib/optimizer/index.ts's ContestType) so "pick your contest type, see
+# the top 5 for it" lines up on both sides. cash has its own scorer (different
+# format entirely); single/gpp20/large are all GPPs split by entry-cap tier.
+CONTEST_TYPE_PARAMS <- list(
+  cash   = list(cap_min = 1L,  cap_max = Inf),
+  single = list(cap_min = 1L,  cap_max = 1L),
+  gpp20  = list(cap_min = 2L,  cap_max = 20L),
+  large  = list(cap_min = 21L, cap_max = Inf)
+)
+
 # short human-readable why-this-rank
 .contest_verdict <- function(rake, cap, field, guaranteed, fill, first_pct) {
   vapply(seq_along(rake), function(i) {
@@ -168,28 +206,10 @@ print_my_contests <- function(r) {
 # sitting completely unused. Writes the SAME JSON-feed pattern as dfs_values.R:
 #   <FEED_DIR>/dfs-engine/<sport>/contests_<YYYY-MM-DD>.json
 .contest_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Documents/dashboard_feed")
-write_contest_feed <- function(sport, top = 8L, ...) {
-  sc <- tryCatch(score_contests(sport, ...), error = function(e) {
-    msg("contest feed:", sport, "- score_contests error:", conditionMessage(e)); NULL })
-  dir <- file.path(.contest_feed_dir(), "dfs-engine", sport)
-  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-  f <- file.path(dir, sprintf("contests_%s.json", Sys.Date()))
-  if (is.null(sc) || !nrow(sc)) {
-    # still publish an empty, dated file so a slow/off day doesn't leave the site
-    # showing a STALE prior day's board (same "honest empty, not stale" discipline
-    # as dfs_values.R's fallback path).
-    out <- list(contract_version = "1.0", source = "dfs-engine", sport = sport,
-                slate_date = as.character(Sys.Date()),
-                generated_at = format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"),
-                contests = list())
-    txt <- as.character(jsonlite::toJSON(out, auto_unbox = TRUE, pretty = TRUE, null = "null"))
-    txt <- sub('"contests"\\s*:\\s*\\{\\s*\\}', '"contests": []', txt)
-    writeLines(txt, f, useBytes = TRUE)
-    msg("contest feed:", sport, "-> ", basename(f), "(0 contests)")
-    return(invisible(f))
-  }
-  s <- head(sc, top)
-  items <- lapply(seq_len(nrow(s)), function(i) {
+
+.contest_items <- function(s, top) {
+  s <- head(s, top)
+  lapply(seq_len(nrow(s)), function(i) {
     it <- list(rank = i, name = s$name[i], entry_fee = s$fee[i], field_size = as.integer(s$field[i]),
                score = s$score[i], verdict = s$verdict[i])
     if (is.finite(s$cap[i]))        it$max_entries      <- as.integer(s$cap[i])
@@ -200,12 +220,45 @@ write_contest_feed <- function(sport, top = 8L, ...) {
     if (nzchar(s$start[i] %||% "")) it$start             <- s$start[i]
     it
   })
+}
+
+# Per CONTEST TYPE (cash/single/gpp20/large, matching the browser optimizer's presets),
+# not one flat ranked list. Rewritten 2026-10-16: the flat top-N list was dominated by
+# DK's high-roller "Luxury Box"/"Thunderdome" single-entry products -- real, genuinely
+# low-rake, but $1500+ buy-ins nobody recreational is actually playing, structurally
+# favored by the scoring formula (fixed costs amortize better at high stakes, so rake
+# drops) regardless of whether anyone can/will play them. fee_max defaults to $50,
+# a normal recreational ceiling; raise it per call if that's ever wrong for you.
+write_contest_feed <- function(sport, top = 5L, fee_max = 50) {
+  dir <- file.path(.contest_feed_dir(), "dfs-engine", sport)
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  f <- file.path(dir, sprintf("contests_%s.json", Sys.Date()))
+
+  by_type <- list()
+  n_total <- 0L
+  for (type in names(CONTEST_TYPE_PARAMS)) {
+    p <- CONTEST_TYPE_PARAMS[[type]]
+    sc <- tryCatch(
+      if (identical(type, "cash")) score_cash_contests(sport, fee_max = fee_max)
+      else score_contests(sport, cap_min = p$cap_min, cap_max = p$cap_max, fee_max = fee_max),
+      error = function(e) { msg("contest feed:", sport, type, "- error:", conditionMessage(e)); NULL })
+    items <- if (is.null(sc) || !nrow(sc)) list() else .contest_items(sc, top)
+    by_type[[type]] <- items
+    n_total <- n_total + length(items)
+  }
+
   out <- list(contract_version = "1.0", source = "dfs-engine", sport = sport,
               slate_date = as.character(Sys.Date()),
               generated_at = format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"),
-              contests = items)
-  writeLines(as.character(jsonlite::toJSON(out, auto_unbox = TRUE, pretty = TRUE, null = "null")), f, useBytes = TRUE)
-  msg("contest feed:", sport, "->", basename(f), sprintf("(%d contests)", length(items)))
+              contests = by_type)
+  txt <- as.character(jsonlite::toJSON(out, auto_unbox = TRUE, pretty = TRUE, null = "null"))
+  # jsonlite serializes an empty R list() as {} not [] -- fix up every empty type so the
+  # contract's array type holds for a type with nothing in range today (same "honest
+  # empty, not stale" discipline as dfs_values.R's own [] fixup).
+  for (type in names(CONTEST_TYPE_PARAMS))
+    txt <- sub(sprintf('"%s"\\s*:\\s*\\{\\s*\\}', type), sprintf('"%s": []', type), txt)
+  writeLines(txt, f, useBytes = TRUE)
+  msg("contest feed:", sport, "->", basename(f), sprintf("(%d contests across %d types)", n_total, length(by_type)))
   invisible(f)
 }
 write_contest_feeds <- function(sports = c("wnba", "golf", "nfl", "tennis", "ncaaf")) {
