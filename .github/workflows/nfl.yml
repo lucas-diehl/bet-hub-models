@@ -39,6 +39,23 @@ name: nfl
 #                 retrain-td as aspirational until whatever script(s) produce
 #                 those two files are also wired in here; the version PIN is
 #                 the real fix today.
+#   retrain-fantasy  workflow_dispatch only. Forces scripts/17_build_fantasy_
+#                 prop_models.R --retrain, re-fitting + re-caching data/processed/
+#                 fantasy_prop_deployment_models.rds (gitignored, cache-only --
+#                 restored/saved by the "NFL data + outputs" cache steps below,
+#                 same as td_deployment_model.rds but never committed). Found
+#                 2026-10-17: that cache predates fit_fantasy_stat_model()'s own
+#                 portable_booster() call (R/fantasy_prop_model.R:1193), so every
+#                 normal run's SCORING step (line 1169's publish-* path, which
+#                 only ever passes --execute, never --retrain) called
+#                 revive_booster() on a dead, attribute-less pointer and threw --
+#                 this is what left fantasy_prop_*_week*_projections.csv stuck on
+#                 week 4 well into week 6. Unlike retrain-td, this job's inputs
+#                 (player_stats_2021_2026.rds, td_game_context.rds) ARE already
+#                 restored by the shared cache-restore step, so it actually runs
+#                 end to end. One dispatch repopulates the cache correctly;
+#                 every subsequent normal run reuses it until the next deliberate
+#                 model change or xgboost bump forces another one of these.
 #
 # NFL is STATEFUL: the frozen-pick ledger (data/processed/published_picks_ledger.csv),
 # the closing-line capture (data/processed/closing_line_capture.csv), and the latest
@@ -59,7 +76,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "publish-spread-total | publish-full | td-publish | td-refresh | capture-close | grade | retrain-td (blank = pick from the schedule)"
+        description: "publish-spread-total | publish-full | td-publish | td-refresh | capture-close | grade | retrain-td | retrain-fantasy (blank = pick from the schedule)"
         required: false
       day:
         description: "YYYY-MM-DD game day for td-publish/publish-full (blank = today, America/New_York)"
@@ -182,6 +199,9 @@ jobs:
             Rscript scripts/58_grade_published_picks.R --grade --execute
           elif [ "$JOB" = "retrain-td" ]; then
             Rscript scripts/13_train_td_model.R
+          elif [ "$JOB" = "retrain-fantasy" ]; then
+            Rscript scripts/17_build_fantasy_prop_models.R --retrain --execute
+            Rscript scripts/59_emit_dfs_projection_json.R || echo "DFS ENGINE projection JSON failed; CSV projections still written."
           else
             Rscript scripts/58_grade_published_picks.R --capture-close --execute
           fi
