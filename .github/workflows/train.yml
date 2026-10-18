@@ -66,6 +66,15 @@ jobs:
         run: |
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("data.table","jsonlite","httr2","curl","xgboost","openxlsx","DBI","duckdb","nnet"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+          # wehoop (WNBA box scores, sportsdataverse) was never in the package list above,
+          # so wnba_ingest()'s own `stop("install.packages('wehoop')")` guard has been firing
+          # on EVERY run -- confirmed live, every single daily retrain since at least
+          # 2026-10-14 logged "wnba train failed (non-fatal)" and WNBA has been building
+          # real, live, currently-running slates off the crude salary-baseline fallback
+          # the whole time ("No WNBA model cached -> baseline"), never the trained model.
+          # It isn't on plain CRAN -- r-universe is additive (mirrors CRAN too), so this
+          # is safe regardless of wehoop's own CRAN status.
+          Rscript -e 'if (!("wehoop" %in% rownames(installed.packages()))) install.packages("wehoop", repos = c("https://sportsdataverse.r-universe.dev", getOption("repos")))'
 
       - name: Retrain golf (master -> elo -> bundle)
         if: ${{ github.event.inputs.scope != 'dfs' }}

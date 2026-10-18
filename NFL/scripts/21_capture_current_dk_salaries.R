@@ -19,7 +19,15 @@ lobby_url <- paste0(
   config$current$sport
 )
 lobby_response <- dfs_request(lobby_url) |>
-  httr2::req_user_agent("nfl-dfs-salary-research/1.0") |>
+  # DK's own anti-bot layer returns HTTP 403 for the honest research UA this used to
+  # send (confirmed live, 2026-10-13 -- the salary capture has been failing on EVERY
+  # Tuesday/Sunday heavy publish since, cascading into scripts/17's fantasy prop model
+  # never refreshing either, which is why the live site was serving week4 projections
+  # days into a later week). dfs-engine's OWN DK scraper (spine/R/dk_scrape.R,
+  # confirmed working daily) uses a browser-shaped UA + explicit Accept header against
+  # these same endpoints -- matching that exactly here, not reinventing it.
+  httr2::req_user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) nfl-dfs-salary-research/1.0") |>
+  httr2::req_headers(Accept = "application/json") |>
   httr2::req_timeout(30) |>
   httr2::req_retry(max_tries = 3) |>
   httr2::req_perform()
@@ -46,7 +54,8 @@ rows <- purrr::map_dfr(draft_groups, function(group) {
     group_id
   )
   response <- dfs_request(url) |>
-    httr2::req_user_agent("nfl-dfs-salary-research/1.0") |>
+    httr2::req_user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) nfl-dfs-salary-research/1.0") |>
+    httr2::req_headers(Accept = "application/json") |>
     httr2::req_timeout(30) |>
     httr2::req_retry(max_tries = 3) |>
     httr2::req_perform()

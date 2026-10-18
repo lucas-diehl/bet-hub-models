@@ -62,6 +62,10 @@ jobs:
         run: |
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","openxlsx","DBI","duckdb","lpSolve"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
+          # wehoop (WNBA box scores) -- same gap, same fix as train.yml. Daily log showed
+          # "box refresh failed: install.packages('wehoop')" here too (a live-serving box
+          # refresh, separate from the daily retrain) on every run.
+          Rscript -e 'if (!("wehoop" %in% rownames(installed.packages()))) install.packages("wehoop", repos = c("https://sportsdataverse.r-universe.dev", getOption("repos")))'
 
       # The DuckDB is where logged ownership + projections + salaries ACCUMULATE, and the
       # ownership model needs >=5 slates of history before it will train. A fresh empty db
