@@ -59,7 +59,7 @@ dfs_require_key <- function(name) {
 # ── source the spine ──────────────────────────────────────────────────────────
 # Order matters: db + plugin first, then the core modules that depend on them.
 .dfs_spine_order <- c(
-  "db.R", "plugin.R", "slate_io.R", "dk_scrape.R", "fd_scrape.R", "payouts.R", "dk_contest.R", "contest_select.R",
+  "db.R", "plugin.R", "model_persist.R", "slate_io.R", "dk_scrape.R", "fd_scrape.R", "payouts.R", "dk_contest.R", "contest_select.R",
   "vegas.R", "injuries.R", "slates.R", "correlation.R", "slate_sim.R", "field_sim.R", "optimizer.R",
   "lineup_eval.R", "portfolio.R", "pipeline.R", "showdown.R", "ownership.R", "dk_auth.R",
   "results.R", "proj_accuracy.R", "diagnostics.R", "ownership_model.R", "io_export.R", "staking.R", "report.R", "dashboard.R", "validate.R"

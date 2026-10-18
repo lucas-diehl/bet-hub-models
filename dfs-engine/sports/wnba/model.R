@@ -121,7 +121,10 @@ wnba_train_models <- function(D) {
   D[, proj_hat := pmin_hat * pfppm_hat]
   D[, mtier := cut(pmin_hat, c(-1, 10, 18, 25, 32, 100))]
   tier_sd <- D[, .(resid_sd = sd(dk_pts - proj_hat)), by = mtier]
-  list(m_min = m_min, m_fppm = m_fppm, fill = fill, tier_sd = tier_sd,
+  # dfs_portable_booster(): see spine/R/model_persist.R -- neither booster survives
+  # saveRDS()/readRDS() across a process boundary or an xgboost version drift without
+  # this. Attach the portable payload now, before wnba_train() saves the wrapper list.
+  list(m_min = dfs_portable_booster(m_min), m_fppm = dfs_portable_booster(m_fppm), fill = fill, tier_sd = tier_sd,
        trained_on = format(Sys.time(), "%Y-%m-%d"), n = nrow(D))
 }
 
@@ -157,7 +160,11 @@ wnba_train <- function(seasons = NULL, refresh = FALSE) {
 }
 
 wnba_load_models <- function() {
-  p <- WNBA_MODEL_PATH(); if (file.exists(p)) readRDS(p) else NULL
+  p <- WNBA_MODEL_PATH(); if (!file.exists(p)) return(NULL)
+  m <- readRDS(p)
+  if (!is.null(m$m_min))  m$m_min  <- dfs_revive_booster(m$m_min,  "wnba minutes model")
+  if (!is.null(m$m_fppm)) m$m_fppm <- dfs_revive_booster(m$m_fppm, "wnba fppm model")
+  m
 }
 
 # ── walk-forward accuracy backtest (needs NO salaries — works today) ──────────

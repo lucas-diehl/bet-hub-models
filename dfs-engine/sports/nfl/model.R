@@ -51,7 +51,11 @@ nfl_fit <- function(D, nrounds = 500L) {
   D[, pred := predict(m, .nfl_mat(D))]
   D[, tier := cut(pred, c(-Inf, 5, 10, 16, 24, Inf))]
   tsd <- D[, .(resid_sd = sd(dk_pts - pred)), by = tier][is.na(resid_sd) | resid_sd <= 0, resid_sd := 7]
-  list(model = m, tier_sd = tsd, feats = NFL_FEATS, trained_on = format(Sys.time(), "%Y-%m-%d"))
+  # dfs_portable_booster(): a trained xgboost booster doesn't survive saveRDS()/readRDS()
+  # across a process boundary, let alone a different xgboost version from the one that
+  # trained it -- see spine/R/model_persist.R. Attach the portable payload now, before
+  # this gets wrapped+saved, so nfl_load_models() can always hand back a live model.
+  list(model = dfs_portable_booster(m), tier_sd = tsd, feats = NFL_FEATS, trained_on = format(Sys.time(), "%Y-%m-%d"))
 }
 
 nfl_train <- function(seasons = NULL, refresh = FALSE) {
@@ -65,7 +69,12 @@ nfl_train <- function(seasons = NULL, refresh = FALSE) {
   invisible(fit)
 }
 
-nfl_load_models <- function() { p <- NFL_MODEL_PATH(); if (file.exists(p)) readRDS(p) else NULL }
+nfl_load_models <- function() {
+  p <- NFL_MODEL_PATH(); if (!file.exists(p)) return(NULL)
+  fit <- readRDS(p)
+  if (!is.null(fit$model)) fit$model <- dfs_revive_booster(fit$model, "nfl model")
+  fit
+}
 
 # LIVE PROJECTION — features a set of players ENTER their next game with (their current
 # rolling form), for projecting an upcoming slate. Appends a synthetic "next" row per
