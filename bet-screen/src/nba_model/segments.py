@@ -1,9 +1,10 @@
-"""The 11 candidate bet segments from tonight's diagnostic work (owner's selection,
-2026-10-20), with their backtested record attached so nothing downstream has to guess
-which ones are statistically real vs. exploratory. 3 of 11 clear P(ROI<=0) < 0.05 on the
-2025-26 backtest; the rest range from weak to a literal coin flip -- see HANDOFF.md section
-4 for the full numbers. This module exists to make that status impossible to lose track of
-as these get wired into a live pipeline and a public-facing site.
+"""5 bet segments: the 3 with real statistical support (P(ROI<=0) < 0.05) from the
+2025-26 diagnostic pass, plus the next-best 2 by backtest_p_le0 among the original 11
+candidates (owner's explicit "3 core + next best 2" trim, 2026-10-20). The other 6
+original candidates (coin-flip to weak) were dropped to stop over-posting. See
+HANDOFF.md section 4 in the bet-screen possessions repo for the full backtest history,
+including a follow-up mechanism investigation that complicates the simple "p<0.05"
+framing for the role-narrowed rebounds segments specifically.
 """
 
 from __future__ import annotations
@@ -27,24 +28,20 @@ class Segment:
     @property
     def confirmed(self) -> bool:
         """True only for the 3 segments with real statistical support (P(ROI<=0) < 0.05).
-        The other 8 are being forward-tracked on the owner's explicit decision, not because
-        they're validated -- every consumer of this flag (site, grading) must keep them
-        visibly distinct, not silently equal."""
+        The other 2 (next-best by backtest_p_le0) are being forward-tracked on the owner's
+        explicit decision, not because they're validated -- every consumer of this flag
+        (site, grading) must keep them visibly distinct, not silently equal."""
         return self.backtest_p_le0 < 0.05
 
 
 SEGMENTS: list[Segment] = [
-    Segment("player_points", "Under", "bench", "close", 0.0480, 0.199, 248),
-    Segment("player_points", "Under", "starter", "close", 0.0313, 0.119, 478),
+    # The 3 confirmed (P(ROI<=0) < 0.05).
     Segment("player_rebounds", "Under", "bench", "blowout-risk", 0.1614, 0.003, 262),
-    Segment("player_rebounds", "Under", "starter", "blowout-risk", 0.0410, 0.129, 824),
     Segment("player_rebounds", "Under", "bench", "close", 0.1138, 0.016, 207),
     Segment("player_threes", "Under", "bench", "close", 0.1289, 0.029, 148),
-    Segment("player_threes", "Under", "starter", "close", 0.0010, 0.492, 388),
-    Segment("player_points_rebounds_assists", "Under", "starter", "blowout-risk", 0.0051, 0.445, 715),
-    Segment("player_points_rebounds_assists", "Over", "bench", "blowout-risk", 0.0537, 0.250, 101),
-    Segment("player_assists", "Over", "bench", "blowout-risk", 0.0974, 0.150, 109),
-    Segment("player_points", "Over", "bench", "blowout-risk", 0.0065, 0.453, 331),
+    # Next-best 2 by backtest_p_le0 among the original 11 candidates.
+    Segment("player_points", "Under", "starter", "close", 0.0313, 0.119, 478),
+    Segment("player_rebounds", "Under", "starter", "blowout-risk", 0.0410, 0.129, 824),
 ]
 
 
