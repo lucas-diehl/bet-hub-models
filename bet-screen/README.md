@@ -18,12 +18,15 @@ Posts NBA player-prop picks to the Bet Hub feed. Source key `bet-screen`, sport 
 ## Segment validation status
 
 This is a research-derived rule set, not a probability model. Full backtest history,
-including a deeper mechanism investigation that complicates the simple "3 of 11 cleared
-p<0.05" framing `segments.py` encodes, lives in the `bet-screen` possessions repo's
-`nba/HANDOFF.md`. Short version: of the 11 role x game-script segments selected for
-tracking, 3 cleared the original significance screen; a follow-up investigation into *why*
+including a deeper mechanism investigation that complicates the simple "p<0.05" framing
+`segments.py` encodes, lives in the `bet-screen` possessions repo's `nba/HANDOFF.md`.
+
+Started at 11 candidate role x game-script segments from the 2025-26 diagnostic pass; 3
+cleared the original significance screen. A follow-up investigation into *why*
 rebounds-under works found the broader (non-role-conditioned) cut has more robust support
-than the role-narrowed one this module currently ships, and recommended forward-validation
-before real staking. All 11 are posted here as real (`mode: "LIVE"`) picks per an explicit
-owner decision, not because every segment has cleared that bar independently -- forward
-results should be read with that in mind.
+than the role-narrowed one two of those three segments ship, and recommended
+forward-validation before real staking. Trimmed on 2026-10-20 (too many bets posting) to
+just those 3 confirmed segments plus the next-best 2 by backtest_p_le0 among the original
+11 -- 5 total. All 5 post as real (`mode: "LIVE"`) picks per an explicit owner decision,
+not because every segment has cleared that bar independently -- forward results should be
+read with that in mind.

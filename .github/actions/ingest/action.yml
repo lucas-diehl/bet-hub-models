@@ -9,6 +9,14 @@ inputs:
   feed-dir:
     description: Absolute path the model wrote its feed JSON to
     required: true
+  reconcile:
+    description: >
+      Set 'true' to also delete, per (source, sport, slate_date), any ungraded bet that
+      was previously posted but is no longer in the incoming picks file (e.g. a segment
+      set shrinking). Graded bets are never removed. Opt-in per caller — defaults to off
+      so existing callers (NFL/golf/cfb/dfs) are unaffected.
+    required: false
+    default: "false"
   post-to-x:
     description: >
       Set 'true' to also announce newly-ingested picks/results on X after this ingest.
@@ -45,10 +53,15 @@ runs:
       env:
         DATABASE_URL: ${{ inputs.database-url }}
         FEED_DIR: ${{ inputs.feed-dir }}
+        RECONCILE: ${{ inputs.reconcile }}
       run: |
         mkdir -p "$FEED_DIR"   # ensure it exists so an empty feed (e.g. preseason) is a clean no-op
         pnpm install --frozen-lockfile
-        pnpm --filter @bet/ingest start
+        if [ "$RECONCILE" = "true" ]; then
+          pnpm --filter @bet/ingest start -- --reconcile
+        else
+          pnpm --filter @bet/ingest start
+        fi
 
     # Batches whatever's newly-posted/newly-graded since the last successful run into at
     # most 2 tweets (see apps/ingest/src/tweet.ts). Reuses the checkout above rather than

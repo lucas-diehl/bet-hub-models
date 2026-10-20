@@ -91,6 +91,11 @@ jobs:
         with:
           database-url: ${{ secrets.DATABASE_URL }}
           feed-dir: ${{ github.workspace }}/_feed
+          # Each day's picks file is the full, authoritative set for that (source, sport,
+          # slate_date) -- if a re-run (narrower segments.py, re-fetched odds, etc.) drops
+          # a previously-posted ungraded bet, it should disappear from the board too, not
+          # linger as a stray row forever.
+          reconcile: "true"
 
       - name: Save bet-screen data (box-score cache + picks archive)
         if: always()
