@@ -1,0 +1,102 @@
+name: bet-screen
+
+# NBA player-prop picks for the Bet Hub feed (source "bet-screen", sport "nba").
+#   post   ~10:00 ET daily — refresh today's season box-score cache (for the minutes EWMA),
+#          fetch live DraftKings/FanDuel props, match the 11 segments in
+#          bet-screen/src/nba_model/segments.py, write picks_<date>.json.
+#   grade  ~08:00 ET daily — grade the PRIOR day's archived picks against real box scores
+#          (free, nba_api), write results_<date>.json. Runs before the same day's post step
+#          in UTC-cron order so grading never races a fresh day's new picks.
+# Cron is UTC-fixed, so the ET offset drifts ~1h during EST (same known approximation as
+# this repo's other model workflows' cron comments) -- fine for daily picks.
+on:
+  schedule:
+    - cron: "0 12 * * *"   # ~08:00 ET — grade yesterday
+    - cron: "0 14 * * *"   # ~10:00 ET — post today
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "post | grade (blank = pick from the schedule, default post)"
+        required: false
+      as_of:
+        description: "post only: YYYY-MM-DD to replay from cached data (zero Odds-API cost). Blank = live."
+        required: false
+      date:
+        description: "grade only: YYYY-MM-DD to grade. Blank = yesterday (UTC)."
+        required: false
+      dry_run:
+        description: "post only: true = print picks, write nothing (safe with --as-of for testing)"
+        required: false
+        default: "false"
+
+concurrency:
+  group: bet-screen
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      FEED_DIR: ${{ github.workspace }}/_feed
+      ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Rolling key: restore the newest prior bet-screen/data (season box-score cache +
+      # picks archive used by the next day's grade step), save a fresh copy each run.
+      - name: Restore bet-screen data (box-score cache + picks archive)
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            bet-screen/data/processed
+            bet-screen/data/picks_archive
+          key: bet-screen-data-${{ github.run_id }}
+          restore-keys: bet-screen-data-
+
+      - name: Install dependencies
+        working-directory: bet-screen
+        run: pip install -e .
+
+      - name: Run bet-screen job (post / grade)
+        working-directory: bet-screen
+        run: |
+          JOB="${{ github.event.inputs.job }}"
+          if [ -z "$JOB" ]; then
+            case "${{ github.event.schedule }}" in
+              "0 12 * * *") JOB="grade" ;;
+              *)             JOB="post" ;;
+            esac
+          fi
+          echo "bet-screen job = $JOB"
+
+          if [ "$JOB" = "post" ]; then
+            SEASON=$(python -c "from datetime import date; d=date.today(); print(d.year+1 if d.month>=10 else d.year)")
+            python scripts/download_boxscores.py --seasons "$SEASON" --refresh --skip-inactive || echo "box-score refresh failed; continuing with the cached file."
+            ARGS=""
+            if [ -n "${{ github.event.inputs.as_of }}" ]; then ARGS="--as-of ${{ github.event.inputs.as_of }}"; fi
+            if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+            python scripts/live_fetch_props_slate.py $ARGS
+          else
+            ARGS=""
+            if [ -n "${{ github.event.inputs.date }}" ]; then ARGS="--date ${{ github.event.inputs.date }}"; fi
+            python scripts/grade_props_slate.py $ARGS
+          fi
+
+      - name: Ingest to Supabase
+        uses: ./.github/actions/ingest
+        with:
+          database-url: ${{ secrets.DATABASE_URL }}
+          feed-dir: ${{ github.workspace }}/_feed
+
+      - name: Save bet-screen data (box-score cache + picks archive)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            bet-screen/data/processed
+            bet-screen/data/picks_archive
+          key: bet-screen-data-${{ github.run_id }}

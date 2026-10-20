@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bet-screen"
+version = "0.1.0"
+description = "NBA player-prop picks for the Bet Hub feed (source key: bet-screen)"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "requests>=2.31",
+  "nba_api>=1.4",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
