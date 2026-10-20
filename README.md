@@ -9,6 +9,7 @@ golf-modeling/   72-hole matchup + top-10 golf bets (DataGolf)      -> workflow:
 cfb-modeling/    college-football weekly picks (CFBD)               -> workflow: cfb
 NFL/             NFL weekly picks (The Odds API + nflverse)         -> workflow: nfl
 dfs-engine/      DFS projections + the /dfs optimizer pool feed     -> workflow: dfs
+bet-screen/      NBA player-prop picks (The Odds API + nba_api)     -> workflow: bet-screen
 .github/
   actions/ingest/   composite: checkout bet-dashboard -> pnpm ingest -> Supabase
   workflows/        one per model (schedule + manual dispatch)
@@ -24,7 +25,7 @@ dfs-engine/      DFS projections + the /dfs optimizer pool feed     -> workflow:
    | `DATABASE_URL` | all (ingest) | Supabase Postgres connection string (same one the site uses) |
    | `DATAGOLF_API_KEY` | golf, dfs | DataGolf API key |
    | `CFB_API_KEY` | cfb | CollegeFootballData (CFBD) API key |
-   | `THE_ODDS_API_KEY` | nfl, dfs | The Odds API key |
+   | `THE_ODDS_API_KEY` | nfl, dfs, bet-screen | The Odds API key (same multi-sport account covers NBA) |
 
 3. Open the **Actions** tab and run each workflow once via **Run workflow**
    (`workflow_dispatch`) to verify, then let the crons take over.

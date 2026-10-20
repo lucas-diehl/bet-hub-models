@@ -1,0 +1,7 @@
+data/processed/*
+!data/processed/player_games_2026.csv
+data/picks_archive/
+_feed/
+__pycache__/
+*.pyc
+.venv/
