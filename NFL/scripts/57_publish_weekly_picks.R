@@ -10,6 +10,13 @@ cfg <- read_config()
 
 # Weekly Tuesday publish for the Bet Hub feed.
 #
+# Spread/total staking was REMOVED 2026-10-21 (owner: "we don't use those").
+# This script now only refreshes the informational full-slate lean file
+# (outputs/nfl_full_slate_latest.csv) each week; it never stakes a bet. The
+# history below (Tuesday timing rationale, append-only ledger behavior) is
+# kept for context in case ATS/O-U staking is ever revisited, not because
+# either still runs.
+#
 # Timing: Tuesday, not game day. Tested on the 2025 snapshots, a Tuesday line
 # (median 123 hours before kickoff) retains 75% of the bets that still qualify
 # at the close, with zero side flips in 267 games, and the early number returned
@@ -170,14 +177,6 @@ consensus <- quotes |>
   dplyr::summarise(line = stats::median(.data$point[.data$side %in%
     c("over", "home")]), .groups = "drop")
 
-best_price <- quotes |>
-  dplyr::group_by(.data$home_team, .data$away_team, .data$market, .data$side) |>
-  dplyr::arrange(dplyr::desc(.data$price), .by_group = TRUE) |>
-  dplyr::summarise(
-    price = dplyr::first(.data$price), book = dplyr::first(.data$book),
-    point = dplyr::first(.data$point), .groups = "drop"
-  )
-
 lines <- consensus |>
   tidyr::pivot_wider(names_from = "market", values_from = "line") |>
   dplyr::rename(home_line = "spreads", total_line = "totals") |>
@@ -230,9 +229,6 @@ cat(sprintf(
   length(margin_seeds), mean(apply(margin_draws, 1, stats::sd))
 ))
 
-teams <- feed_team_lookup()
-cover_table <- feed_empirical_cover_prob()
-
 scored <- test |>
   dplyr::mutate(
     projected_total = total_pred, projected_margin = margin_pred,
@@ -251,71 +247,27 @@ readr::write_csv(scored, slate_out_path)
 readr::write_csv(scored, "outputs/nfl_full_slate_latest.csv")
 cat("Wrote full-slate table (", nrow(scored), "games ) to", slate_out_path, "\n")
 
-price_for <- function(home, away, market, side) {
-  hit <- best_price |>
-    dplyr::filter(.data$home_team == home, .data$away_team == away,
-                  .data$market == !!market, .data$side == !!side)
-  if (!nrow(hit)) {
-    return(list(price = NA_real_, book = NA_character_, point = NA_real_))
-  }
-  # point is carried too: a spread bet without its number is unusable, and the
-  # feed spec requires the signed line on the selection.
-  list(price = hit$price[[1]], book = hit$book[[1]], point = hit$point[[1]])
-}
-
 candidates <- list()
-for (i in seq_len(nrow(scored))) {
-  row <- scored[i, ]
-  event <- paste(unname(teams$nick[row$away_team]), "@",
-                 unname(teams$nick[row$home_team]))
-  slate <- format(row$game_date)
-
-  if (abs(row$total_edge) >= 5) {
-    side <- if (row$total_edge > 0) "over" else "under"
-    quote <- price_for(row$home_team, row$away_team, "totals", side)
-    if (!is.na(quote$price)) {
-      candidates[[length(candidates) + 1L]] <- tibble::tibble(
-        bet_id = sprintf("nfl-modeling-%s-%s-%s-total", slate,
-                         feed_slug(row$away_team), feed_slug(row$home_team)),
-        slate_date = slate, week = row$week, event = event,
-        event_start = row$kickoff_utc, market = "total",
-        selection = paste(if (side == "over") "Over" else "Under",
-                          row$total_line),
-        side = side, line = row$total_line, edge = row$total_edge,
-        odds_american = as.integer(quote$price), book = quote$book,
-        model_prob = feed_lookup_cover_prob("total", row$total_edge, cover_table),
-        strategies = "total_fl5,portfolio"
-      )
-    }
-  }
-
-  if (row$margin_edge >= 6) {
-    quote <- price_for(row$home_team, row$away_team, "spreads", "home")
-    if (!is.na(quote$price)) {
-      candidates[[length(candidates) + 1L]] <- tibble::tibble(
-        bet_id = sprintf("nfl-modeling-%s-%s-%s-spread", slate,
-                         feed_slug(row$away_team), feed_slug(row$home_team)),
-        slate_date = slate, week = row$week, event = event,
-        event_start = row$kickoff_utc, market = "spread",
-        selection = unname(teams$full[row$home_team]),
-        side = "home", line = quote$point, edge = row$margin_edge,
-        odds_american = as.integer(quote$price), book = quote$book,
-        model_prob = feed_lookup_cover_prob("spread", row$margin_edge,
-                                            cover_table),
-        strategies = "spread_rf6,spread_home,portfolio"
-      )
-    }
-  }
-}
 
 # --------------------------------------------------------------------------
-# Anytime touchdown props: moved OUT of this script on 2026-10-13.
+# This script no longer stakes anything.
 #
-# TD staking is now day-scoped (scripts/90_publish_td_picks.R, run on its own
-# Thu 9am / Sun 6am / Mon 9am ET cadence, one game-day at a time) instead of
-# week-scoped. Running it from here too - on this script's Tue/Sun cadence -
-# would duplicate-stake the same props through a second, week-wide path. This
-# script now only ever handles spread/total.
+# Spread/total staking: REMOVED 2026-10-21 per owner direction ("we don't use
+# those" - ATS/O-U picks were never part of how this project actually bets).
+# `scored` (the full-slate table above, with projected_total/projected_margin/
+# total_edge/margin_edge) is still written to outputs/nfl_full_slate_latest.csv
+# for anything downstream that wants the model's raw lean on a game, but
+# nothing here turns it into a staked bet any more.
+#
+# Anytime touchdown props: moved OUT of this script on 2026-10-13. TD staking
+# is day-scoped (scripts/90_publish_td_picks.R, its own Thu 9am / Sun 6am /
+# Mon 9am ET cadence, one game-day at a time) instead of week-scoped. Running
+# it from here too - on this script's Tue/Sun cadence - would duplicate-stake
+# the same props through a second, week-wide path.
+#
+# So `candidates` stays empty and `fresh` resolves to the zero-row schema
+# right below - every run of this script now just refreshes the full-slate
+# lean file above and reports a quiet week, which is correct, not a bug.
 # --------------------------------------------------------------------------
 
 fresh <- dplyr::bind_rows(candidates)

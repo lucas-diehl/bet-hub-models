@@ -10,7 +10,10 @@ on:
   schedule:
     - cron: "0 13 * * *"     # ~09:00 ET daily — live pull + price + merge picks
     - cron: "0 22 * * *"     # ~18:00 ET daily — refresh with closing-er lines
-    - cron: "0 12 * * 1,2"   # Mon+Tue ~08:00 ET — grade the weekend/Monday-finish slate
+    - cron: "0 12 * * *"     # ~08:00 ET daily — grade the newest settled slate (self-gated;
+                              # a quiet day between tournaments is a cheap no-op). Was Mon+Tue
+                              # only until 2026-10-21 (owner: grading should run daily, every
+                              # sport, not just once a tournament week looked done).
     - cron: "0 10 * * 4"     # Thu ~06:00 ET — capture the closing price for CLV, safely
                               # before any Thursday tee time in any US course timezone
   workflow_dispatch:
@@ -60,12 +63,12 @@ jobs:
           mkdir -p "$R_LIBS_USER"
           Rscript -e 'p<-c("data.table","jsonlite","httr2","xgboost","nnet","lpSolve"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
-      - name: Run golf model (post live, or grade on the Mon/Tue cron & manual date)
+      - name: Run golf model (post live, or grade on the daily 8am-ET cron & manual date)
         working-directory: golf-modeling
         run: |
           DATE="${{ github.event.inputs.results_date }}"
           CC_DATE="${{ github.event.inputs.capture_close_date }}"
-          if [ "${{ github.event.schedule }}" = "0 12 * * 1,2" ] && [ -z "$DATE" ]; then
+          if [ "${{ github.event.schedule }}" = "0 12 * * *" ] && [ -z "$DATE" ]; then
             Rscript engine/bet_hub.R --results          # auto: grade the newest slate
           elif [ "${{ github.event.schedule }}" = "0 10 * * 4" ] && [ -z "$DATE" ]; then
             Rscript engine/bet_hub.R --capture-close    # auto: freeze the closing price for CLV

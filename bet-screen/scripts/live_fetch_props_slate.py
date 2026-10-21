@@ -1,13 +1,29 @@
-"""Daily live pick generator for the 11 segments in nba_model/segments.py -- the Bet Hub feed
+"""Daily live pick generator for the 5 segments in nba_model/segments.py -- the Bet Hub feed
 for source "bet-screen" (sport "nba"). Pulls today's live spread (for game-script
 classification) and player props (points/rebounds/assists/threes/PRA) across
 DraftKings/FanDuel, classifies each player's role from their EWMA minutes (carried over
 across the season boundary from last season, since a fresh season starts with ~0 games of
-its own history), matches against the 11 segments, and writes a contract-compliant
+its own history), matches against the 5 segments, and writes a contract-compliant
 picks_<date>.json to $FEED_DIR for the shared ingest step (checkout bet-dashboard -> pnpm
 ingest -> Supabase). Also archives the same payload under data/picks_archive/ (persisted via
 actions/cache across runs) so grade_props_slate.py can grade it the next day without needing
 its own Supabase read.
+
+Each matched bet also carries `model_prob` / `market_prob` / `edge`, same fields the other
+sports' BetSchema rows use (2026-10-21, owner request: show the important context on a prop,
+not just the side and the price). This system doesn't fit a per-player probability -- it bets
+a fixed, backtested historical bucket (nba_model.segments.Segment) -- so `model_prob` is
+honestly that bucket's own realized win rate (`backtest_win_pct`), not a fabricated live
+figure. `market_prob` is the real two-sided de-vigged price (nba_model.market.devig_two_way),
+computed from whichever book quotes BOTH sides; left null if only one side is quoted.
+
+At most MAX_DAILY_PICKS bets are posted a day. The owner's own framing: "post a maximum of
+15 plays a day (have the 15 best posted, but it is not by edge%)" -- edge% is a live-market
+quantity (how far today's specific price has drifted from fair), not a measure of which
+BUCKET is more trustworthy, so ranking by it would just reward a mispriced book, not pick the
+best bets. Instead this ranks by the segment's own backtested confidence: the 3 CONFIRMED
+segments (P(ROI<=0) < 0.05) before the 2 experimental ones, and within each tier, lowest
+backtest_p_le0 (most statistically confident) first.
 
     python scripts/live_fetch_props_slate.py --dry-run              # live odds, no write
     python scripts/live_fetch_props_slate.py --as-of 2026-01-15 --dry-run   # cached replay, zero cost
@@ -30,12 +46,13 @@ import requests
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from nba_model.api import NBAStatsClient  # noqa: E402
-from nba_model.market import BASE, PROP_MARKETS, SPORT_KEY, odds_api_key  # noqa: E402
+from nba_model.market import BASE, PROP_MARKETS, SPORT_KEY, devig_two_way, odds_api_key  # noqa: E402
 from nba_model.minutes import ewma_halflife_alpha  # noqa: E402
 from nba_model.names import normalize_name  # noqa: E402
 from nba_model.segments import classify_role, classify_script, matching_segment  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
+MAX_DAILY_PICKS = 15
 # bet365 was never integrated (would need a different Odds API region); betmgm is not one of
 # the sanctioned books in the bet-dashboard contract (FanDuel | DraftKings | bet365 only).
 LIVE_BOOKS = ["draftkings", "fanduel"]
@@ -229,12 +246,35 @@ def main() -> None:
     props["role"] = props["min_ewma_now"].map(classify_role)
     props["script"] = props["spread_abs"].map(classify_script)
 
-    bets = []
+    # Opposing side's best price, for de-vigging -- e.g. a matched "Under" bet looks up
+    # this same player/market's "Over" row. One row per (player, market, side) already,
+    # courtesy of best_price()/load_cached_replay() above.
+    opp_side = {"Over": "Under", "Under": "Over"}
+    price_by_player_market_side = {
+        (r["player"], r["market"], r["side"]): r["price"] for _, r in props.iterrows()
+    }
+
+    matched = []  # (bet dict, Segment) -- keeps the segment around for the rank/cap step below
     for _, row in props.iterrows():
         seg = matching_segment(row["market"], row["side"], row["role"], row["script"])
         if seg is None:
             continue
         book_key = row["book"]
+        opp_price = price_by_player_market_side.get((row["player"], row["market"], opp_side[row["side"]]))
+        market_prob = model_prob = edge = None
+        if opp_price is not None:
+            # devig_two_way(price_a, price_b) -> (fair_prob_a, fair_prob_b) -- keep whichever
+            # slot corresponds to THIS row's own side, not just the first element.
+            if row["side"] == "Over":
+                fair_this_side, _ = devig_two_way(row["price"], opp_price)
+            else:
+                _, fair_this_side = devig_two_way(opp_price, row["price"])
+            # float(): row["price"]/opp_price are numpy scalars off a DataFrame, which
+            # json.dumps() can't serialize -- same reason "line"/"odds_american" below
+            # are explicitly cast already.
+            market_prob = float(fair_this_side)
+            model_prob = seg.backtest_win_pct
+            edge = float(model_prob - market_prob)
         bet = {
             "bet_id": make_bet_id(as_of_date, row["player"], row["market"], row["side"], row["point"]),
             "sport": SPORT,
@@ -246,22 +286,43 @@ def main() -> None:
             "line": float(row["point"]),
             "odds_american": int(row["price"]),
             "book": BOOK_LABEL.get(book_key, book_key),
+            "model_prob": model_prob,
+            "market_prob": market_prob,
+            "edge": edge,
             "stake_units": 1.0,
             "tags": [row["role"], row["script"]],
             "details": {
                 "role": row["role"], "script": row["script"],
                 "backtest_roi": seg.backtest_roi, "backtest_p_le0": seg.backtest_p_le0,
-                "backtest_n": seg.backtest_n,
+                "backtest_n": seg.backtest_n, "confirmed": seg.confirmed,
             },
         }
         if pd.notna(row.get("home_team")) and pd.notna(row.get("away_team")):
             bet["event"] = f"{row['away_team']} @ {row['home_team']}"
-        bets.append(bet)
+        matched.append((bet, seg))
 
-    print(f"\n{len(bets)} bets matched")
+    print(f"\n{len(matched)} bets matched")
+
+    # Cap to MAX_DAILY_PICKS. Ranked by the segment's own backtested confidence -- NOT by
+    # edge%, which is today's live mispricing on one specific player, not a measure of
+    # which bucket is more trustworthy (see the module docstring). Confirmed segments
+    # (P(ROI<=0) < 0.05) first, then lowest backtest_p_le0 first within each tier.
+    matched.sort(key=lambda pair: (not pair[1].confirmed, pair[1].backtest_p_le0))
+    dropped = len(matched) - MAX_DAILY_PICKS
+    kept, cut = matched[:MAX_DAILY_PICKS], matched[MAX_DAILY_PICKS:]
+    bets = [b for b, _ in kept]
+
+    if dropped > 0:
+        print(f"capped at {MAX_DAILY_PICKS}/day -- dropped {dropped} lower-confidence match(es):")
+        for b, seg in cut:
+            print(f"  (cut) {b['selection']} {b['side']} {b['line']} {b['market_label']} "
+                  f"({'confirmed' if seg.confirmed else 'experimental'}, p_le0={seg.backtest_p_le0:.3f})")
+
     for b in bets:
+        prob_bits = f" | model {b['model_prob']:.1%} vs mkt {b['market_prob']:.1%} (edge {b['edge']:+.1%})" \
+            if b["model_prob"] is not None else " | model/market prob n/a (one side unquoted)"
         print(f"  {b['selection']} {b['side']} {b['line']} {b['market_label']} "
-              f"({b['details']['role']}/{b['details']['script']}) @ {b['odds_american']} {b['book']}")
+              f"({b['details']['role']}/{b['details']['script']}) @ {b['odds_american']} {b['book']}{prob_bits}")
 
     if args.dry_run:
         return

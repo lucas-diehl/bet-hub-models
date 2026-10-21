@@ -20,6 +20,21 @@ PROP_MARKETS = [
 ]
 
 
+def american_to_implied_prob(price: float) -> float:
+    """Raw (vig-included) implied win probability from an American odds price."""
+    return 100 / (price + 100) if price > 0 else -price / (-price + 100)
+
+
+def devig_two_way(price_a: float, price_b: float) -> tuple[float, float]:
+    """Removes the vig from a two-sided market by normalizing both sides' raw implied
+    probabilities to sum to 1 (the standard, "multiplicative" devig -- same approach
+    the research project's calibration.py used, re-implemented here since that module
+    was never ported into the live pipeline). Returns (fair_prob_a, fair_prob_b)."""
+    raw_a, raw_b = american_to_implied_prob(price_a), american_to_implied_prob(price_b)
+    total = raw_a + raw_b
+    return raw_a / total, raw_b / total
+
+
 def odds_api_key() -> str:
     if os.getenv("ODDS_API_KEY"):
         return os.environ["ODDS_API_KEY"]
