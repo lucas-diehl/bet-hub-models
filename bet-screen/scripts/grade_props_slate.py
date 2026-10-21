@@ -22,7 +22,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from nba_model.api import NBAStatsClient  # noqa: E402
+from nba_model.espn import fetch_boxscore_actuals  # noqa: E402
 from nba_model.grading import american_profit  # noqa: E402
 from nba_model.names import normalize_name  # noqa: E402
 
@@ -38,21 +38,14 @@ STAT_COL = {
 }
 
 
-def season_for(d) -> int:
-    return d.year + 1 if d.month >= 10 else d.year
-
-
 def fetch_actuals(graded_date: str) -> pd.DataFrame:
-    """Pulls the actual box score for graded_date directly from the live season game log --
-    free, no credits, same source as the rest of this project's historical backfill."""
-    client = NBAStatsClient()
-    season = season_for(datetime.strptime(graded_date, "%Y-%m-%d").date())
-    df = client.get_player_game_log(season)
-    df["GAME_DATE"] = df["GAME_DATE"].astype(str)
-    day = df[df["GAME_DATE"] == graded_date].copy()
-    day["player_norm"] = day["PLAYER_NAME"].map(normalize_name)
-    day["actual_pra"] = day["PTS"] + day["REB"] + day["AST"]
-    return day
+    """Pulls the actual box score for graded_date. Was a direct stats.nba.com call (free,
+    no credits) -- switched 2026-10-21 to ESPN's site API (nba_model.espn) after
+    stats.nba.com consistently timed out from GitHub Actions runners (2/2 real runs, same
+    error); see espn.py's module docstring for the full story. normalize_name/column
+    shape (PLAYER_NAME, PTS, REB, AST, FG3M, actual_pra, player_norm) is unchanged, so
+    grade_bet() below needed no changes."""
+    return fetch_boxscore_actuals(graded_date)
 
 
 def grade_bet(bet: dict, actuals: pd.DataFrame) -> dict:
