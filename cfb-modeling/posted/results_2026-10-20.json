@@ -1,0 +1,45 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-10-20",
+  "graded_at": "2026-10-21T17:49:47Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk8-missouristate-delaware-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 23,
+        "cover_line": -3,
+        "closing_line": -3
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk8-southalabama-marshall-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0451,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 7,
+        "cover_line": 3.5,
+        "closing_line": 1.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk8-southalabama-marshall-under",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0487,
+      "pnl_units": 0.91,
+      "actual": {
+        "total_points": 33,
+        "line": 64.5,
+        "closing_line": 66.5
+      }
+    }
+  ]
+}
