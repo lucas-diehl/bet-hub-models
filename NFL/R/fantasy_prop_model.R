@@ -1484,6 +1484,26 @@ predict_fantasy_deployment <- function(
         baseline_prediction = baseline_prediction
       )
   })
+  ## Confirmed failure mode (2026-10-22): when fantasy_target_candidates() comes back
+  ## empty for EVERY target this week - the live trigger was td_2026_current_events.rds
+  ## being stale (events still mapped to an old week, so target_week_events filtered to
+  ## zero rows upstream in scripts/17, leaving future_features with no deployable rows) -
+  ## purrr::imap_dfr() row-binds N empty, columnless tibble()s and the result has 0 rows
+  ## AND 0 columns. The join below then dies on "Join columns in `x` must be present in
+  ## the data ... Problem with `target`", which says nothing about the real cause and
+  ## sent debugging into the model code instead of the actual stale-input-data problem.
+  ## Fail loud here instead, with the diagnostic that actually points at the fix.
+  if (!nrow(predictions)) {
+    stop(
+      "predict_fantasy_deployment(): zero candidate rows for every target this week. ",
+      "future_features had ", nrow(future_features), " row(s) going in - if that's also ",
+      "zero, the upstream game/event context (td_2026_current_events.rds / ",
+      "td_2026_current_game_lines.rds) is likely stale or missing this week's games. ",
+      "Re-run scripts/15_build_2026_td_board.R with --execute (needs THE_ODDS_API_KEY) ",
+      "to refresh them before re-scoring.",
+      call. = FALSE
+    )
+  }
   if (is.null(blend_weights)) {
     predictions$model_weight <- 1
   } else {
