@@ -357,12 +357,39 @@ write_picks_feed <- function(bets, event, slate_date, mode=NULL, notes=NULL, reb
   f <- unique(f[!is.na(norm) & nzchar(norm), .(norm, finish=as.integer(finish))], by="norm")
   setkey(f, norm); f
 }
+# Is the tournament actually OVER, or just mid-round? preds/in-play is a LIVE/predictive
+# feed -- current_pos is wherever a player sits RIGHT NOW, round 1 hole 9 included, not
+# a final result. Added 2026-10-21 after widening golf's grade cron to run daily: the very
+# next morning (Thu, round 1 barely underway) it graded 18/18 bets as final off that day's
+# in-progress standings (9W-8L) -- confirmed live, info$current_round was 1 and every
+# player's thru was <18. Standard PGA stroke-play is 4 rounds, so "final" requires BOTH
+# the leaderboard reporting round 4 AND every still-active (non-WD/DQ) player having
+# finished all 18 holes -- not just "the API returned something."
+.tournament_is_final <- function(info, raw_data) {
+  tryCatch({
+    rd <- suppressWarnings(as.integer(info$current_round %||% NA))
+    if (!length(rd) || is.na(rd[1]) || rd[1] < 4) return(FALSE)
+    d <- as.data.table(raw_data)
+    if (!nrow(d) || !all(c("thru","current_pos") %in% names(d))) return(FALSE)
+    active <- d[!grepl("WD|DQ", current_pos, ignore.case=TRUE)]
+    if (!nrow(active)) return(FALSE)
+    thru <- suppressWarnings(as.integer(active$thru))
+    length(thru) > 0 && !anyNA(thru) && all(thru >= 18)
+  }, error = function(e) FALSE)  # any unexpected shape (NULL info, malformed data, …) -> not final, never crash
+}
+
 # live leaderboard for the tournament currently in play (event name comes back too,
-# so the caller can refuse to grade slate A against tournament B).
+# so the caller can refuse to grade slate A against tournament B). `final` tells the
+# caller whether current_pos is safe to treat as a real result (see above) -- NOT
+# whether a leaderboard was returned at all (nrow(fin)==0 already covers that).
 dg_live_finishes <- function(tour="pga") {
   ip <- dg("preds/in-play", list(tour=tour))
-  list(event = tryCatch(ip$info$event_name, error=function(e) NULL) %||% NA_character_,
-       fin   = .finish_table(if (is.null(ip)) NULL else ip$data))
+  info <- tryCatch(ip$info, error=function(e) NULL)
+  d <- if (is.null(ip)) NULL else ip$data
+  list(event = tryCatch(info$event_name, error=function(e) NULL) %||% NA_character_,
+       final = .tournament_is_final(info, d),
+       current_round = tryCatch(suppressWarnings(as.integer(info$current_round)), error=function(e) NA_integer_),
+       fin   = .finish_table(d))
 }
 
 # ── manual settlements: golf_picks/settlements.csv (bet_id,result,note) ───────
@@ -397,7 +424,12 @@ SETTLE_FILE <- file.path(OUT, "settlements.csv")
 # matchups, `details$opponent`) is looked up in the finishes table. Nothing here
 # reads a `player_name` column off the picks side.
 # finishes: data.table(norm, finish); closing: optional named list bet_id -> closing dec
-write_results_feed <- function(slate_date, finishes, closing_dec=NULL, source_event=NULL, force=FALSE) {
+# tournament_final: TRUE for every caller except the LIVE --results path mid-tournament
+# (see dg_live_finishes/.tournament_is_final above). When FALSE, `finishes` should already
+# be empty (the caller's job, not this function's) and the old-settled-value carry-forward
+# below is INVERTED on purpose: a prior run that settled a bet while the board was still
+# live gets retracted back to pending here, rather than preserved, the next time this runs.
+write_results_feed <- function(slate_date, finishes, closing_dec=NULL, source_event=NULL, force=FALSE, tournament_final=TRUE) {
   pf <- file.path(FEED,"golf-modeling","pga", sprintf("picks_%s.json", slate_date))
   if (!file.exists(pf)) { emsg("no picks file for ", slate_date); return(invisible()) }
   picks <- jsonlite::fromJSON(pf, simplifyVector=FALSE)
@@ -439,11 +471,22 @@ write_results_feed <- function(slate_date, finishes, closing_dec=NULL, source_ev
   # pending because its bet is missing from today's card or the leaderboard went dark.
   old <- if (file.exists(f)) tryCatch(jsonlite::fromJSON(f, simplifyVector=FALSE)$results,
                                       error=function(e) NULL) else NULL
+  had_old_settled <- FALSE
   if (length(old)) {
     oid <- vapply(old, function(x) x$bet_id %||% "", ""); old <- old[!duplicated(oid) & nzchar(oid)]
     names(old) <- vapply(old, function(x) x$bet_id, "")
+    had_old_settled <- any(vapply(old, function(x) !identical(x$result %||% "pending", "pending"), logical(1)))
     results <- lapply(results, function(r) { o <- old[[r$bet_id]]
-      if (r$result=="pending" && !is.null(o) && !identical(o$result,"pending")) o else r })
+      if (r$result=="pending" && !is.null(o) && !identical(o$result,"pending")) {
+        # Normal case (tournament_final left TRUE, or this call's own `finishes` just
+        # happened to miss this one selection): a dark/incomplete fetch should never
+        # un-settle a real result -- keep the old one.
+        # tournament_final==FALSE case: we KNOW this run's finishes are empty on
+        # purpose because the leaderboard is live, not final (see dg_live_finishes) --
+        # an old settled value here was wrongly graded mid-tournament and gets
+        # retracted to pending now, not preserved.
+        if (isFALSE(tournament_final)) r else o
+      } else r })
     carry <- old[!(names(old) %in% vapply(results, function(x) x$bet_id, ""))]
     if (length(carry)) emsg("carried forward ", length(carry), " earlier bet(s) no longer on the picks card")
     results <- c(results, unname(carry))
@@ -454,11 +497,19 @@ write_results_feed <- function(slate_date, finishes, closing_dec=NULL, source_ev
   res_of  <- vapply(results, function(x) x$result, "")
   settled <- sum(res_of != "pending")
   # GUARD (mirrors write_picks_feed): never replace a settled card with an all-pending
-  # one just because the leaderboard went dark.
-  if (!settled) {
-    if (length(miss)) emsg("no finish found for: ", paste(unique(miss), collapse=", "))
+  # one just because the leaderboard went dark -- UNLESS this is the deliberate
+  # tournament_final==FALSE retraction path AND there's something on the old card to
+  # actually retract, in which case writing the all-pending file IS the point.
+  if (!settled && !(isFALSE(tournament_final) && had_old_settled)) {
+    # "no finish found for" is expected noise (every selection, every time) when
+    # tournament_final was deliberately set FALSE with nothing to retract -- not a real
+    # data-quality warning, so only print it on the normal/unexpected-empty-data path.
+    if (length(miss) && !isFALSE(tournament_final)) emsg("no finish found for: ", paste(unique(miss), collapse=", "))
     emsg("SKIP write ", f, ": 0 of ", length(results), " bets gradeable (empty/stale finishes)")
     return(invisible())
+  }
+  if (!settled && isFALSE(tournament_final) && had_old_settled) {
+    emsg("RETRACTING ", f, ": was settled while the tournament was still live -- resetting to pending")
   }
   out <- list(contract_version="1.0", source="golf-modeling", sport="pga", slate_date=slate_date,
               graded_at=format(as.POSIXct(Sys.time(),tz="UTC"),"%Y-%m-%dT%H:%M:%SZ"), results=results)
@@ -526,10 +577,23 @@ if (identical(environment(), globalenv()) && !nzchar(Sys.getenv("BETHUB_SOURCE_O
     } else {                                   # LIVE: in-play finishes for the current tournament
       lf <- dg_live_finishes("pga")
       if (!nrow(lf$fin)) emsg("in-play feed returned no leaderboard (between events / API hiccup)")
-      cl <- tryCatch(readRDS(file.path(FEED,"golf-modeling","pga","closing_odds",sprintf("%s.rds", sd))),
-                     error=function(e) NULL)
-      if (is.null(cl)) emsg("--results: no closing-odds capture for ", sd, " -> clv_pct will be NA (run --capture-close near Thursday tee time)")
-      write_results_feed(sd, lf$fin, cl, source_event=lf$event, force=fc)
+      if (!isTRUE(lf$final) && !fc) {
+        # Not every active player is thru 18 on the reported final round -- current_pos is a
+        # live standing, not a result. Grade nothing real this run; instead call
+        # write_results_feed with EMPTY finishes + tournament_final=FALSE so it retracts
+        # anything a PRIOR run wrongly settled while the board was still live (see that
+        # function + .tournament_is_final's comments). --force bypasses this, same as the
+        # existing event-mismatch override, for a human who knows better than the feed.
+        emsg("--results: tournament not final (current_round=", lf$current_round %||% "?",
+             "; not every active player thru 18) -- not grading real finishes this run")
+        write_results_feed(sd, data.table(norm=character(), finish=integer()), NULL,
+                           source_event=lf$event, force=fc, tournament_final=FALSE)
+      } else {
+        cl <- tryCatch(readRDS(file.path(FEED,"golf-modeling","pga","closing_odds",sprintf("%s.rds", sd))),
+                       error=function(e) NULL)
+        if (is.null(cl)) emsg("--results: no closing-odds capture for ", sd, " -> clv_pct will be NA (run --capture-close near Thursday tee time)")
+        write_results_feed(sd, lf$fin, cl, source_event=lf$event, force=fc)
+      }
     }
   } else if ("--capture-close" %in% a) {        # freeze each posted bet's near-lock price for CLV
     ci <- which(a=="--capture-close"); sd <- a[ci+1]
