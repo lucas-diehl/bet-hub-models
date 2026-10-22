@@ -245,7 +245,14 @@ jobs:
             echo "no NFL output changes to commit"
           else
             git commit -m "nfl: refresh published projection outputs [skip ci]"
-            git pull --rebase --quiet origin main
+            # NOT a rebase pull: NFL/data (restored from this workflow's own cache
+            # above) routinely sits dirty/unstaged relative to its tracked git
+            # version at this point, which makes `git pull --rebase` abort with
+            # "cannot pull with rebase: you have unstaged changes" before it ever
+            # reaches push -- confirmed live 2026-10-22, the commit succeeded (real
+            # week-7 projections) but never left the runner because of this. Plain
+            # push, same as train.yml's own equivalent step; a real conflict here
+            # is rare enough (this only touches NFL/outputs) to just retry next run.
             git push
           fi
 
