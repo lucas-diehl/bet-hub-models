@@ -98,6 +98,9 @@ concurrency:
   group: nfl
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -217,6 +220,33 @@ jobs:
             Rscript scripts/59_emit_dfs_projection_json.R || echo "DFS ENGINE projection JSON failed; CSV projections still written."
           else
             Rscript scripts/58_grade_published_picks.R --capture-close --execute
+          fi
+
+      # Found 2026-10-22 auditing why dfs.yml's live DFS page was still showing
+      # fantasy_prop_2026_week4_projections.json (committed 10-03) 19 days and 3
+      # weeks into the season: NFL/outputs was only ever written to the actions/
+      # cache above (rolling key, scoped to THIS workflow's own runs, read back
+      # only by nfl.yml itself for TD-signal continuity on td-publish days). dfs.yml
+      # is a SEPARATE workflow with its own plain `actions/checkout` and no access
+      # to that cache, so it only ever sees whatever was last git-committed -- which
+      # nothing here ever did. train.yml has had the equivalent "Commit refreshed
+      # models" step for dfs-engine/golf all along; NFL/outputs never got one.
+      - name: Commit refreshed NFL outputs (so dfs.yml's checkout can see them)
+        if: always()
+        working-directory: NFL
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f outputs/dfs_projections_latest.json 2>/dev/null || true
+          git add -f outputs/fantasy_prop_2026_latest_projections.csv outputs/fantasy_prop_2026_latest_long.csv 2>/dev/null || true
+          git add -f outputs/fantasy_prop_2026_week*_projections.csv outputs/fantasy_prop_2026_week*_projections.json outputs/fantasy_prop_2026_week*_long.csv 2>/dev/null || true
+          git add -f outputs/td_2026_bet_card.csv 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "no NFL output changes to commit"
+          else
+            git commit -m "nfl: refresh published projection outputs [skip ci]"
+            git pull --rebase --quiet origin main
+            git push
           fi
 
       - name: Ingest to Supabase
