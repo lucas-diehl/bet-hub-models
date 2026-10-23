@@ -3,7 +3,7 @@
   "source": "cfb-modeling",
   "sport": "cfb",
   "slate_date": "2026-10-24",
-  "generated_at": "2026-10-22T17:46:57Z",
+  "generated_at": "2026-10-23T17:38:52Z",
   "model_version": "ppp-ppd-2026",
   "mode": "PAPER",
   "event_context": "Week 8",
@@ -666,6 +666,37 @@
         "prob_source": "modelled",
         "posted_total": 56.5,
         "min_total": 56.2
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk8-utahstate-texasstate-under",
+      "event": "Utah State @ Texas State",
+      "event_start": "2026-10-24T23:30:00Z",
+      "market": "total",
+      "selection": "Under 61.5",
+      "side": "under",
+      "line": 61.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.5781,
+      "market_prob": 0.5238,
+      "edge": 0.0543,
+      "ev_pct": 0.1036,
+      "stake_units": 1,
+      "confidence": "low",
+      "tags": [
+        "UNDER",
+        "UNDER3_DOG",
+        "dog"
+      ],
+      "details": {
+        "proj_total": 58.3,
+        "under_edge": 3.2,
+        "strategy": "UNDER3_DOG",
+        "status": "paper",
+        "prob_source": "modelled",
+        "posted_total": 61.5,
+        "min_total": 61.3
       }
     }
   ]
