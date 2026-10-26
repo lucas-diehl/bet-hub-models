@@ -150,16 +150,29 @@ build_model_data <- function(betting_lines, game_dates, include_upcoming = FALSE
     mutate(actual_margin = home_score - away_score,
            home_covered  = as.integer((actual_margin + spread) > 0))
 
+  # first(na.omit(x)) returns a ZERO-LENGTH vector when every row in the group has
+  # x==NA, which breaks summarise()'s "exactly 1 row per group" contract (dplyr warns
+  # "Returning more (or less) than 1 row per `summarise()` group") -- and for an
+  # UPCOMING (not yet played) game, home_score/away_score/actual_margin/home_covered
+  # are ALL NA for every row, every time. Confirmed live 2026-10-26: this silently
+  # dropped the entire current/upcoming week from build_model_data()'s output (0 rows
+  # for week 9, despite CFBD having 56 real games with real lines) while every PAST
+  # week kept working fine (scores known -> na.omit never empties) -- which is exactly
+  # why "no CFB picks on the board" only ever hit the newest week. first_or_na()
+  # degrades an all-NA group to a plain NA instead of a length-0 one, so the group
+  # count stays correct either way.
+  first_or_na <- function(x) { x <- na.omit(x); if (length(x)) x[[1]] else NA }
+
   betting_clean %>%
     group_by(game_id) %>%
     mutate(has_consensus = any(provider == "consensus", na.rm = TRUE)) %>%
     filter((has_consensus & (provider == "consensus" | is.na(provider))) | !has_consensus) %>%
     summarise(
-      season = first(na.omit(season)), week = first(na.omit(week)),
-      home_team = first(na.omit(home_team)), away_team = first(na.omit(away_team)),
-      home_score = first(na.omit(home_score)), away_score = first(na.omit(away_score)),
-      actual_margin = first(na.omit(actual_margin)),
-      home_covered  = first(na.omit(home_covered)),
+      season = first_or_na(season), week = first_or_na(week),
+      home_team = first_or_na(home_team), away_team = first_or_na(away_team),
+      home_score = first_or_na(home_score), away_score = first_or_na(away_score),
+      actual_margin = first_or_na(actual_margin),
+      home_covered  = first_or_na(home_covered),
       spread      = mean(spread, na.rm = TRUE),                    # closing
       spread_open = mean(suppressWarnings(as.numeric(spread_open)), na.rm = TRUE),
       over_under  = mean(suppressWarnings(as.numeric(over_under)),  na.rm = TRUE),
