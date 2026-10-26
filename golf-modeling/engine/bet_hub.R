@@ -357,39 +357,83 @@ write_picks_feed <- function(bets, event, slate_date, mode=NULL, notes=NULL, reb
   f <- unique(f[!is.na(norm) & nzchar(norm), .(norm, finish=as.integer(finish))], by="norm")
   setkey(f, norm); f
 }
-# Is the tournament actually OVER, or just mid-round? preds/in-play is a LIVE/predictive
-# feed -- current_pos is wherever a player sits RIGHT NOW, round 1 hole 9 included, not
-# a final result. Added 2026-10-21 after widening golf's grade cron to run daily: the very
-# next morning (Thu, round 1 barely underway) it graded 18/18 bets as final off that day's
-# in-progress standings (9W-8L) -- confirmed live, info$current_round was 1 and every
-# player's thru was <18. Standard PGA stroke-play is 4 rounds, so "final" requires BOTH
-# the leaderboard reporting round 4 AND every still-active (non-WD/DQ) player having
-# finished all 18 holes -- not just "the API returned something."
-.tournament_is_final <- function(info, raw_data) {
+# Is the tournament actually OVER? First attempt (2026-10-21, same day) used
+# preds/in-play's own current_round + every-player-thru-18 as the signal -- WRONG
+# in a different way, confirmed live 2026-10-26: Bermuda Championship actually
+# finished Sunday 10-25, but preds/in-play was still frozen reporting
+# "current_round: 3, last_update: Fri 10-24 6pm" -- TWO DAYS stale. preds/in-play
+# apparently just stops updating once play ends instead of ever reaching a clean
+# round-4-everyone-thru-18 snapshot, so that gate would have stayed "not final"
+# FOREVER for this event.
+#
+# get-schedule's own `status` field ("completed"/"official 50" for a weather-
+# shortened event cut to 54 holes/etc.) is DataGolf-maintained and authoritative --
+# it correctly showed "completed" with a winner for this exact event while
+# preds/in-play was still stuck. Used here as the real final/not-final signal.
+.event_status <- function(target_event, tour="pga") {
   tryCatch({
-    rd <- suppressWarnings(as.integer(info$current_round %||% NA))
-    if (!length(rd) || is.na(rd[1]) || rd[1] < 4) return(FALSE)
-    d <- as.data.table(raw_data)
-    if (!nrow(d) || !all(c("thru","current_pos") %in% names(d))) return(FALSE)
-    active <- d[!grepl("WD|DQ", current_pos, ignore.case=TRUE)]
-    if (!nrow(active)) return(FALSE)
-    thru <- suppressWarnings(as.integer(active$thru))
-    length(thru) > 0 && !anyNA(thru) && all(thru >= 18)
-  }, error = function(e) FALSE)  # any unexpected shape (NULL info, malformed data, …) -> not final, never crash
+    sched <- dg("get-schedule", list(tour=tour))
+    # dg()/gj() parses with simplifyVector=TRUE, so sched$schedule is a DATA FRAME (one
+    # row per event), not a list of per-event records -- row-filter it, don't Filter()
+    # over it (that would iterate its COLUMNS instead and silently match nothing).
+    sc <- tryCatch(as.data.table(sched$schedule), error=function(e) NULL)
+    if (is.null(sc) || !nrow(sc) || !all(c("event_name","status") %in% names(sc))) return(NA_character_)
+    want <- tolower(trimws(target_event %||% ""))
+    row <- sc[tolower(trimws(event_name)) == want]
+    if (!nrow(row)) return(NA_character_)
+    tolower(trimws(row$status[1]))
+  }, error = function(e) NA_character_)
+}
+
+# The real final leaderboard for a COMPLETED event: preds/live-tournament-stats for
+# round 4 (standard PGA stroke play), NOT preds/in-play -- confirmed live this has
+# the genuinely current snapshot (last_updated matched the tournament's actual Sunday
+# finish, not Friday) with a `position` field in the same "T1"/"CUT"/etc. shape
+# .finish_table() already parses. Only covers players who PLAYED round 4 though, so
+# anyone who missed the cut is simply absent from it (they didn't play round 4) --
+# folded back in here as "CUT" from in_play_data (whose field-wide cut/MC status is
+# immutable once set, so it being a possibly-stale snapshot doesn't matter for THAT
+# one fact), so a top-N bet on a cut player still settles instead of sitting pending
+# forever. Returns NULL (not an empty table) when round 4 itself has no data at all
+# -- e.g. a weather-shortened 3-round event -- so the caller can fall back to
+# not-final rather than silently grading off an empty board. KNOWN LIMIT: a
+# tournament shortened to fewer than 4 rounds will never auto-grade through this path
+# (status says "completed" but round 4 is empty) -- use --force + settlements.csv for
+# those, same escape hatch this file already has for WD/DQ/dead-heat calls.
+.final_round_leaderboard <- function(tour="pga", round=4L, in_play_data=NULL) {
+  tryCatch({
+    raw <- dg("preds/live-tournament-stats",
+              list(tour=tour, round=round, display="value", stats="sg_total"))
+    d <- tryCatch(as.data.table(raw$live_stats), error=function(e) NULL)
+    if (is.null(d) || !nrow(d) || !all(c("player_name","position") %in% names(d))) return(NULL)
+    d <- d[, .(player_name, position)]
+    ip <- tryCatch(as.data.table(in_play_data), error=function(e) NULL)
+    if (!is.null(ip) && nrow(ip) && all(c("player_name","current_pos") %in% names(ip))) {
+      have <- tolower(trimws(d$player_name))
+      cut <- ip[grepl("CUT|^MC$", current_pos, ignore.case=TRUE) &
+                  !(tolower(trimws(player_name)) %in% have)]
+      if (nrow(cut)) d <- rbind(d, cut[, .(player_name, position="CUT")])
+    }
+    d
+  }, error = function(e) NULL)
 }
 
 # live leaderboard for the tournament currently in play (event name comes back too,
-# so the caller can refuse to grade slate A against tournament B). `final` tells the
-# caller whether current_pos is safe to treat as a real result (see above) -- NOT
-# whether a leaderboard was returned at all (nrow(fin)==0 already covers that).
+# so the caller can refuse to grade slate A against tournament B). `final` is TRUE
+# only once get-schedule marks the event completed AND a real round-4 leaderboard is
+# fetched -- in which case `fin` comes from THAT (accurate), not the possibly-stale
+# preds/in-play data, which is used for `fin` only in the normal (not final) case.
 dg_live_finishes <- function(tour="pga") {
   ip <- dg("preds/in-play", list(tour=tour))
   info <- tryCatch(ip$info, error=function(e) NULL)
+  event <- tryCatch(info$event_name, error=function(e) NULL) %||% NA_character_
   d <- if (is.null(ip)) NULL else ip$data
-  list(event = tryCatch(info$event_name, error=function(e) NULL) %||% NA_character_,
-       final = .tournament_is_final(info, d),
+  final_round <- if (identical(.event_status(event, tour), "completed")) .final_round_leaderboard(tour, in_play_data = d) else NULL
+  final <- !is.null(final_round)
+  fin <- if (final) .finish_table(final_round, pos_col = "position") else .finish_table(d)
+  list(event = event, final = final,
        current_round = tryCatch(suppressWarnings(as.integer(info$current_round)), error=function(e) NA_integer_),
-       fin   = .finish_table(d))
+       fin = fin)
 }
 
 # ── manual settlements: golf_picks/settlements.csv (bet_id,result,note) ───────
@@ -425,7 +469,7 @@ SETTLE_FILE <- file.path(OUT, "settlements.csv")
 # reads a `player_name` column off the picks side.
 # finishes: data.table(norm, finish); closing: optional named list bet_id -> closing dec
 # tournament_final: TRUE for every caller except the LIVE --results path mid-tournament
-# (see dg_live_finishes/.tournament_is_final above). When FALSE, `finishes` should already
+# (see dg_live_finishes/.event_status above). When FALSE, `finishes` should already
 # be empty (the caller's job, not this function's) and the old-settled-value carry-forward
 # below is INVERTED on purpose: a prior run that settled a bet while the board was still
 # live gets retracted back to pending here, rather than preserved, the next time this runs.
@@ -578,14 +622,14 @@ if (identical(environment(), globalenv()) && !nzchar(Sys.getenv("BETHUB_SOURCE_O
       lf <- dg_live_finishes("pga")
       if (!nrow(lf$fin)) emsg("in-play feed returned no leaderboard (between events / API hiccup)")
       if (!isTRUE(lf$final) && !fc) {
-        # Not every active player is thru 18 on the reported final round -- current_pos is a
-        # live standing, not a result. Grade nothing real this run; instead call
-        # write_results_feed with EMPTY finishes + tournament_final=FALSE so it retracts
-        # anything a PRIOR run wrongly settled while the board was still live (see that
-        # function + .tournament_is_final's comments). --force bypasses this, same as the
-        # existing event-mismatch override, for a human who knows better than the feed.
-        emsg("--results: tournament not final (current_round=", lf$current_round %||% "?",
-             "; not every active player thru 18) -- not grading real finishes this run")
+        # get-schedule doesn't (yet) show this event as "completed" -- grade nothing real
+        # this run; instead call write_results_feed with EMPTY finishes + tournament_final=
+        # FALSE so it retracts anything a PRIOR run wrongly settled while the board was
+        # still live (see that function + dg_live_finishes/.event_status's comments).
+        # --force bypasses this, same as the existing event-mismatch override, for a human
+        # who knows better than the feed.
+        emsg("--results: tournament not final per get-schedule (current_round=", lf$current_round %||% "?",
+             ") -- not grading real finishes this run")
         write_results_feed(sd, data.table(norm=character(), finish=integer()), NULL,
                            source_event=lf$event, force=fc, tournament_final=FALSE)
       } else {
