@@ -1,0 +1,43 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-10-29",
+  "generated_at": "2026-10-26T15:18:33Z",
+  "model_version": "ppp-ppd-2026",
+  "mode": "PAPER",
+  "event_context": "Week 9",
+  "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
+  "bets": [
+    {
+      "bet_id": "cfb-modeling-2026-wk9-floridaatlantic-northtexas-under",
+      "event": "Florida Atlantic @ North Texas",
+      "event_start": "2026-10-29T23:30:00Z",
+      "market": "total",
+      "selection": "Under 76.5",
+      "side": "under",
+      "line": 76.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.5985,
+      "market_prob": 0.5238,
+      "edge": 0.0747,
+      "ev_pct": 0.1424,
+      "stake_units": 1,
+      "confidence": "medium",
+      "tags": [
+        "UNDER",
+        "UNDER4"
+      ],
+      "details": {
+        "proj_total": 72.4,
+        "under_edge": 4.1,
+        "strategy": "UNDER4",
+        "status": "paper",
+        "prob_source": "modelled",
+        "posted_total": 76.5,
+        "min_total": 76.4
+      }
+    }
+  ]
+}
