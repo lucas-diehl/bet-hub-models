@@ -59,7 +59,21 @@ refresh <- function(yr, heavy) {
     if (is.null(new) || nrow(new) == 0) return(invisible())
     old <- if (file.exists(cache)) readRDS(cache) else NULL
     if (!is.null(old) && col %in% names(old)) old <- dplyr::filter(old, .data[[col]] != yr)
-    saveRDS(dplyr::bind_rows(old, new), cache); log("  refreshed", basename(cache), nrow(new), "rows")
+    # dplyr::bind_rows() ERRORS if a column's type differs between old and new (confirmed
+    # live 2026-10-26: cfbfastR::load_cfb_pbp()'s home_team_id/away_team_id came back
+    # character for the live 2026 pull but integer in the already-cached 2019-2025 pbp --
+    # this silently killed EVERY pbp refresh on every run, which meant
+    # 02_build_asof_ratings.R never got an as_of_week entry for the current week, which
+    # meant 08_write_slate.R's final filter(!is.na(proj_margin)) dropped the ENTIRE
+    # current week -- "no CFB picks on the board", no error anywhere in the chain to
+    # surface it (the bind_rows failure itself was already caught by refresh()'s own
+    # tryCatch and just logged). data.table::rbindlist(fill=TRUE) coerces mismatched
+    # column types instead of erroring; verified it reproduces bind_rows()'s own output
+    # exactly (same values/types) when nothing actually conflicts, so this only changes
+    # behavior for the broken case, not the 4 caches (game_info/betting_lines/
+    # sp_ratings/coaches) that were never affected.
+    merged <- if (is.null(old)) new else data.table::rbindlist(list(old, new), use.names = TRUE, fill = TRUE)
+    saveRDS(tibble::as_tibble(merged), cache); log("  refreshed", basename(cache), nrow(new), "rows")
   }
   add("data_cache/game_info.rds",     "season", function(y) cfbfastR::cfbd_game_info(year = y, season_type = "regular"))
   add("data_cache/betting_lines.rds", "season", function(y) cfbfastR::cfbd_betting_lines(year = y, season_type = "regular"))
