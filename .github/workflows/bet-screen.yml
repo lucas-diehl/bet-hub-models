@@ -9,10 +9,14 @@ name: bet-screen
 #          in UTC-cron order so grading never races a fresh day's new picks.
 # Cron is UTC-fixed, so the ET offset drifts ~1h during EST (same known approximation as
 # this repo's other model workflows' cron comments) -- fine for daily picks.
+# Minutes offset from :00 on purpose: GitHub's own guidance is that top-of-hour schedules
+# queue behind everyone else's top-of-hour schedules under load. Confirmed in practice here
+# -- the first week at "0 12" / "0 14" actually ran 3-7+ hours late every single day (e.g.
+# 12:00 UTC firing at 15:26-18:07 UTC). Off-the-hour minutes should queue much faster.
 on:
   schedule:
-    - cron: "0 12 * * *"   # ~08:00 ET — grade yesterday
-    - cron: "0 14 * * *"   # ~10:00 ET — post today
+    - cron: "17 11 * * *"  # ~07:17 ET — grade yesterday
+    - cron: "23 13 * * *"  # ~09:23 ET — post today
   workflow_dispatch:
     inputs:
       job:
@@ -67,8 +71,8 @@ jobs:
           JOB="${{ github.event.inputs.job }}"
           if [ -z "$JOB" ]; then
             case "${{ github.event.schedule }}" in
-              "0 12 * * *") JOB="grade" ;;
-              *)             JOB="post" ;;
+              "17 11 * * *") JOB="grade" ;;
+              *)              JOB="post" ;;
             esac
           fi
           echo "bet-screen job = $JOB"
