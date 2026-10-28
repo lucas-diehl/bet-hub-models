@@ -131,11 +131,18 @@ nfl_inactive_roster <- function(max_age_hours = 12) {
   if (!file.exists(p)) return(NULL)
   R <- tryCatch(as.data.table(readRDS(p)), error = function(e) NULL)
   if (is.null(R) || !nrow(R) || !all(c("status", "full_name", "week", "team") %in% names(R))) return(NULL)
-  R <- R[week == max(week)]
   # KEY ON name+team, not name alone — common names collide across teams (confirmed real
   # case: "DeVonta Smith" PHI WR, active, vs "Devonta Smith" CAR practice-squad DB; a
   # name-only match would wrongly exclude the active Eagles starter too).
   R[, `:=`(norm = norm_name(full_name), tk = toupper(team))]
+  # PER-PLAYER latest week, not one global max(week) — a player on long-term reserve can
+  # fall off the weekly roster snapshot entirely once there's been no transaction for a
+  # while, so he has no row at all in the globally-latest week even though every active
+  # player does (confirmed real case: Ricky Pearsall, SF, RES through week 7, simply
+  # absent from week 8 while 2,241 other players had a week-8 row). Using each player's
+  # own most recent row instead of the single latest week closes that gap the same way
+  # the roster-status source itself was added to close the injury-report gap above.
+  R <- R[R[, .I[week == max(week)], by = .(norm, tk)]$V1]
   inactive <- unique(R[status %in% c("RES", "CUT", "RET", "EXE", "DEV"), .(norm, team = tk)])
   active   <- unique(R[status == "ACT", .(norm, team = tk)])
   # an ACT row for the same name+team always wins over a stale/ambiguous inactive one —
