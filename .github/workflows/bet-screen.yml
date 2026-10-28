@@ -1,29 +1,54 @@
 name: bet-screen
 
 # NBA player-prop picks for the Bet Hub feed (source "bet-screen", sport "nba").
-#   post   ~10:00 ET daily — fetch live DraftKings/FanDuel props, match the segments in
+#   grade  grade the PRIOR day's archived picks against real box scores (free, ESPN's site
+#          API), write results_<date>.json, and append that day's games to
+#          player_games_<season>.csv.
+#   post   fetch live DraftKings/FanDuel/BetMGM props, match the segments in
 #          bet-screen/src/nba_model/segments.py against the minutes EWMA (read from
-#          player_games_<season>.csv, kept current by the grade job below -- post does not
-#          refresh it itself any more, see grade_props_slate.py's docstring), write
-#          picks_<date>.json.
-#   grade  ~08:00 ET daily — grade the PRIOR day's archived picks against real box scores
-#          (free, ESPN's site API), write results_<date>.json, and append that day's games to
-#          player_games_<season>.csv. Runs before the same day's post step in UTC-cron order
-#          so both grading and the EWMA refresh happen before a fresh day's picks are posted.
+#          player_games_<season>.csv, kept current by grade above -- post does not refresh
+#          it itself, see grade_props_slate.py's docstring), write picks_<date>.json.
+#
+# Every scheduled firing runs BOTH, grade then post, in that order, in the same job. This
+# replaced an earlier design with two separate schedule entries (one per job, selected by
+# matching the literal cron string in github.event.schedule) after it silently failed on
+# 2026-10-28: the "post" cron never fired at all that day -- GitHub Actions schedule events
+# are best-effort and can be delayed for hours or dropped outright under load, and there was
+# no fallback -- leaving the public board on a stale 3-pick manual test run from the night
+# before, until that was caught by chance and fixed by hand. Running both steps together
+# removes the grade-before-post ordering dependency too (it's now just sequential bash
+# within one run, not two independent cron events that both have to land, in order).
+#
+# TWO schedule entries exist on purpose, both running the full grade+post sequence: a
+# morning firing and an early-afternoon catch-up a few hours later. Both scripts are
+# idempotent -- grade de-dupes player_games_<season>.csv by date; post's reconcile=true
+# ingest makes each run's picks file the fully authoritative board for that date -- so the
+# second firing is always safe. On a normal day it's a quality improvement, not just
+# insurance: sportsbooks keep posting player props through midday, so the early-afternoon
+# re-post typically has more of the slate's markets live than the morning one did. On a day
+# where the morning firing is delayed for hours or dropped outright, the afternoon one still
+# produces a correct, same-day board instead of leaving it stale all day. Cost: one extra
+# day's worth of live Odds-API credits for the props pull -- a modest, bounded tradeoff
+# against losing the board entirely on a bad scheduling day.
+#
 # Cron is UTC-fixed, so the ET offset drifts ~1h during EST (same known approximation as
 # this repo's other model workflows' cron comments) -- fine for daily picks.
 # Minutes offset from :00 on purpose: GitHub's own guidance is that top-of-hour schedules
 # queue behind everyone else's top-of-hour schedules under load. Confirmed in practice here
-# -- the first week at "0 12" / "0 14" actually ran 3-7+ hours late every single day (e.g.
-# 12:00 UTC firing at 15:26-18:07 UTC). Off-the-hour minutes should queue much faster.
+# -- the first week at "0 12" / "0 14" ran 3-7+ hours late every day, and even the
+# off-the-hour "17 11" / "23 13" split still saw the "post" cron miss its slot entirely on
+# 2026-10-28 (the "17 11" grade cron itself still fired ~6h late that day: 11:17 UTC
+# scheduled, ~17:09 UTC actual) -- hence the belt-and-suspenders second firing above rather
+# than trying to out-guess GitHub's queue with yet another single cron minute.
 on:
   schedule:
-    - cron: "17 11 * * *"  # ~07:17 ET — grade yesterday
-    - cron: "23 13 * * *"  # ~09:23 ET — post today
+    - cron: "23 13 * * *"  # ~09:23 ET -- grade yesterday, then post today
+    - cron: "41 16 * * *"  # ~12:41 ET -- catch-up: re-run both in case the morning firing
+                            # was delayed/dropped, and to pick up any props posted since
   workflow_dispatch:
     inputs:
       job:
-        description: "post | grade (blank = pick from the schedule, default post)"
+        description: "post | grade | blank = run both, grade then post (what the schedule does)"
         required: false
       as_of:
         description: "post only: YYYY-MM-DD to replay from cached data (zero Odds-API cost). Blank = live."
@@ -68,32 +93,35 @@ jobs:
         working-directory: bet-screen
         run: pip install -e .
 
-      - name: Run bet-screen job (post / grade)
+      - name: Run bet-screen job(s)
         working-directory: bet-screen
         run: |
           JOB="${{ github.event.inputs.job }}"
-          if [ -z "$JOB" ]; then
-            case "${{ github.event.schedule }}" in
-              "17 11 * * *") JOB="grade" ;;
-              *)              JOB="post" ;;
-            esac
-          fi
-          echo "bet-screen job = $JOB"
+          echo "bet-screen job = ${JOB:-both (grade, post)}"
 
-          if [ "$JOB" = "post" ]; then
-            # No box-score refresh here any more -- download_boxscores.py's stats.nba.com
-            # call failed 100% of runs from this runner (see espn.py's docstring). The grade
-            # job (which runs first in the daily schedule) keeps player_games_<season>.csv
-            # current via ESPN instead, so post can just read what's already there.
+          run_grade() {
+            # No box-score refresh needed here -- grade_props_slate.py keeps
+            # player_games_<season>.csv current via ESPN itself (see its docstring).
+            ARGS=""
+            if [ -n "${{ github.event.inputs.date }}" ]; then ARGS="--date ${{ github.event.inputs.date }}"; fi
+            python scripts/grade_props_slate.py $ARGS
+          }
+          run_post() {
             ARGS=""
             if [ -n "${{ github.event.inputs.as_of }}" ]; then ARGS="--as-of ${{ github.event.inputs.as_of }}"; fi
             if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
             python scripts/live_fetch_props_slate.py $ARGS
-          else
-            ARGS=""
-            if [ -n "${{ github.event.inputs.date }}" ]; then ARGS="--date ${{ github.event.inputs.date }}"; fi
-            python scripts/grade_props_slate.py $ARGS
-          fi
+          }
+
+          case "$JOB" in
+            grade) run_grade ;;
+            post)  run_post ;;
+            # `|| true` on grade: a grade-step failure must not prevent post from being
+            # attempted too -- the whole point of running both here is to not have a single
+            # failure point silently take out the day's board.
+            *)     run_grade || true
+                   run_post ;;
+          esac
 
       - name: Ingest to Supabase
         uses: ./.github/actions/ingest
