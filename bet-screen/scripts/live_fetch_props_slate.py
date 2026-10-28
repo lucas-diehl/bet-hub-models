@@ -76,7 +76,14 @@ def current_minutes_estimate(as_of_date: str, halflife: float = 8.0) -> pd.DataF
     """Each player's CURRENT minutes EWMA -- i.e. including their most recent played game,
     not shifted -- carried continuously across the season boundary. A fresh season starts
     with ~0 games of its own, so without this every player would show up as a leak-safe-NaN
-    'bench' by default for the first few weeks, which is wrong, not just imprecise."""
+    'bench' by default for the first few weeks, which is wrong, not just imprecise.
+
+    Groups by player_norm, not player_id: the current season's rows now come from ESPN
+    (grade_props_slate.py's daily append, since stats.nba.com reliably times out from
+    GitHub Actions -- see nba_model/espn.py) while prior seasons' rows are stats.nba.com-
+    sourced. The two use different, incompatible player-id numbering schemes; player_norm
+    is the one identity that's stable across both and already the real join key everything
+    downstream uses anyway."""
     season = season_for(datetime.strptime(as_of_date, "%Y-%m-%d").date())
     frames = []
     for s in [season - 1, season]:
@@ -88,14 +95,13 @@ def current_minutes_estimate(as_of_date: str, halflife: float = 8.0) -> pd.DataF
     pg = pd.concat(frames, ignore_index=True)
     pg["game_date"] = pg["game_date"].astype(str)
     pg = pg[pg["game_date"] < as_of_date]  # strictly before -- leak safety even in live mode
-    pg = pg.sort_values(["player_id", "game_date"])
+    pg["player_norm"] = pg["player_name"].map(normalize_name)
+    pg = pg.sort_values(["player_norm", "game_date"])
 
     alpha = ewma_halflife_alpha(halflife)
-    current_ewma = pg.groupby("player_id")["min"].apply(lambda s: s.ewm(alpha=alpha, min_periods=1).mean().iloc[-1])
-    latest_name = pg.groupby("player_id")["player_name"].last()
-    out = pd.DataFrame({"min_ewma_now": current_ewma, "player_name": latest_name}).reset_index()
-    out["player_norm"] = out["player_name"].map(normalize_name)
-    return out[["player_id", "player_norm", "min_ewma_now"]]
+    current_ewma = pg.groupby("player_norm")["min"].apply(lambda s: s.ewm(alpha=alpha, min_periods=1).mean().iloc[-1])
+    out = current_ewma.rename("min_ewma_now").reset_index()
+    return out[["player_norm", "min_ewma_now"]]
 
 
 def fetch_live_game_lines(as_of_date: str) -> pd.DataFrame:

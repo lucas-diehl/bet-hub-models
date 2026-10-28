@@ -1,12 +1,15 @@
 name: bet-screen
 
 # NBA player-prop picks for the Bet Hub feed (source "bet-screen", sport "nba").
-#   post   ~10:00 ET daily — refresh today's season box-score cache (for the minutes EWMA),
-#          fetch live DraftKings/FanDuel props, match the 11 segments in
-#          bet-screen/src/nba_model/segments.py, write picks_<date>.json.
+#   post   ~10:00 ET daily — fetch live DraftKings/FanDuel props, match the segments in
+#          bet-screen/src/nba_model/segments.py against the minutes EWMA (read from
+#          player_games_<season>.csv, kept current by the grade job below -- post does not
+#          refresh it itself any more, see grade_props_slate.py's docstring), write
+#          picks_<date>.json.
 #   grade  ~08:00 ET daily — grade the PRIOR day's archived picks against real box scores
-#          (free, nba_api), write results_<date>.json. Runs before the same day's post step
-#          in UTC-cron order so grading never races a fresh day's new picks.
+#          (free, ESPN's site API), write results_<date>.json, and append that day's games to
+#          player_games_<season>.csv. Runs before the same day's post step in UTC-cron order
+#          so both grading and the EWMA refresh happen before a fresh day's picks are posted.
 # Cron is UTC-fixed, so the ET offset drifts ~1h during EST (same known approximation as
 # this repo's other model workflows' cron comments) -- fine for daily picks.
 # Minutes offset from :00 on purpose: GitHub's own guidance is that top-of-hour schedules
@@ -78,8 +81,10 @@ jobs:
           echo "bet-screen job = $JOB"
 
           if [ "$JOB" = "post" ]; then
-            SEASON=$(python -c "from datetime import date; d=date.today(); print(d.year+1 if d.month>=10 else d.year)")
-            python scripts/download_boxscores.py --seasons "$SEASON" --refresh --skip-inactive || echo "box-score refresh failed; continuing with the cached file."
+            # No box-score refresh here any more -- download_boxscores.py's stats.nba.com
+            # call failed 100% of runs from this runner (see espn.py's docstring). The grade
+            # job (which runs first in the daily schedule) keeps player_games_<season>.csv
+            # current via ESPN instead, so post can just read what's already there.
             ARGS=""
             if [ -n "${{ github.event.inputs.as_of }}" ]; then ARGS="--as-of ${{ github.event.inputs.as_of }}"; fi
             if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi

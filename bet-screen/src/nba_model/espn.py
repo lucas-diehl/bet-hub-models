@@ -12,10 +12,21 @@ exact codebase already proves it works from these same GitHub Actions runners
 -- it just needs a non-default User-Agent header, confirmed live (both from a local
 machine and matching the already-working R pattern) before writing this.
 
-Deliberately NOT used for download_boxscores.py's full-season backfill (that stays on
-stats.nba.com/nba_api, which IS what minutes.py/segments.py were built and validated
-against) -- this is a narrow, single-day, grading-only substitute, not a wholesale
-swap of the project's data source.
+Originally narrow (grading-only): the historical backfill (player_games_2016-2026.csv,
+what minutes.py/segments.py were built and validated against) stays on stats.nba.com/
+nba_api, unchanged. But download_boxscores.py's daily --refresh (meant to keep the
+*current* season's player_games_<season>.csv current for the live minutes EWMA) hit the
+exact same GitHub-Actions-only ReadTimeout as grading did -- 100% failure, 7/7 real runs,
+confirmed 2026-10-27 -- so the live pipeline has been silently running on a stale,
+never-refreshed current-season file since launch. fetch_canonical_player_games() below
+extends this same ESPN source (already proven reliable from these runners) to also cover
+that incremental refresh: grade_props_slate.py appends each day's games to
+player_games_<season>.csv right after grading, so the live pipeline never needs its own
+network call for this at all. current_minutes_estimate() in live_fetch_props_slate.py
+was changed to group by player_norm instead of player_id for exactly this reason --
+ESPN's player ids are a different numbering scheme than stats.nba.com's, and the two
+sources now sit side by side in the same file (historical rows on one scheme, current-
+season rows on the other). player_norm is the stable identity across both.
 """
 
 from __future__ import annotations
@@ -100,3 +111,61 @@ def fetch_boxscore_actuals(date_iso: str) -> pd.DataFrame:
     df["player_norm"] = df["PLAYER_NAME"].map(normalize_name)
     df["actual_pra"] = df["PTS"] + df["REB"] + df["AST"]
     return df
+
+
+def fetch_canonical_player_games(date_iso: str, season: int) -> pd.DataFrame:
+    """Every player's minutes + box score for every NBA game on date_iso, shaped to match
+    build_canonical_player_games()'s output (nba_model.data) closely enough for
+    current_minutes_estimate() and the team-abbreviation lookup in live_fetch_props_slate.py
+    -- season/game_id/game_date/team_abbreviation/opp_abbr/is_home/player_id/player_name/min
+    plus pts/reb/ast/fg3m along for the ride. Separate fetch loop from
+    fetch_boxscore_actuals() above rather than sharing one -- grading is already proven
+    reliable and this stays independent of it so a bug here can't touch that path.
+    Empty DataFrame if ESPN has nothing for that date."""
+    resp = requests.get(f"{BASE}/scoreboard", params={"dates": date_iso.replace("-", "")},
+                        headers=HEADERS, timeout=TIMEOUT)
+    resp.raise_for_status()
+    events = resp.json().get("events", [])
+
+    rows: list[dict] = []
+    for ev in events:
+        event_id = ev.get("id")
+        if not event_id:
+            continue
+        r = requests.get(f"{BASE}/summary", params={"event": event_id}, headers=HEADERS, timeout=TIMEOUT)
+        if r.status_code != 200:
+            continue
+        payload = r.json()
+        competitors = (payload.get("header", {}).get("competitions") or [{}])[0].get("competitors", [])
+        home_away = {c.get("team", {}).get("abbreviation"): c.get("homeAway") for c in competitors}
+        boxscore = payload.get("boxscore", {})
+        for team in boxscore.get("players", []):
+            t = team.get("team", {})
+            abbr = t.get("abbreviation")
+            is_home = home_away.get(abbr) == "home"
+            opp_abbr = next((a for a in home_away if a != abbr), None)
+            for stat_group in team.get("statistics", []):
+                labels = stat_group.get("labels") or stat_group.get("names") or []
+                idx = {lab: i for i, lab in enumerate(labels)}
+                for athlete in stat_group.get("athletes", []):
+                    stats = athlete.get("stats") or []
+                    info = athlete.get("athlete") or {}
+                    name = info.get("displayName")
+                    if not name:
+                        continue
+                    minutes = _stat_int(stats, idx, "MIN")
+                    pts, reb, ast = _stat_int(stats, idx, "PTS"), _stat_int(stats, idx, "REB"), _stat_int(stats, idx, "AST")
+                    if minutes is None and pts is None and reb is None and ast is None:
+                        continue  # DNP/inactive row
+                    fg3m = _stat_made(stats, idx, "3PT")
+                    rows.append({
+                        "season": season, "game_id": event_id, "game_date": date_iso,
+                        "team_abbreviation": abbr, "opp_abbr": opp_abbr, "is_home": is_home,
+                        "player_id": info.get("id"), "player_name": name,
+                        "min": minutes or 0, "pts": pts or 0, "reb": reb or 0,
+                        "ast": ast or 0, "fg3m": fg3m or 0,
+                    })
+
+    cols = ["season", "game_id", "game_date", "team_abbreviation", "opp_abbr", "is_home",
+            "player_id", "player_name", "min", "pts", "reb", "ast", "fg3m"]
+    return pd.DataFrame(rows, columns=cols)

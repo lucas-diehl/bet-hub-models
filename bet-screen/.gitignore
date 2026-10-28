@@ -1,5 +1,11 @@
 data/processed/*
 !data/processed/player_games_2026.csv
+# One-time backfilled seed for the week the daily refresh was silently broken (2026-10-20
+# through 2026-10-26, see grade_props_slate.py/espn.py). The actions/cache for this path never
+# captured a 2027 file since the old refresh always failed, so without this the live EWMA
+# would have a real week-long gap the day this ships. Growth from here on is cache-only, same
+# as every other season file -- this is a bootstrap copy, not something kept in sync by hand.
+!data/processed/player_games_2027.csv
 data/picks_archive/
 _feed/
 __pycache__/
