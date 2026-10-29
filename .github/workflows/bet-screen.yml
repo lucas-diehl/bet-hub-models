@@ -9,47 +9,47 @@ name: bet-screen
 #          player_games_<season>.csv, kept current by grade above -- post does not refresh
 #          it itself, see grade_props_slate.py's docstring), write picks_<date>.json.
 #
-# Every scheduled firing runs BOTH, grade then post, in that order, in the same job. This
-# replaced an earlier design with two separate schedule entries (one per job, selected by
-# matching the literal cron string in github.event.schedule) after it silently failed on
-# 2026-10-28: the "post" cron never fired at all that day -- GitHub Actions schedule events
-# are best-effort and can be delayed for hours or dropped outright under load, and there was
-# no fallback -- leaving the public board on a stale 3-pick manual test run from the night
-# before, until that was caught by chance and fixed by hand. Running both steps together
-# removes the grade-before-post ordering dependency too (it's now just sequential bash
-# within one run, not two independent cron events that both have to land, in order).
+# ============================================================================
+# Scheduling history -- read before touching the cron below
+# ============================================================================
+# v1: one cron per job ("17 11" grade, "23 13" post), chosen by matching the literal cron
+#     string in github.event.schedule. Failed on 2026-10-28: the post cron never fired at
+#     all, leaving the board on a stale 3-pick manual run from the night before.
+# v2 (2026-10-28): both jobs run together on every firing (grade then post, sequential --
+#     removes the ordering dependency too) plus a second schedule entry ~3h later as a
+#     catch-up. Still failed the very next day, 2026-10-29: NEITHER of the two scheduled
+#     crons fired at all (confirmed via `gh run list` -- zero runs that day until triggered
+#     by hand), and nfl.yml -- a different workflow in this same repo, unrelated code --
+#     also had zero scheduled runs that same day while OTHER workflows (dfs/train/golf)
+#     fired fine. GitHub Actions schedule events are best-effort with no latency or
+#     delivery guarantee; redundancy at the scale of 2 crons/day was not enough.
+# v3 (this version): run the check every ~12 minutes across the whole relevant window
+#     instead of at 2 fixed times. Each firing is cheap and safe to no-op (see the
+#     already-posted-today guard below), so this converts "did GitHub deliver these exact
+#     2 events" into "did GitHub deliver at least 1 of ~40 events spread across 8 hours" --
+#     the failure mode would have to be near-total to still lose a day. Public repo, so
+#     GitHub-hosted runner minutes are free regardless of how often this fires.
+# ============================================================================
 #
-# TWO schedule entries exist on purpose, both running the full grade+post sequence: a
-# morning firing and an early-afternoon catch-up a few hours later. Both scripts are
-# idempotent -- grade de-dupes player_games_<season>.csv by date; post's reconcile=true
-# ingest makes each run's picks file the fully authoritative board for that date -- so the
-# second firing is always safe. On a normal day it's a quality improvement, not just
-# insurance: sportsbooks keep posting player props through midday, so the early-afternoon
-# re-post typically has more of the slate's markets live than the morning one did. On a day
-# where the morning firing is delayed for hours or dropped outright, the afternoon one still
-# produces a correct, same-day board instead of leaving it stale all day. Cost: one extra
-# day's worth of live Odds-API credits for the props pull -- a modest, bounded tradeoff
-# against losing the board entirely on a bad scheduling day.
-#
-# Cron is UTC-fixed, so the ET offset drifts ~1h during EST (same known approximation as
-# this repo's other model workflows' cron comments) -- fine for daily picks.
-# Minutes offset from :00 on purpose: GitHub's own guidance is that top-of-hour schedules
-# queue behind everyone else's top-of-hour schedules under load. Confirmed in practice here
-# -- the first week at "0 12" / "0 14" ran 3-7+ hours late every day, and even the
-# off-the-hour "17 11" / "23 13" split still saw the "post" cron miss its slot entirely on
-# 2026-10-28 (the "17 11" grade cron itself still fired ~6h late that day: 11:17 UTC
-# scheduled, ~17:09 UTC actual) -- hence the belt-and-suspenders second firing above rather
-# than trying to out-guess GitHub's queue with yet another single cron minute.
+# Cron is UTC-fixed, so the ET offset drifts ~1h during EST -- irrelevant now that this
+# runs every ~12 min across the whole window rather than at one precise clock time.
 on:
   schedule:
-    - cron: "23 13 * * *"  # ~09:23 ET -- grade yesterday, then post today
-    - cron: "41 16 * * *"  # ~12:41 ET -- catch-up: re-run both in case the morning firing
-                            # was delayed/dropped, and to pick up any props posted since
+    # Every 12 min, 13:00-20:48 UTC (~8am-3:48pm ET) -- covers the original "~09:23 ET
+    # grade+post" and "~12:41 ET catch-up" intent many times over. Explicit minute list
+    # (not */12) so every firing lands off the top of the hour, dodging the queue
+    # congestion GitHub's own guidance warns about (confirmed costing this exact workflow
+    # 3-7h delays when it used to run on "0 12"/"0 14").
+    - cron: "3,15,27,39,51 13-20 * * *"
   workflow_dispatch:
     inputs:
       job:
         description: "post | grade | blank = run both, grade then post (what the schedule does)"
         required: false
+      force:
+        description: "post/blank only: true = post even if today's picks already exist (bypasses the already-posted-today guard, still costs live Odds-API credits)"
+        required: false
+        default: "false"
       as_of:
         description: "post only: YYYY-MM-DD to replay from cached data (zero Odds-API cost). Blank = live."
         required: false
@@ -97,7 +97,8 @@ jobs:
         working-directory: bet-screen
         run: |
           JOB="${{ github.event.inputs.job }}"
-          echo "bet-screen job = ${JOB:-both (grade, post)}"
+          FORCE="${{ github.event.inputs.force }}"
+          echo "bet-screen job = ${JOB:-both (grade, post)}  force=${FORCE:-false}"
 
           run_grade() {
             # No box-score refresh needed here -- grade_props_slate.py keeps
@@ -112,6 +113,16 @@ jobs:
             if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
             python scripts/live_fetch_props_slate.py $ARGS
           }
+          # Running every ~12 min means most firings must be a no-op, or this would burn
+          # live Odds-API credits ~40x/day instead of ~once. Gate on whether today's picks
+          # already exist: the FIRST firing each day that successfully completes writes
+          # data/picks_archive/picks_<today>.json, which is cache-persisted, so every later
+          # firing that day sees it and skips the real fetch. --force (manual dispatch only)
+          # bypasses this for testing / an intentional same-day re-post.
+          already_posted() {
+            [ "$FORCE" = "true" ] && return 1
+            [ -f "data/picks_archive/picks_$(date -u +%F).json" ]
+          }
 
           case "$JOB" in
             grade) run_grade ;;
@@ -120,7 +131,11 @@ jobs:
             # attempted too -- the whole point of running both here is to not have a single
             # failure point silently take out the day's board.
             *)     run_grade || true
-                   run_post ;;
+                   if already_posted; then
+                     echo "today's picks already exist -- skipping post (no live-odds re-fetch)"
+                   else
+                     run_post
+                   fi ;;
           esac
 
       - name: Ingest to Supabase
