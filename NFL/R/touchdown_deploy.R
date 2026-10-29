@@ -619,25 +619,30 @@ prepare_td_2026_bet_card <- function(
       ## whole has (+11.9% ROI, CI [-10.0%, +38.3%], z = 0.26, n = 210). Left
       ## in place rather than reverted, since removing it was not tested either.
       wide_receiver = .data$position == "WR",
-      ## Position-specific gates, added 2026-10-13 at the user's explicit
-      ## direction for the re-launched site publishing. Each is ADDITIVE on
-      ## top of the core/expanded logic above -- never widens eligibility,
-      ## only narrows it for the two named positions. TE gets no new gate.
-      ## See the dated comment in config/td_2026.yml (strategy.wr_max_odds /
-      ## strategy.rb_min_edge) for the backtest evidence behind each number.
-      wr_odds_ok = .data$position != "WR" |
-        .data$best_american_odds <= config$strategy$wr_max_odds,
+      ## Position-specific gates, added 2026-10-13, REVISED 2026-10-29 after a
+      ## full-range monotonic power test (every priced RB/WR/TE row with a
+      ## line, 2023-2025, logistic regression of relative_edge on realized
+      ## anytime_td -- not bucketed, selftest-verified sign convention).
+      ## wr_odds_ok REMOVED: WR's founding backtest (a 53-bet bucket) does not
+      ## replicate -- the full-power test finds WR's edge POSITIVE in 2 of 3
+      ## seasons. rb_edge_ok KEPT: now better-supported than before (positive
+      ## in both 2024 and 2025). te_edge_ok ADDED: TE's edge inverts and
+      ## REPLICATES in all three seasons, the one relationship that holds up
+      ## every year -- excluded from core/expanded entirely, same treatment
+      ## as QB, pending a fix to whatever is driving it. See config/td_2026.yml
+      ## (strategy.rb_min_edge / strategy.te_enabled) for the full evidence.
       rb_edge_ok = .data$position != "RB" |
         .data$relative_edge >= config$strategy$rb_min_edge,
+      te_edge_ok = .data$position != "TE" | isTRUE(config$strategy$te_enabled),
       core_signal = .data$eligible_price &
         .data$relative_edge >= config$strategy$core_edge &
         (.data$low_total | .data$tight_end) &
-        .data$wr_odds_ok & .data$rb_edge_ok,
+        .data$rb_edge_ok & .data$te_edge_ok,
       expanded_signal = .data$eligible_price &
         .data$relative_edge >= config$strategy$expanded_edge &
         (.data$low_total | .data$tight_end | .data$heavy_favorite |
            .data$wide_receiver) &
-        .data$wr_odds_ok & .data$rb_edge_ok,
+        .data$rb_edge_ok & .data$te_edge_ok,
       strategy_tier = dplyr::case_when(
         .data$core_signal ~ "CORE",
         .data$expanded_signal ~ "EXPANDED",

@@ -105,8 +105,8 @@ posted_for <- function(player) {
   posted[[key]]
 }
 
-wr_max_odds <- suppressWarnings(as.numeric(cfg$strategy$wr_max_odds))
 rb_min_edge <- suppressWarnings(as.numeric(cfg$strategy$rb_min_edge))
+te_enabled <- isTRUE(cfg$strategy$te_enabled)
 
 d <- card |>
   mutate(
@@ -119,16 +119,26 @@ d <- card |>
         sprintf("shorter than %d", as.integer(floor_odds)),
       is.finite(cap_odds) & .data$best_american_odds > cap_odds ~
         sprintf("longer than +%d", as.integer(cap_odds)),
-      ## WR odds-cap / RB edge-floor, added 2026-10-13 alongside the Thu/Sun/
-      ## Mon publish cadence - spelled out here too, not just reflected in a
-      ## blank "-", matching this board's existing "never a silent gap"
-      ## convention (see file header).
-      toupper(.data$position) == "WR" & is.finite(wr_max_odds) &
-        .data$best_american_odds > wr_max_odds ~
-        sprintf("WR longer than +%d", as.integer(wr_max_odds)),
+      ## RB edge-floor, added 2026-10-13 - spelled out here too, not just
+      ## reflected in a blank "-", matching this board's existing "never a
+      ## silent gap" convention (see file header).
+      ##
+      ## WR odds-cap REMOVED 2026-10-29: its founding backtest (a 53-bet
+      ## bucket) did not replicate under a full-range monotonic power test
+      ## (every priced row with a line, not bucketed) - WR's edge is
+      ## positive and significant in 2 of 3 test seasons. See
+      ## config/td_2026.yml strategy.rb_min_edge / strategy.te_enabled.
+      ##
+      ## TE ADDED 2026-10-29: the same full-power test found TE's edge
+      ## inverts and REPLICATES in all three seasons (the one position-edge
+      ## relationship that held up every year, in the wrong direction) -
+      ## excluded from core/expanded entirely, same treatment as QB, until
+      ## that's diagnosed and fixed.
       toupper(.data$position) == "RB" & is.finite(rb_min_edge) &
         .data$relative_edge < rb_min_edge ~
         sprintf("RB edge below %d%%", as.integer(rb_min_edge * 100)),
+      toupper(.data$position) == "TE" & !te_enabled ~
+        "TE anytime-TD excluded (edge inverts on a full-power test)",
       TRUE ~ NA_character_
     ),
     .ev = .data$model_probability * (

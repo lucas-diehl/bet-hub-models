@@ -120,26 +120,42 @@ strategy:
   core_edge: 0.05
   low_total_max: 42
   heavy_favorite_max_spread: -6
-  # Position-specific gates, added 2026-10-13 at the user's explicit direction
-  # for the re-launched site publishing (see R/touchdown_deploy.R core_signal/
-  # expanded_signal). Each is ADDITIVE on top of the existing edge/situational
-  # logic above, not a replacement. TE gets no new gate -- it keeps exactly the
-  # core_edge/expanded_edge + low_total/tight_end logic as before.
+  # Position-specific gates, added 2026-10-13, REVISED 2026-10-29 after a
+  # proper full-range monotonic power test (direct port of the user's own CBB
+  # ATS methodology: one pre-registered logistic regression of relative_edge
+  # on realized anytime_td across EVERY priced RB/WR/TE row with a line,
+  # 2023-2025, n=12,928 -- not bucketed into quintiles/odds-bands the way the
+  # 2026-10-13 rules below were. Selftest-verified sign convention (negating
+  # relative_edge flips the fit coefficient exactly, as it must).
+  # See R/touchdown_deploy.R core_signal/expanded_signal for where these are
+  # applied, and scripts/155-156 for the full test + the 2023-fold follow-up.
   #
-  # wr_max_odds: a real multi-year walk-forward backtest (2023-25, 759 EXPANDED
-  # bets) found the +551-or-longer WR bucket alone at 53 bets, 5.7% win rate,
-  # ROI -54.7%, bootstrap CI [-100%, +5.7%] -- the closest thing to a
-  # statistically confident NEGATIVE result found this session. WR's claimed-
-  # edge/real-ROI relationship also INVERTS at the high end (2-5% claimed edge:
-  # -0.4% ROI; 30%+ claimed edge: -66.7% ROI, 1 win in 24) -- the model's own
-  # edge number is actively misleading for WR longshots, not merely noisy.
-  wr_max_odds: 500
-  # rb_min_edge: the same backtest split RB's EXPANDED-tier bets by whether they
-  # also cleared the tighter 5% CORE threshold: edge 2-5% ("also_core" FALSE) ran
-  # 87 bets at ROI -15.1%; edge >=5% ran 204 bets at ROI +15.7%. Unlike WR, RB's
-  # edge number points the right direction -- this floor just closes off RB's
-  # worst-performing segment (the 2-5% EXPANDED tier) rather than RB as a whole.
+  # wr_max_odds REMOVED 2026-10-29. Its founding backtest (759 EXPANDED bets,
+  # the +551-or-longer bucket alone at 53 bets, bootstrap CI already spanning
+  # [-100%, +5.7%]) does not replicate under the full-power test: WR's
+  # relative_edge is POSITIVE and significant in 2 of the 3 test seasons
+  # (2024 coef +1.86 p<.0001 n=1,975; 2025 coef +1.20 p=.012 n=1,919; only the
+  # thinnest-trained 2023 fold, 2021-22 training data only, inverts at -1.53).
+  # Pooled on the two better-supported seasons: +1.61, p<.00001, n=3,894. The
+  # original 1-win-in-24-bets "inverts at 30%+ claimed edge" sub-finding was
+  # exactly the underpowered-bucket pattern the CBB test was built to catch.
+  #
+  # rb_min_edge KEPT at 0.05, now on firmer ground than its original 2-bucket
+  # backtest (87 bets at -15.1% vs 204 at +15.7%): the full-power test finds
+  # RB's relative_edge positive and significant in BOTH 2024 (+1.60, p<.0001)
+  # and 2025 (+2.24, p<.0001), pooled +1.83, p<.00001, n=2,628.
   rb_min_edge: 0.05
+  # te_enabled ADDED 2026-10-29. TE never had a position gate before today --
+  # the full-power test found it needed one more than WR ever did: TE's
+  # relative_edge is NEGATIVE and significant in ALL THREE seasons, no
+  # exceptions (2023 -0.96 p<.0001 n=996; 2024 -2.18 p<.0001 n=1,003; 2025
+  # -1.05 p=.036 n=1,014) -- this is the one position-edge relationship that
+  # actually replicates cleanly every year, in the wrong direction. Treated
+  # the same way QB already is (excluded from core/expanded entirely) rather
+  # than capped at some odds/edge level the data doesn't support picking.
+  # Flip to true only after the TE-specific signal is diagnosed and fixed,
+  # not as a quick reversal of this finding.
+  te_enabled: false
   # Weekly cap on CORE+EXPANDED bets actually published, added 2026-10-01 -
   # this is what the bankroll section's old "daily_or_weekly_cap: null" was a
   # placeholder for; moved here next to the other qualification knobs and
