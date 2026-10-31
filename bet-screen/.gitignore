@@ -7,6 +7,8 @@ data/processed/*
 # as every other season file -- this is a bootstrap copy, not something kept in sync by hand.
 !data/processed/player_games_2027.csv
 data/picks_archive/
+data/props_snapshots/
+data/clv_log.csv
 _feed/
 __pycache__/
 *.pyc

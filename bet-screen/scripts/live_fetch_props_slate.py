@@ -41,12 +41,13 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pandas as pd
-import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from nba_model.api import NBAStatsClient  # noqa: E402
-from nba_model.market import BASE, PROP_MARKETS, SPORT_KEY, devig_two_way, odds_api_key  # noqa: E402
+from nba_model.market import (  # noqa: E402
+    best_price, devig_two_way, fetch_live_game_lines, fetch_live_props_for_event,
+)
 from nba_model.minutes import ewma_halflife_alpha  # noqa: E402
 from nba_model.names import normalize_name  # noqa: E402
 from nba_model.segments import classify_role, classify_script, matching_segment  # noqa: E402
@@ -55,8 +56,8 @@ ROOT = Path(__file__).resolve().parents[1]
 MAX_DAILY_PICKS = 15
 # bet365 was never integrated (would need a different Odds API region); betmgm is not one of
 # the sanctioned books in the bet-dashboard contract (FanDuel | DraftKings | bet365 only).
-LIVE_BOOKS = ["draftkings", "fanduel"]
 BOOK_LABEL = {"draftkings": "DraftKings", "fanduel": "FanDuel"}
+SNAPSHOT_DIR = ROOT / "data" / "props_snapshots"
 MARKET_LABEL = {
     "player_points": "Points", "player_rebounds": "Rebounds", "player_assists": "Assists",
     "player_threes": "3PM", "player_points_rebounds_assists": "PRA",
@@ -102,71 +103,6 @@ def current_minutes_estimate(as_of_date: str, halflife: float = 8.0) -> pd.DataF
     current_ewma = pg.groupby("player_norm")["min"].apply(lambda s: s.ewm(alpha=alpha, min_periods=1).mean().iloc[-1])
     out = current_ewma.rename("min_ewma_now").reset_index()
     return out[["player_norm", "min_ewma_now"]]
-
-
-def fetch_live_game_lines(as_of_date: str) -> pd.DataFrame:
-    """Today's spread per team, live (non-historical) endpoint. Filtered to games actually
-    commencing on as_of_date (US-evening-rollover window), same contamination fix as
-    download_game_lines.py's historical version -- the live board also includes upcoming
-    games days out."""
-    resp = requests.get(
-        f"{BASE}/sports/{SPORT_KEY}/odds",
-        params={"apiKey": odds_api_key(), "regions": "us", "markets": "spreads", "oddsFormat": "american"},
-        timeout=60,
-    )
-    resp.raise_for_status()
-    window_start = pd.Timestamp(f"{as_of_date}T10:00:00Z")
-    window_end = window_start + pd.Timedelta(hours=24)
-    rows = []
-    for event in resp.json():
-        commence = pd.Timestamp(event["commence_time"])
-        if not (window_start <= commence < window_end):
-            continue
-        home, away = event["home_team"], event["away_team"]
-        spreads = [m for b in event.get("bookmakers", []) for m in b.get("markets", []) if m["key"] == "spreads"]
-        if not spreads:
-            continue
-        home_pts = [o["point"] for m in spreads for o in m["outcomes"] if o["name"] == home]
-        if not home_pts:
-            continue
-        home_spread = pd.Series(home_pts).median()
-        rows.append({"event_id": event["id"], "home_team": home, "away_team": away,
-                     "commence_time": event["commence_time"], "home_spread": home_spread})
-    return pd.DataFrame(rows)
-
-
-def fetch_live_props_for_event(event_id: str, commence_time: str | None = None) -> list[dict]:
-    key = odds_api_key()
-    resp = requests.get(
-        f"{BASE}/sports/{SPORT_KEY}/events/{event_id}/odds",
-        params={"apiKey": key, "regions": "us", "markets": ",".join(PROP_MARKETS), "oddsFormat": "american"},
-        timeout=60,
-    )
-    resp.raise_for_status()
-    payload = resp.json()
-    rows = []
-    for book in payload.get("bookmakers", []):
-        if book["key"] not in LIVE_BOOKS:
-            continue
-        for market in book.get("markets", []):
-            for outcome in market["outcomes"]:
-                rows.append({
-                    "event_id": event_id, "home_team": payload.get("home_team"),
-                    "away_team": payload.get("away_team"), "commence_time": commence_time,
-                    "book": book["key"],
-                    "market": market["key"], "player": outcome.get("description"),
-                    "side": outcome.get("name"), "point": outcome.get("point"),
-                    "price": outcome.get("price"),
-                })
-    return rows
-
-
-def best_price(rows: list[dict]) -> pd.DataFrame:
-    df = pd.DataFrame(rows)
-    if df.empty:
-        return df
-    idx = df.groupby(["player", "market", "side"])["price"].idxmax()
-    return df.loc[idx]
 
 
 def load_cached_replay(as_of_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -223,6 +159,16 @@ def main() -> None:
             print(f"  {game['home_team']} vs {game['away_team']}: {len(rows)} quotes")
             time.sleep(0.3)
         props = best_price(all_prop_rows)
+
+        # Archive the FULL unfiltered board (every player/market/side, not just the ~15
+        # that end up matching a segment) as the "morning" half of a CLV pair -- free, this
+        # is the exact data already just fetched for picks, just also persisted wholesale.
+        # capture_closing_snapshot.py takes the other half later the same day; CLV itself
+        # gets computed at grade time the next day, once real outcomes are available too.
+        if not args.dry_run and not props.empty:
+            SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+            props.assign(snapshot="morning", captured_at=datetime.now(timezone.utc).isoformat()) \
+                .to_csv(SNAPSHOT_DIR / f"morning_{as_of_date}.csv", index=False)
 
     # Only spread_abs comes from this join -- props already carries its own correct
     # event_id/home_team/away_team/commence_time natively (from the live API payload or
