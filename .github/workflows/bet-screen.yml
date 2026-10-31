@@ -8,6 +8,14 @@ name: bet-screen
 #          bet-screen/src/nba_model/segments.py against the minutes EWMA (read from
 #          player_games_<season>.csv, kept current by grade above -- post does not refresh
 #          it itself, see grade_props_slate.py's docstring), write picks_<date>.json.
+#   closing  (added 2026-10-31) capture the FULL live props board -- every player/market/
+#          side, not just whatever post matched a segment for -- near tip-off, for a free
+#          forward CLV dataset. Pairs against post's own "morning" board archive
+#          (data/props_snapshots/morning_<date>.csv, written every day post runs for real)
+#          at grade time the next day, once real outcomes exist too (compute_clv.py, run
+#          alongside grade below). See reports/_clv_test.py in the nba/ research project for
+#          why this needs to accumulate prospectively rather than trusting a backtest-only
+#          look.
 #
 # ============================================================================
 # Scheduling history -- read before touching the cron below
@@ -41,10 +49,17 @@ on:
     # congestion GitHub's own guidance warns about (confirmed costing this exact workflow
     # 3-7h delays when it used to run on "0 12"/"0 14").
     - cron: "3,15,27,39,51 13-20 * * *"
+    # Added 2026-10-31, same every-12-min redundancy logic as above: 22:00-23:55 UTC is
+    # ~6:00-7:55pm ET (EDT) / ~5:00-6:55pm ET (EST) -- shortly before most weeknight tips
+    # (commonly 7:00/7:30pm ET), so props are still live and liquid, not suspended
+    # mid-game. capture_closing_snapshot.py is itself idempotent per-day (checks its output
+    # file before fetching anything), so repeated firings in this window after the first
+    # success are free no-ops, same pattern as the already_posted() guard below.
+    - cron: "3,15,27,39,51 22-23 * * *"
   workflow_dispatch:
     inputs:
       job:
-        description: "post | grade | blank = run both, grade then post (what the schedule does)"
+        description: "post | grade | closing | blank = run both, grade then post (what the schedule does)"
         required: false
       force:
         description: "post/blank only: true = post even if today's picks already exist (bypasses the already-posted-today guard, still costs live Odds-API credits)"
@@ -86,6 +101,8 @@ jobs:
           path: |
             bet-screen/data/processed
             bet-screen/data/picks_archive
+            bet-screen/data/props_snapshots
+            bet-screen/data/clv_log.csv
           key: bet-screen-data-${{ github.run_id }}
           restore-keys: bet-screen-data-
 
@@ -98,6 +115,14 @@ jobs:
         run: |
           JOB="${{ github.event.inputs.job }}"
           FORCE="${{ github.event.inputs.force }}"
+          # The evening cron fires nothing but the closing capture -- distinguished by its
+          # own distinct cron string (github.event.schedule is exactly whichever of the two
+          # schedule entries above fired this run, so this is a reliable match, unlike the
+          # abandoned v1 approach: that one failed on cron *delivery*, not on this kind of
+          # string match).
+          if [ "${{ github.event.schedule }}" = "3,15,27,39,51 22-23 * * *" ]; then
+            JOB="closing"
+          fi
           echo "bet-screen job = ${JOB:-both (grade, post)}  force=${FORCE:-false}"
 
           run_grade() {
@@ -106,12 +131,21 @@ jobs:
             ARGS=""
             if [ -n "${{ github.event.inputs.date }}" ]; then ARGS="--date ${{ github.event.inputs.date }}"; fi
             python scripts/grade_props_slate.py $ARGS
+            # CLV is a side-channel analytics log, never allowed to block the real picks
+            # pipeline -- same "optional step's absence/failure never blocks the rest"
+            # pattern as update_player_games() inside grade_props_slate.py itself.
+            python scripts/compute_clv.py $ARGS || true
           }
           run_post() {
             ARGS=""
             if [ -n "${{ github.event.inputs.as_of }}" ]; then ARGS="--as-of ${{ github.event.inputs.as_of }}"; fi
             if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
             python scripts/live_fetch_props_slate.py $ARGS
+          }
+          run_closing() {
+            # capture_closing_snapshot.py is itself idempotent per-day, so no shell-level
+            # guard is needed here the way already_posted() guards run_post below.
+            python scripts/capture_closing_snapshot.py
           }
           # Running every ~12 min means most firings must be a no-op, or this would burn
           # live Odds-API credits ~40x/day instead of ~once. Gate on whether today's picks
@@ -125,8 +159,9 @@ jobs:
           }
 
           case "$JOB" in
-            grade) run_grade ;;
-            post)  run_post ;;
+            grade)   run_grade ;;
+            post)    run_post ;;
+            closing) run_closing ;;
             # `|| true` on grade: a grade-step failure must not prevent post from being
             # attempted too -- the whole point of running both here is to not have a single
             # failure point silently take out the day's board.
@@ -156,4 +191,6 @@ jobs:
           path: |
             bet-screen/data/processed
             bet-screen/data/picks_archive
+            bet-screen/data/props_snapshots
+            bet-screen/data/clv_log.csv
           key: bet-screen-data-${{ github.run_id }}

@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import pandas as pd
 import requests
 
 SECRETS = Path(r"C:\Users\ljdie\OneDrive\Documents\bet-screen\secrets.env")
@@ -53,7 +54,7 @@ def list_sports() -> tuple[list[dict], dict[str, str]]:
     return resp.json(), quota
 
 
-def load_game_lines(path: str) -> "pd.DataFrame":
+def load_game_lines(path: str) -> pd.DataFrame:
     """Loads the bulk spreads+totals pull (download_game_lines.py) into one row per real
     game: the consensus (median across books) home spread and total, taken from whichever
     sampled query-date's snapshot was CLOSEST to the game's actual tip-off.
@@ -66,8 +67,6 @@ def load_game_lines(path: str) -> "pd.DataFrame":
     (derived from `commence_time`, not the query `date` column) gets the closest-to-tipoff
     number available within whatever budget-limited date range was actually pulled.
     """
-    import pandas as pd
-
     df = pd.read_csv(path)
     df["commence_time"] = pd.to_datetime(df["commence_time"])
     # Same evening-UTC-rollover convention as the rest of this project: the real US game
@@ -101,3 +100,77 @@ def list_events(date_iso: str | None = None) -> list[dict]:
     resp = requests.get(path, params=params, timeout=30)
     resp.raise_for_status()
     return resp.json() if not date_iso else resp.json()["data"]
+
+
+# Live (non-historical) board fetchers -- shared by live_fetch_props_slate.py (the picks
+# generator) and scripts/capture_closing_snapshot.py (the CLV forward-capture, added
+# 2026-10-31). Moved here from live_fetch_props_slate.py so neither script duplicates the
+# other's fetch logic; a "morning" and a "closing" snapshot are necessarily two separate
+# script runs (can't capture near-tipoff data in the morning), but they should hit the
+# exact same endpoints the exact same way.
+LIVE_BOOKS = ["draftkings", "fanduel"]
+
+
+def fetch_live_game_lines(as_of_date: str) -> pd.DataFrame:
+    """Today's spread per team, live (non-historical) endpoint. Filtered to games actually
+    commencing on as_of_date (US-evening-rollover window), same contamination fix as
+    download_game_lines.py's historical version -- the live board also includes upcoming
+    games days out."""
+    resp = requests.get(
+        f"{BASE}/sports/{SPORT_KEY}/odds",
+        params={"apiKey": odds_api_key(), "regions": "us", "markets": "spreads", "oddsFormat": "american"},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    window_start = pd.Timestamp(f"{as_of_date}T10:00:00Z")
+    window_end = window_start + pd.Timedelta(hours=24)
+    rows = []
+    for event in resp.json():
+        commence = pd.Timestamp(event["commence_time"])
+        if not (window_start <= commence < window_end):
+            continue
+        home, away = event["home_team"], event["away_team"]
+        spreads = [m for b in event.get("bookmakers", []) for m in b.get("markets", []) if m["key"] == "spreads"]
+        if not spreads:
+            continue
+        home_pts = [o["point"] for m in spreads for o in m["outcomes"] if o["name"] == home]
+        if not home_pts:
+            continue
+        home_spread = pd.Series(home_pts).median()
+        rows.append({"event_id": event["id"], "home_team": home, "away_team": away,
+                     "commence_time": event["commence_time"], "home_spread": home_spread})
+    return pd.DataFrame(rows)
+
+
+def fetch_live_props_for_event(event_id: str, commence_time: str | None = None) -> list[dict]:
+    key = odds_api_key()
+    resp = requests.get(
+        f"{BASE}/sports/{SPORT_KEY}/events/{event_id}/odds",
+        params={"apiKey": key, "regions": "us", "markets": ",".join(PROP_MARKETS), "oddsFormat": "american"},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    payload = resp.json()
+    rows = []
+    for book in payload.get("bookmakers", []):
+        if book["key"] not in LIVE_BOOKS:
+            continue
+        for market in book.get("markets", []):
+            for outcome in market["outcomes"]:
+                rows.append({
+                    "event_id": event_id, "home_team": payload.get("home_team"),
+                    "away_team": payload.get("away_team"), "commence_time": commence_time,
+                    "book": book["key"],
+                    "market": market["key"], "player": outcome.get("description"),
+                    "side": outcome.get("name"), "point": outcome.get("point"),
+                    "price": outcome.get("price"),
+                })
+    return rows
+
+
+def best_price(rows: list[dict]) -> pd.DataFrame:
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    idx = df.groupby(["player", "market", "side"])["price"].idxmax()
+    return df.loc[idx]
