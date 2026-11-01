@@ -1,0 +1,78 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-11-05",
+  "generated_at": "2026-11-01T18:15:17Z",
+  "model_version": "ppp-ppd-2026",
+  "mode": "PAPER",
+  "event_context": "Week 10",
+  "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
+  "bets": [
+    {
+      "bet_id": "cfb-modeling-2026-wk10-utsa-floridaatlantic-under",
+      "event": "UTSA @ Florida Atlantic",
+      "event_start": "2026-11-06T00:30:00Z",
+      "market": "total",
+      "selection": "Under 72.5",
+      "side": "under",
+      "line": 72.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.6676,
+      "market_prob": 0.5238,
+      "edge": 0.1438,
+      "ev_pct": 0.2745,
+      "stake_units": 1,
+      "confidence": "high",
+      "tags": [
+        "UNDER",
+        "UNDER4+DOG",
+        "dog"
+      ],
+      "details": {
+        "proj_total": 65.4,
+        "under_edge": 7.1,
+        "strategy": "UNDER4+DOG",
+        "status": "paper",
+        "prob_source": "modelled",
+        "posted_total": 72.5,
+        "min_total": 69.4
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk10-utsa-floridaatlantic-atsopen",
+      "event": "UTSA @ Florida Atlantic",
+      "event_start": "2026-11-06T00:30:00Z",
+      "market": "spread",
+      "selection": "Florida Atlantic",
+      "side": "home",
+      "line": 7,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.58,
+      "market_prob": 0.5238,
+      "edge": 0.0562,
+      "ev_pct": 0.1072,
+      "stake_units": 3,
+      "confidence": "high",
+      "tags": [
+        "OPEN_ATS",
+        "dog"
+      ],
+      "details": {
+        "proj_margin": -2.3,
+        "open_spread": 7,
+        "edge_pts": 4.7,
+        "dvoa_consensus": "5/5",
+        "opened": "2026-11-01T18:13:46Z",
+        "week": 10,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
+        "posted_spread": 7,
+        "min_line": 5
+      }
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-10-31",
+  "graded_at": "2026-11-01T18:15:14Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk9-arizona-texastech-under",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0244,
+      "pnl_units": -1,
+      "actual": {
+        "total_points": 60,
+        "line": 54.5,
+        "closing_line": 55.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-mississippistate-texas-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0226,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": 28,
+        "cover_line": 20.5,
+        "closing_line": 19.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-arizona-texastech-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0786,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": 8,
+        "cover_line": 7.5,
+        "closing_line": 4
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-oklahomastate-iowastate-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": 1.82,
+      "actual": {
+        "actual_margin": 2,
+        "cover_line": 10,
+        "closing_line": 10
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-smu-syracuse-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0339,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 3,
+        "cover_line": 10,
+        "closing_line": 8.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-michigan-rutgers-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0564,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": -7,
+        "cover_line": 14,
+        "closing_line": 16.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-nevada-ucla-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": 27,
+        "cover_line": 22.5,
+        "closing_line": 22.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-notredame-navy-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0451,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": -22,
+        "cover_line": 28.5,
+        "closing_line": 30.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-oregonstate-fresnostate-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0226,
+      "pnl_units": 0.91,
+      "actual": {
+        "actual_margin": 16,
+        "cover_line": 7,
+        "closing_line": 6
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-temple-eastcarolina-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0113,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": 8,
+        "cover_line": -4.5,
+        "closing_line": -4
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-coastalcarolina-georgiastate-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0675,
+      "pnl_units": -2,
+      "actual": {
+        "actual_margin": -11,
+        "cover_line": -6.5,
+        "closing_line": -3.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-marshall-olddominion-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": -1,
+      "actual": {
+        "actual_margin": -13,
+        "cover_line": 3,
+        "closing_line": 3
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk9-oklahomastate-iowastate-under",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": -1,
+      "actual": {
+        "total_points": 100,
+        "line": 58.5,
+        "closing_line": 58.5
+      }
+    }
+  ]
+}
