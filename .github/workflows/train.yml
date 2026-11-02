@@ -65,6 +65,11 @@ jobs:
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
+          # stringi ships a compiled .so linked against a specific system ICU version; the
+          # cached R_LIBS_USER persists it across runs, so it goes stale the moment GitHub
+          # bumps the runner image (same failure as cfb.yml, see that file's comment).
+          # Probe before trusting "already installed" from the cache, reinstall if broken.
+          Rscript -e 'ok <- tryCatch({ library(stringi); TRUE }, error = function(e) { cat("stringi failed to load from cache:", conditionMessage(e), "\n"); FALSE }); if (!ok) { cat("forcing a fresh stringi reinstall\n"); install.packages("stringi") }'
           Rscript -e 'p<-c("data.table","jsonlite","httr2","curl","xgboost","openxlsx","DBI","duckdb","nnet"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
           # wehoop (WNBA box scores, sportsdataverse) was never in the package list above,
           # so wnba_ingest()'s own `stop("install.packages('wehoop')")` guard has been firing
