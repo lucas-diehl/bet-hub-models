@@ -81,6 +81,16 @@ jobs:
       - name: Install R packages
         run: |
           mkdir -p "$R_LIBS_USER"
+          # stringi (a transitive dependency of dplyr/stringr/cfbfastR) ships a compiled
+          # .so linked against a specific system ICU version. The rlib-cfb-* cache persists
+          # R_LIBS_USER across runs, so a stringi built against an OLDER ubuntu-latest image's
+          # ICU can go stale the moment GitHub bumps the runner image -- confirmed live
+          # 2026-11-02: "unable to load shared object .../stringi.so: libicui18n.so.74: cannot
+          # open shared object file" killed light refresh AND pbp refresh on every call,
+          # which fed through to 0 games on the board with no further error anywhere. Probe
+          # for this BEFORE trusting "already installed" from the cache, and force a fresh
+          # reinstall (relinks against whatever ICU this runner actually has) if it's broken.
+          Rscript -e 'ok <- tryCatch({ library(stringi); TRUE }, error = function(e) { cat("stringi failed to load from cache:", conditionMessage(e), "\n"); FALSE }); if (!ok) { cat("forcing a fresh stringi reinstall\n"); install.packages("stringi") }'
           Rscript -e 'p<-c("cfbfastR","dplyr","tidyr","stringr","lubridate","zoo","purrr","readr","tibble","jsonlite","xgboost","httr2","httr"); i<-p[!p %in% rownames(installed.packages())]; if(length(i)) install.packages(i)'
 
       # 07_write_feed.R grades from the PREVIOUSLY-POSTED picks file on disk ("no backfill:
