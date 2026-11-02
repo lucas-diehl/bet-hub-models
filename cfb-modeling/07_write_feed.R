@@ -1,10 +1,14 @@
 # ============================================================================
 # 07_write_feed.R  —  write ATS + Totals picks/results to the Bet Hub feed
 # ----------------------------------------------------------------------------
-# Contract 1.0 (dashboard_feed/_schema/{picks,results}.schema.json). Two markets,
-# PAPER until forward-validated:
-#   total  -> UNDER-only asymmetry
-#   spread -> early-season 4th-down aggressiveness ATS
+# Contract 1.0 (dashboard_feed/_schema/{picks,results}.schema.json). Three
+# markets built every run; which ones actually STAKE is controlled by the
+# EMIT_* flags further down (all default off except proj_vs_open):
+#   total  -> UNDER-only asymmetry. RETIRED from live staking 2026-11-01
+#             (owner: "we are not going to bet these anymore") -- still built,
+#             set PPP_EMIT_TOTAL=1 to re-emit.
+#   spread (early-4th-down) -> RETIRED 2026-09 (market fully encompasses it).
+#   spread (proj_vs_open, "Arm O") -> the one live, staking strategy.
 #
 # Lines come from ONE book we actually bet — DraftKings (FanDuel auto-used if it
 # ever appears in the data); games neither book prices are skipped. `book` is set
@@ -253,12 +257,21 @@ mk_ats_open_obj <- function(r) { tags <- c("OPEN_ATS", if(isTRUE(r$is_dog))"dog"
 # fully encompasses our margin projection AND its components (all p>0.35) — ATS is closed,
 # and the early-4th-down niche is unconfirmed (flat CLV, fails multiplicity, H2-only). The
 # `ats` build + mk_ats_obj stay in place for research/backtest; set PPP_EMIT_ATS=1 to re-emit
-# if a genuine ATS edge is ever established. Totals (UNDER) continue to flow.
+# if a genuine ATS edge is ever established.
 EMIT_ATS <- nzchar(Sys.getenv("PPP_EMIT_ATS"))
+# Totals (UNDER) REMOVED from the live feed (2026-11-01, owner: "we are not going to bet
+# these anymore") -- same treatment as the early-4th-down ATS arm just above, not a code
+# deletion: the `tot` build + mk_total_obj stay in place (still computed every run, just not
+# staked) for research/backtest, and set PPP_EMIT_TOTAL=1 to re-emit if ever reactivated.
+# This was a real, backtested, historically-profitable edge (see 03_models_backtest.R) --
+# retired on the owner's own call, not because anything was found wrong with it.
+EMIT_TOTAL <- nzchar(Sys.getenv("PPP_EMIT_TOTAL"))
 # proj_vs_open is a NEW, independently-validated edge (CLV-confirmed) — defaults ON (opt OUT
 # with PPP_EMIT_ATS_OPEN=0), unlike the retired early-4th-down `ats` arm above which defaults off.
 EMIT_ATS_OPEN <- Sys.getenv("PPP_EMIT_ATS_OPEN", "1") != "0"
-cand <- lapply(seq_len(nrow(tot)), function(i){ o<-mk_total_obj(tot[i,]); o$.date<-tot$slate_date[i]; o$.gkey<-tot$gkey[i]; o$.completed<-tot$completed[i]; o })
+cand <- list()
+if (EMIT_TOTAL)
+  cand <- c(cand, lapply(seq_len(nrow(tot)), function(i){ o<-mk_total_obj(tot[i,]); o$.date<-tot$slate_date[i]; o$.gkey<-tot$gkey[i]; o$.completed<-tot$completed[i]; o }))
 if (EMIT_ATS)
   cand <- c(cand, lapply(seq_len(nrow(ats)), function(i){ o<-mk_ats_obj(ats[i,]); o$.date<-ats$slate_date[i]; o$.gkey<-ats$gkey[i]; o$.completed<-ats$completed[i]; o }))
 if (EMIT_ATS_OPEN && nrow(ats_open) > 0)
