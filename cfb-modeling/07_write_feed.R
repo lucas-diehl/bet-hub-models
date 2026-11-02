@@ -51,6 +51,16 @@ ATS_OPEN_PROB     <- as.numeric(Sys.getenv("PPP_ATS_OPEN_PROB", "0.58"))  # shru
 # staking with PPP_ATS_STAKE_MIN=PPP_ATS_STAKE_MAX (e.g. both 1).
 ATS_STAKE_MIN     <- as.numeric(Sys.getenv("PPP_ATS_STAKE_MIN", "1"))
 ATS_STAKE_MAX     <- as.numeric(Sys.getenv("PPP_ATS_STAKE_MAX", "3"))
+# Low-consensus/high-edge tier (2026-11-01, owner-directed: "wire it in as a new tier at
+# 1 unit"). Ad hoc OOS 2024-2025 check: votes==1 & edge>=4 -> 56.6% win, +8.0% ROI (n=99),
+# but binom.test vs the 52.4% breakeven gives p=0.23 -- NOT distinguishable from noise at
+# this n, unlike the confirmed votes>=3 arm below it. votes==2 at the same edge floor was
+# flat (52.5%, n=40) and is deliberately excluded. Tagged "experimental" in the feed (see
+# mk_ats_open_obj) so this cohort's real-money record can be tracked separately from the
+# validated arm and the decision revisited once more weeks accumulate.
+ATS_LOWVOTE_VOTES    <- as.integer(Sys.getenv("PPP_ATS_LOWVOTE_VOTES", "1"))
+ATS_LOWVOTE_EDGE_MIN <- as.numeric(Sys.getenv("PPP_ATS_LOWVOTE_EDGE_MIN", "4"))
+ATS_LOWVOTE_STAKE    <- as.numeric(Sys.getenv("PPP_ATS_LOWVOTE_STAKE", "1"))
 
 slug     <- function(x) gsub("[^a-z0-9]", "", tolower(x))
 compact  <- function(l) l[!vapply(l, is.null, logical(1))]
@@ -201,7 +211,8 @@ if (file.exists(ledger_path)) {
     }, integer(nrow(ats_open)))
     ats_open$votes <- if (is.null(dim(vote_mat))) sum(vote_mat) else rowSums(vote_mat)
   } else ats_open$votes <- 0L
-  ats_open <- ats_open %>% filter(mag >= ATS_OPEN_EDGE_MIN, votes >= ATS_CONSENSUS_MIN)
+  ats_open$is_lowvote <- ats_open$votes == ATS_LOWVOTE_VOTES & ats_open$mag >= ATS_LOWVOTE_EDGE_MIN
+  ats_open <- ats_open %>% filter((mag >= ATS_OPEN_EDGE_MIN & votes >= ATS_CONSENSUS_MIN) | is_lowvote)
   # --- confidence-tiered stake (2026-09-09, user-directed) -------------------------
   # 1u / 2u / 3u by consensus strength. IMPORTANT CAVEAT, recorded so this is not later
   # mistaken for a measured effect: the tiers are NOT statistically distinguishable.
@@ -209,13 +220,14 @@ if (file.exists(ledger_path)) {
   # ==3), the k=3..5 trend test gives p=0.123, and EB shrinkage returns tau2=0, collapsing
   # all three tiers to the 58.6% grand mean. The ladder is therefore a risk-appetite
   # choice, not an edge: expected win rate is the same 0.58 on every tier, which is why
-  # `mp` stays flat at ATS_OPEN_PROB and only the stake moves.
-  ats_open$stake <- pmin(ATS_STAKE_MAX,
-                         pmax(ATS_STAKE_MIN, ats_open$votes - (ATS_CONSENSUS_MIN - ATS_STAKE_MIN)))
+  # `mp` stays flat at ATS_OPEN_PROB and only the stake moves. The lowvote tier (above) is
+  # a separate, unconfirmed cohort — flat ATS_LOWVOTE_STAKE, not part of this ladder.
+  ats_open$stake <- ifelse(ats_open$is_lowvote, ATS_LOWVOTE_STAKE,
+    pmin(ATS_STAKE_MAX, pmax(ATS_STAKE_MIN, ats_open$votes - (ATS_CONSENSUS_MIN - ATS_STAKE_MIN))))
 } else { ats_open <- slate[0, ] %>% mutate(open_book=character(), open_spread=numeric(), open_total=numeric(),
     captured_at=character(), open_margin=numeric(), ats_open_edge=numeric(), mag=numeric(), pick_home=logical(),
     pick_team=character(), pick_side=character(), pick_line=numeric(), is_dog=logical(), mp=numeric(),
-    stake=numeric(), votes=integer()) }
+    stake=numeric(), votes=integer(), is_lowvote=logical()) }
 
 mk_total_obj <- function(r) { tags <- c("UNDER", r$strategy); if (isTRUE(r$dog_ats)) tags <- c(tags,"dog")
   compact(list(bet_id=sprintf("cfb-modeling-%d-wk%d-%s-%s-under", TS, TW, slug(r$away_team), slug(r$home_team)),
@@ -237,7 +249,7 @@ mk_ats_obj <- function(r) { tags <- c("early_ats", if(isTRUE(r$is_dog))"dog" els
                  gap=round(r$gap,3), week=TW,
                  status="paper", prob_source="empirical_insample",   # 0.593/0.546 are shrunk in-sample tier rates, NOT a calibrated model output
                  posted_spread=round(r$pick_line,1), min_line=round(r$pick_line - 2, 1)))) }
-mk_ats_open_obj <- function(r) { tags <- c("OPEN_ATS", if(isTRUE(r$is_dog))"dog" else "fav")
+mk_ats_open_obj <- function(r) { tags <- c("OPEN_ATS", if(isTRUE(r$is_dog))"dog" else "fav", if(isTRUE(r$is_lowvote))"experimental")
   compact(list(bet_id=sprintf("cfb-modeling-%d-wk%d-%s-%s-atsopen", TS, TW, slug(r$away_team), slug(r$home_team)),
     event=r$event, event_start=if(is.na(r$event_start)) NULL else r$event_start, market="spread",
     selection=r$pick_team, side=r$pick_side, line=round(r$pick_line,1), odds_american=ODDS, book=r$open_book,
@@ -245,12 +257,19 @@ mk_ats_open_obj <- function(r) { tags <- c("OPEN_ATS", if(isTRUE(r$is_dog))"dog"
     stake_units=r$stake,
     # confidence mirrors the stake tier so the board badge and the slip never disagree;
     # it labels consensus strength, NOT a calibrated probability (model_prob is flat 0.58).
-    confidence=if(r$votes>=5)"high" else if(r$votes>=4)"medium" else "low", tags=as.list(tags),
+    # NOTE: ConfidenceSchema (packages/contract) is a strict enum of low/medium/high only --
+    # the lowvote tier is genuinely the lowest-conviction bucket, so "low" is both accurate
+    # and contract-safe; "experimental" lives in `tags` instead, which is free-form.
+    confidence=if(r$votes>=5)"high" else if(r$votes>=4)"medium" else "low",
+    tags=as.list(tags),
     details=list(proj_margin=round(r$proj_margin,1), open_spread=round(r$open_spread,1), edge_pts=round(r$mag,1),
                  dvoa_consensus=sprintf("%d/%d", r$votes, length(DVOA_VARIANTS)),
                  opened=r$captured_at, week=TW,
                  status="paper", prob_source="empirical_insample",   # 0.58 = shrunk cross-variant estimate; see FEATURE_REGISTRY
-                 mechanism="PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
+                 mechanism=if(isTRUE(r$is_lowvote))
+                   "Low-consensus/high-edge tier: PPD projection vs the FROZEN opening line, votes==1/5 but edge>=4pts. Ad hoc OOS check (2024-2025): 56.6% win, p=0.23 vs breakeven -- not statistically confirmed, added 2026-11-01 on owner's call for more volume. Track separately."
+                 else
+                   "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
                  posted_spread=round(r$pick_line,1), min_line=round(r$pick_line - 2, 1)))) }  # don't chase >2pts worse than posted
 
 # ATS is REMOVED from the live feed (2026-09): the encompassing test showed the market
