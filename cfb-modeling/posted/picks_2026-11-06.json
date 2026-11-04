@@ -1,0 +1,87 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-11-06",
+  "generated_at": "2026-11-04T22:18:03Z",
+  "model_version": "ppp-ppd-2026",
+  "mode": "PAPER",
+  "event_context": "Week 10",
+  "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
+  "bets": [
+    {
+      "bet_id": "cfb-modeling-2026-wk10-tcu-arizona-atsopen",
+      "event": "TCU @ Arizona",
+      "event_start": "2026-11-07T03:15:00Z",
+      "market": "spread",
+      "selection": "Arizona",
+      "side": "home",
+      "line": -8.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.55,
+      "market_prob": 0.5238,
+      "edge": 0.0262,
+      "ev_pct": 0.05,
+      "stake_units": 1,
+      "confidence": "low",
+      "tags": [
+        "OPEN_ATS",
+        "fav",
+        "experimental",
+        "pline"
+      ],
+      "details": {
+        "proj_margin": 12.3,
+        "open_spread": -8.5,
+        "edge_pts": 3.8,
+        "dvoa_consensus": "1/5",
+        "p_line": 0.514,
+        "opened": "2026-11-01T18:13:46Z",
+        "week": 10,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "p_line volume tier: votes<3/5 (skipped by the main arm AND the lowvote tier) but a leave-one-season-out normal-residual P(cover) vs the opening line lands in [0.50,0.525). OOS 2024-2025, restricted to that fully-skipped population: 55.0% win, +5.0% ROI (n=229), independently positive in BOTH test seasons -- the only cut of this population that held up to a season-split check. p=0.23 vs breakeven -- not statistically confirmed, added 2026-11-04 on owner's call for more volume. Track separately from the main arm and the lowvote tier.",
+        "posted_spread": -8.5,
+        "min_line": -10.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk10-nebraska-illinois-atsopen",
+      "event": "Nebraska @ Illinois",
+      "event_start": "2026-11-07T01:00:00Z",
+      "market": "spread",
+      "selection": "Illinois",
+      "side": "home",
+      "line": 5.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.55,
+      "market_prob": 0.5238,
+      "edge": 0.0262,
+      "ev_pct": 0.05,
+      "stake_units": 1,
+      "confidence": "low",
+      "tags": [
+        "OPEN_ATS",
+        "dog",
+        "experimental",
+        "pline"
+      ],
+      "details": {
+        "proj_margin": 0.2,
+        "open_spread": 5.5,
+        "edge_pts": 5.7,
+        "dvoa_consensus": "0/5",
+        "p_line": 0.516,
+        "opened": "2026-11-01T18:13:46Z",
+        "week": 10,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "p_line volume tier: votes<3/5 (skipped by the main arm AND the lowvote tier) but a leave-one-season-out normal-residual P(cover) vs the opening line lands in [0.50,0.525). OOS 2024-2025, restricted to that fully-skipped population: 55.0% win, +5.0% ROI (n=229), independently positive in BOTH test seasons -- the only cut of this population that held up to a season-split check. p=0.23 vs breakeven -- not statistically confirmed, added 2026-11-04 on owner's call for more volume. Track separately from the main arm and the lowvote tier.",
+        "posted_spread": 5.5,
+        "min_line": 3.5
+      }
+    }
+  ]
+}
