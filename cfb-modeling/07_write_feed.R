@@ -61,6 +61,25 @@ ATS_STAKE_MAX     <- as.numeric(Sys.getenv("PPP_ATS_STAKE_MAX", "3"))
 ATS_LOWVOTE_VOTES    <- as.integer(Sys.getenv("PPP_ATS_LOWVOTE_VOTES", "1"))
 ATS_LOWVOTE_EDGE_MIN <- as.numeric(Sys.getenv("PPP_ATS_LOWVOTE_EDGE_MIN", "4"))
 ATS_LOWVOTE_STAKE    <- as.numeric(Sys.getenv("PPP_ATS_LOWVOTE_STAKE", "1"))
+# p_line volume tier (2026-11-04, owner-directed: "build it in as a new tier, with
+# proper unit staking... get it flowing live"). Separate mechanism from both tiers
+# above: a leave-one-season-out normal-residual P(cover) vs the opening line --
+# lm(ats_resid ~ ats_open_edge) where ats_resid = actual_margin - open_margin,
+# recalibrated on ALL history every run exactly like cal_m/cal_dvoa below. Targets
+# the votes<3 population the main arm AND the lowvote tier both skip entirely (not
+# just votes==1). OOS 2024-2025 check, restricted to that fully-skipped population:
+# p_line in [0.50,0.525) -> 55.0% win, +5.0% ROI (n=229) -- the ONLY cut of that
+# population that held up to a per-season split, independently positive in BOTH
+# 2024 (53.9%/+3.0%, n=76) and 2025 (55.6%/+6.1%, n=153). Every other cut tried in
+# that population (wider/narrower edge bands, dog/fav, lowering the lowvote floor
+# to edge>=3) was a single-season fluke that reversed on the other season. Still
+# p=0.23 vs breakeven -- not statistically confirmed, same evidentiary bar as the
+# lowvote tier. Tagged "experimental"+"pline" in the feed (see mk_ats_open_obj) so
+# this cohort's real-money record tracks separately from both other arms.
+ATS_PLINE_MIN   <- as.numeric(Sys.getenv("PPP_ATS_PLINE_MIN", "0.500"))
+ATS_PLINE_MAX   <- as.numeric(Sys.getenv("PPP_ATS_PLINE_MAX", "0.525"))
+ATS_PLINE_STAKE <- as.numeric(Sys.getenv("PPP_ATS_PLINE_STAKE", "1"))
+ATS_PLINE_PROB  <- as.numeric(Sys.getenv("PPP_ATS_PLINE_PROB", "0.55"))   # empirical in-sample rate for this band
 
 slug     <- function(x) gsub("[^a-z0-9]", "", tolower(x))
 compact  <- function(l) l[!vapply(l, is.null, logical(1))]
@@ -117,6 +136,15 @@ if (HAVE_DVOA) for (v in DVOA_VARIANTS) {
 }
 sig_t <- sd(hist$total_points  - predict(cal_t, hist), na.rm = TRUE)
 sig_m <- sd(hist$actual_margin - predict(cal_m, hist), na.rm = TRUE)
+# line-aware probability layer for the p_line volume tier (see ATS_PLINE_* above) --
+# how much of the model-vs-opening-line edge survives, recalibrated on ALL history
+# every run (same pattern as cal_m/cal_dvoa, not a fixed train/test split).
+hist_line <- hist[!is.na(hist$spread_open), ]
+hist_line$open_margin   <- -hist_line$spread_open
+hist_line$ats_open_edge <- predict(cal_m, hist_line) - hist_line$open_margin
+hist_line$ats_resid     <- hist_line$actual_margin - hist_line$open_margin
+cal_line <- if (nrow(hist_line) >= 300) lm(ats_resid ~ ats_open_edge, data = hist_line) else NULL
+sig_line <- if (!is.null(cal_line)) summary(cal_line)$sigma else NA_real_
 agg   <- build_asof_aggressiveness()   # game_id-keyed (completed games)
 agg_t <- latest_aggressiveness(TS)     # team-keyed latest -> fires early-ATS pre-game
 
@@ -212,7 +240,15 @@ if (file.exists(ledger_path)) {
     ats_open$votes <- if (is.null(dim(vote_mat))) sum(vote_mat) else rowSums(vote_mat)
   } else ats_open$votes <- 0L
   ats_open$is_lowvote <- ats_open$votes == ATS_LOWVOTE_VOTES & ats_open$mag >= ATS_LOWVOTE_EDGE_MIN
-  ats_open <- ats_open %>% filter((mag >= ATS_OPEN_EDGE_MIN & votes >= ATS_CONSENSUS_MIN) | is_lowvote)
+  # --- p_line volume tier: votes<3 population, skipped by BOTH tiers above ---------
+  ats_open$p_line <- if (!is.null(cal_line)) {
+    p_home <- pnorm(predict(cal_line, ats_open) / sig_line)
+    ifelse(ats_open$pick_home, p_home, 1 - p_home)
+  } else NA_real_
+  ats_open$is_pline_tier <- !is.na(ats_open$p_line) & !ats_open$is_lowvote &
+    ats_open$votes < ATS_CONSENSUS_MIN & ats_open$mag >= ATS_OPEN_EDGE_MIN &
+    ats_open$p_line >= ATS_PLINE_MIN & ats_open$p_line < ATS_PLINE_MAX
+  ats_open <- ats_open %>% filter((mag >= ATS_OPEN_EDGE_MIN & votes >= ATS_CONSENSUS_MIN) | is_lowvote | is_pline_tier)
   # --- confidence-tiered stake (2026-09-09, user-directed) -------------------------
   # 1u / 2u / 3u by consensus strength. IMPORTANT CAVEAT, recorded so this is not later
   # mistaken for a measured effect: the tiers are NOT statistically distinguishable.
@@ -220,14 +256,17 @@ if (file.exists(ledger_path)) {
   # ==3), the k=3..5 trend test gives p=0.123, and EB shrinkage returns tau2=0, collapsing
   # all three tiers to the 58.6% grand mean. The ladder is therefore a risk-appetite
   # choice, not an edge: expected win rate is the same 0.58 on every tier, which is why
-  # `mp` stays flat at ATS_OPEN_PROB and only the stake moves. The lowvote tier (above) is
-  # a separate, unconfirmed cohort — flat ATS_LOWVOTE_STAKE, not part of this ladder.
+  # `mp` stays flat at ATS_OPEN_PROB and only the stake moves. The lowvote and p_line
+  # tiers (above) are separate, unconfirmed cohorts — flat stake/prob each, not part of
+  # this ladder.
   ats_open$stake <- ifelse(ats_open$is_lowvote, ATS_LOWVOTE_STAKE,
-    pmin(ATS_STAKE_MAX, pmax(ATS_STAKE_MIN, ats_open$votes - (ATS_CONSENSUS_MIN - ATS_STAKE_MIN))))
+    ifelse(ats_open$is_pline_tier, ATS_PLINE_STAKE,
+      pmin(ATS_STAKE_MAX, pmax(ATS_STAKE_MIN, ats_open$votes - (ATS_CONSENSUS_MIN - ATS_STAKE_MIN)))))
+  ats_open$mp <- ifelse(ats_open$is_pline_tier, ATS_PLINE_PROB, ats_open$mp)
 } else { ats_open <- slate[0, ] %>% mutate(open_book=character(), open_spread=numeric(), open_total=numeric(),
     captured_at=character(), open_margin=numeric(), ats_open_edge=numeric(), mag=numeric(), pick_home=logical(),
     pick_team=character(), pick_side=character(), pick_line=numeric(), is_dog=logical(), mp=numeric(),
-    stake=numeric(), votes=integer(), is_lowvote=logical()) }
+    stake=numeric(), votes=integer(), is_lowvote=logical(), p_line=numeric(), is_pline_tier=logical()) }
 
 mk_total_obj <- function(r) { tags <- c("UNDER", r$strategy); if (isTRUE(r$dog_ats)) tags <- c(tags,"dog")
   compact(list(bet_id=sprintf("cfb-modeling-%d-wk%d-%s-%s-under", TS, TW, slug(r$away_team), slug(r$home_team)),
@@ -249,7 +288,9 @@ mk_ats_obj <- function(r) { tags <- c("early_ats", if(isTRUE(r$is_dog))"dog" els
                  gap=round(r$gap,3), week=TW,
                  status="paper", prob_source="empirical_insample",   # 0.593/0.546 are shrunk in-sample tier rates, NOT a calibrated model output
                  posted_spread=round(r$pick_line,1), min_line=round(r$pick_line - 2, 1)))) }
-mk_ats_open_obj <- function(r) { tags <- c("OPEN_ATS", if(isTRUE(r$is_dog))"dog" else "fav", if(isTRUE(r$is_lowvote))"experimental")
+mk_ats_open_obj <- function(r) { tags <- c("OPEN_ATS", if(isTRUE(r$is_dog))"dog" else "fav",
+    if(isTRUE(r$is_lowvote))"experimental", if(isTRUE(r$is_lowvote))"lowvote",
+    if(isTRUE(r$is_pline_tier))"experimental", if(isTRUE(r$is_pline_tier))"pline")
   compact(list(bet_id=sprintf("cfb-modeling-%d-wk%d-%s-%s-atsopen", TS, TW, slug(r$away_team), slug(r$home_team)),
     event=r$event, event_start=if(is.na(r$event_start)) NULL else r$event_start, market="spread",
     selection=r$pick_team, side=r$pick_side, line=round(r$pick_line,1), odds_american=ODDS, book=r$open_book,
@@ -264,10 +305,13 @@ mk_ats_open_obj <- function(r) { tags <- c("OPEN_ATS", if(isTRUE(r$is_dog))"dog"
     tags=as.list(tags),
     details=list(proj_margin=round(r$proj_margin,1), open_spread=round(r$open_spread,1), edge_pts=round(r$mag,1),
                  dvoa_consensus=sprintf("%d/%d", r$votes, length(DVOA_VARIANTS)),
+                 p_line=if(!is.na(r$p_line)) round(r$p_line,3) else NULL,
                  opened=r$captured_at, week=TW,
-                 status="paper", prob_source="empirical_insample",   # 0.58 = shrunk cross-variant estimate; see FEATURE_REGISTRY
+                 status="paper", prob_source="empirical_insample",   # 0.58/0.55 = shrunk/empirical in-sample estimates; see FEATURE_REGISTRY
                  mechanism=if(isTRUE(r$is_lowvote))
                    "Low-consensus/high-edge tier: PPD projection vs the FROZEN opening line, votes==1/5 but edge>=4pts. Ad hoc OOS check (2024-2025): 56.6% win, p=0.23 vs breakeven -- not statistically confirmed, added 2026-11-01 on owner's call for more volume. Track separately."
+                 else if(isTRUE(r$is_pline_tier))
+                   "p_line volume tier: votes<3/5 (skipped by the main arm AND the lowvote tier) but a leave-one-season-out normal-residual P(cover) vs the opening line lands in [0.50,0.525). OOS 2024-2025, restricted to that fully-skipped population: 55.0% win, +5.0% ROI (n=229), independently positive in BOTH test seasons -- the only cut of this population that held up to a season-split check. p=0.23 vs breakeven -- not statistically confirmed, added 2026-11-04 on owner's call for more volume. Track separately from the main arm and the lowvote tier."
                  else
                    "PPD projection vs the FROZEN opening line, gated on >=3/5 independently-built DVOA ratings agreeing on the side. Edge exists at the OPEN only (fully encompassed by the true close); post-2023 regime-dependent, monitor decay",
                  posted_spread=round(r$pick_line,1), min_line=round(r$pick_line - 2, 1)))) }  # don't chase >2pts worse than posted
