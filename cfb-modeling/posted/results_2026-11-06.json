@@ -1,0 +1,33 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-11-06",
+  "graded_at": "2026-11-07T17:56:41Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk10-tcu-arizona-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0564,
+      "pnl_units": -1,
+      "actual": {
+        "actual_margin": 1,
+        "cover_line": -8.5,
+        "closing_line": -6
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk10-nebraska-illinois-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0226,
+      "pnl_units": 0.91,
+      "actual": {
+        "actual_margin": 11,
+        "cover_line": 5.5,
+        "closing_line": 4.5
+      }
+    }
+  ]
+}
