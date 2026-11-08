@@ -1,0 +1,87 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-11-13",
+  "generated_at": "2026-11-08T18:12:10Z",
+  "model_version": "ppp-ppd-2026",
+  "mode": "PAPER",
+  "event_context": "Week 11",
+  "notes": "UNDER-only totals + early-season 4th-down ATS. PAPER: forward-validating.",
+  "bets": [
+    {
+      "bet_id": "cfb-modeling-2026-wk11-houston-colorado-atsopen",
+      "event": "Houston @ Colorado",
+      "event_start": "2026-11-14T03:15:00Z",
+      "market": "spread",
+      "selection": "Houston",
+      "side": "away",
+      "line": -10.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.58,
+      "market_prob": 0.5238,
+      "edge": 0.0562,
+      "ev_pct": 0.1072,
+      "stake_units": 1,
+      "confidence": "low",
+      "tags": [
+        "OPEN_ATS",
+        "fav",
+        "experimental",
+        "lowvote"
+      ],
+      "details": {
+        "proj_margin": -15,
+        "open_spread": 10.5,
+        "edge_pts": 4.5,
+        "dvoa_consensus": "1/5",
+        "p_line": 0.498,
+        "opened": "2026-11-08T18:10:35Z",
+        "week": 11,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "Low-consensus/high-edge tier: PPD projection vs the FROZEN opening line, votes==1/5 but edge>=4pts. Ad hoc OOS check (2024-2025): 56.6% win, p=0.23 vs breakeven -- not statistically confirmed, added 2026-11-01 on owner's call for more volume. Track separately.",
+        "posted_spread": -10.5,
+        "min_line": -12.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk11-illinois-ucla-atsopen",
+      "event": "Illinois @ UCLA",
+      "event_start": "2026-11-14T02:00:00Z",
+      "market": "spread",
+      "selection": "Illinois",
+      "side": "away",
+      "line": 12.5,
+      "odds_american": -110,
+      "book": "DraftKings",
+      "model_prob": 0.55,
+      "market_prob": 0.5238,
+      "edge": 0.0262,
+      "ev_pct": 0.05,
+      "stake_units": 1,
+      "confidence": "low",
+      "tags": [
+        "OPEN_ATS",
+        "dog",
+        "experimental",
+        "pline"
+      ],
+      "details": {
+        "proj_margin": 5.3,
+        "open_spread": -12.5,
+        "edge_pts": 7.2,
+        "dvoa_consensus": "0/5",
+        "p_line": 0.502,
+        "opened": "2026-11-05T20:26:24Z",
+        "week": 11,
+        "status": "paper",
+        "prob_source": "empirical_insample",
+        "mechanism": "p_line volume tier: votes<3/5 (skipped by the main arm AND the lowvote tier) but a leave-one-season-out normal-residual P(cover) vs the opening line lands in [0.50,0.525). OOS 2024-2025, restricted to that fully-skipped population: 55.0% win, +5.0% ROI (n=229), independently positive in BOTH test seasons -- the only cut of this population that held up to a season-split check. p=0.23 vs breakeven -- not statistically confirmed, added 2026-11-04 on owner's call for more volume. Track separately from the main arm and the lowvote tier.",
+        "posted_spread": 12.5,
+        "min_line": 10.5
+      }
+    }
+  ]
+}
