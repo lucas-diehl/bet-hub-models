@@ -267,7 +267,8 @@ EXCLUDE_FILE <- file.path(OUT, "excluded_bets.csv")
 # mode: explicit arg > BETHUB_MODE env > whatever the slate's card already says > PAPER.
 # Sticky by design — once a slate is flipped to LIVE, the daily re-run must not quietly
 # demote it back to PAPER just because it didn't pass a mode.
-write_picks_feed <- function(bets, event, slate_date, mode=NULL, notes=NULL, rebuild=FALSE) {
+write_picks_feed <- function(bets, event, slate_date, mode=NULL, notes=NULL, rebuild=FALSE,
+                             enforce_lock=TRUE) {
   bid  <- function(x) vapply(x, function(b) b$bet_id %||% "", "")
   today <- as.character(Sys.Date())
   if (length(bets)) {                              # hard guarantee: one row per logical bet_id
@@ -288,6 +289,33 @@ write_picks_feed <- function(bets, event, slate_date, mode=NULL, notes=NULL, reb
     if (is.null(prev)) {                           # unreadable: keep a copy, never silently destroy it
       emsg("could not parse ", f, " -> saved ", .feed_backup(f, "bad"))
       if (!length(bets)) { emsg("SKIP write ", f, ": unreadable card and 0 new picks"); return(invisible(f)) }
+    }
+  }
+  # ── pre-tournament lock (owner-directed 2026-11-09: late-selected picks were
+  # quietly dragging on tracker integrity -- "remove any bets selected after the
+  # tournament starts... locked at minimum 10 hours before the event starts").
+  # DataGolf's get-schedule only carries a calendar date for Round 1, never a tee
+  # time, so there is no real tee-off timestamp to measure "10 hours before"
+  # against directly. 14:00 ET the day BEFORE the start date is a deliberately
+  # conservative stand-in: against even the earliest plausible PGA/Korn Ferry/DP
+  # World tee time (~7am local), that clears the requested >=10h minimum with
+  # several hours of real margin, and it lines up with this pipeline's own
+  # ~9am/~6pm ET run cadence (the morning-before run can still add a pick; that
+  # evening's run cannot). Only blocks bet_ids that would be NEWLY created this
+  # run -- a bet already on file from before the cutoff is never touched.
+  # enforce_lock=FALSE for the historical TEST/backtest call site below, where
+  # slate_date is intentionally in the past and this guard would reject
+  # everything as "too late" relative to the real current time.
+  if (enforce_lock && length(bets)) {
+    lock_cutoff <- as.POSIXct(paste(as.Date(slate_date) - 1, "14:00:00"), tz = "America/New_York")
+    if (Sys.time() >= lock_cutoff) {
+      prev_ids <- if (!is.null(prev)) bid(prev$bets) else character(0)
+      is_new <- !(bid(bets) %in% prev_ids)
+      if (any(is_new)) {
+        emsg("LOCK: blocking ", sum(is_new), " newly-selected pick(s) -- within 10h of ",
+             "tournament start (cutoff was ", format(lock_cutoff, "%Y-%m-%d %H:%M %Z"), ")")
+        bets <- bets[!is_new]
+      }
     }
   }
   if (rebuild && !is.null(prev) && length(prev$bets)) {
@@ -589,6 +617,7 @@ if (identical(environment(), globalenv()) && !nzchar(Sys.getenv("BETHUB_SOURCE_O
     bets <- build_matchup_picks(sim, m, nm, paste0("Event ",eid), ev_thresh=EV_THRESH,
                                 slate_date=as.character(e$event_date[1]))
     write_picks_feed(bets, paste0("Event ",eid," (TEST)"), as.character(e$event_date[1]), rebuild=rb,
+                     enforce_lock=FALSE,
                      notes="TEST sample from a historical event + cached odds (leakage-free projection).")
   } else if ("--results" %in% a) {             # grade a slate's picks after settle
     ri <- which(a=="--results"); sd <- a[ri+1]
