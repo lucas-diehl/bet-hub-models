@@ -1,0 +1,21 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-11-10",
+  "graded_at": "2026-11-11T19:58:25Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk11-westernmichigan-akron-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0339,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": -28,
+        "cover_line": 14,
+        "closing_line": 15.5
+      }
+    }
+  ]
+}
