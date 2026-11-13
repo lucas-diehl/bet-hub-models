@@ -142,9 +142,55 @@ build_portfolio <- function(res, gates = list(cash_enabled = FALSE, gpp_enabled 
 ## entries and (b) a lower bound on its own variance. `max_overlap` is (a) in its
 ## combinatorial form; `min_sd_pct` is (b), as a quantile of the candidate pool's own
 ## sim_sd so it travels across sports and slate sizes.
+## CONVICTION CAPS (added 2026-11-13). One flat cap for every player meant a smash spot
+## (e.g. a workhorse RB in the slate's best matchup) was held to the same 30-50% as a
+## coin-flip WR. Sim tools (Stokastic "optimal %", SaberSim) let exposure EMERGE from how
+## often a player is in the optimal lineup across simulated outcomes. natural_exposure()
+## measures exactly that: solve the real ILP (incl. any sport stacking rules) on each of
+## `n_draws` simulated outcome columns and count. conviction_caps() turns it into a
+## per-player MAX exposure RELATIVE to the slate's own top plays:
+##     cap = clamp(base * natural / ref, 0.5 * base, position ceiling)
+##     ref = mean natural rate of the slate's top-10 players
+## Absolute natural rates are small and slate-dependent (measured on 2023-25 DK main
+## slates: the single most-optimal player is in only ~25% of sim-optimal lineups, because
+## one sim's optimum is a very noisy target), so an absolute formula capped EVERYONE below
+## the old flat cap. Relative scaling keeps a typical top play at the base cap, lets a true
+## outlier (2-3x the top-10 average: the "smash spot") run to the position ceiling, and
+## holds rarely-optimal players to half the base. Position ceilings stop a single QB/DST
+## from owning the portfolio (Stokastic caps QB ~20-30% and DST 10-20% for that reason).
+## Manual overrides (config/exposure_overrides.json) still win, in either direction.
+natural_exposure <- function(pool, sim, rr, n_draws = 200L, seed = NULL) {
+  if (is.null(sim$scores) || !ncol(sim$scores)) return(NULL)
+  if (!is.null(seed)) set.seed(seed)
+  pool <- as.data.table(pool)
+  if (nrow(sim$scores) != nrow(pool)) return(NULL)
+  con <- build_constraints(pool, rr)
+  cols <- sample.int(ncol(sim$scores), min(n_draws, ncol(sim$scores)))
+  hits <- numeric(nrow(pool)); ok <- 0L
+  for (s in cols) {
+    con_s <- if (is.function(rr$stack_draw)) con_append(con, rr$stack_draw(pool)) else con
+    idx <- ilp_solve(sim$scores[, s], pool, rr, con_s)
+    if (is.null(idx)) next
+    hits[idx] <- hits[idx] + 1; ok <- ok + 1L
+  }
+  if (!ok) return(NULL)
+  hits / ok
+}
+
+CONVICTION_POS_CEIL <- c(QB = 0.40, DST = 0.30, DEF = 0.30, CPT = 0.40)
+conviction_caps <- function(pool, nat, base_cap, skill_ceil = 0.70, n_ref = 10L) {
+  if (is.null(nat) || base_cap >= 0.999) return(NULL)        # cash / single-entry: no caps to scale
+  ref <- mean(sort(nat, decreasing = TRUE)[seq_len(min(n_ref, sum(nat > 0)))])
+  if (!is.finite(ref) || ref <= 0) return(NULL)
+  pos  <- toupper(as.character(pool$position))
+  ceil <- CONVICTION_POS_CEIL[pos]; ceil[is.na(ceil)] <- skill_ceil
+  ceil <- pmax(ceil, pmin(base_cap, skill_ceil))             # a ceiling never sits below the flat cap it replaces
+  pmin(ceil, pmax(0.5 * base_cap, base_cap * nat / ref))
+}
+
 build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap = 0.50,
                         pool = NULL, caps = NULL, max_overlap = NULL, min_sd_pct = NULL,
-                        rr = NULL) {
+                        rr = NULL, player_caps = NULL) {
   R <- res[order(-proj)]
   rsize <- length(R$idx[[1]])
   if (!is.null(min_sd_pct) && "sim_sd" %in% names(R)) {
@@ -156,8 +202,9 @@ build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap
   }
   if (is.null(max_overlap)) max_overlap <- max(1L, floor(rsize / 2))
   base_cap <- max(1L, floor(n * exp_cap))
-  # PER-PLAYER cap overrides (injury/news): caps = named vector player_name -> max exposure frac.
-  # Order-insensitive name match (First Last vs "Last, First"). Only lowers a player below base_cap.
+  # PER-PLAYER cap overrides (injury/news/conviction): caps = named vector player_name -> max
+  # exposure frac. Order-insensitive name match (First Last vs "Last, First"). Applied AFTER
+  # conviction caps and wins in EITHER direction (e.g. 0.80 to go overweight on a smash spot).
   .nkey <- function(x) vapply(as.character(x), function(s) {
     t <- strsplit(gsub("[^a-z ]", " ", tolower(s)), "\\s+")[[1]]; t <- t[nzchar(t)]
     paste(sort(t), collapse = " ") }, character(1))
@@ -168,6 +215,14 @@ build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap
   ekey <- if (!is.null(P0) && "base_id" %in% names(P0)) as.character(P0$base_id) else NULL
   keyf <- function(j) if (is.null(ekey)) as.character(j) else ekey[j]
   pcap <- integer(0)   # exposure key -> override cap count
+  # per-ROW conviction caps (conviction_caps(), parallel to pool) -> per exposure key. A key
+  # shared by several rows (showdown CPT+FLEX) takes the most generous of its rows' caps.
+  if (!is.null(pool) && !is.null(player_caps) && length(player_caps) == nrow(P0)) {
+    for (j in seq_len(nrow(P0))) { k <- keyf(j); v <- max(1L, floor(n * player_caps[j]))
+      if (is.na(pcap[k]) || v > pcap[k]) pcap[k] <- v }
+    msg(sprintf("  20-max GPP: conviction caps on %d players (max %d/%d lineups, min %d)",
+                length(pcap), max(pcap), n, min(pcap)))
+  }
   if (!is.null(pool) && !is.null(caps) && length(caps)) {
     P <- P0 %||% as.data.table(pool); nmcol <- if ("player_name" %in% names(P)) "player_name" else names(P)[1]
     ck <- .nkey(names(caps)); cv <- as.numeric(caps); pk <- .nkey(P[[nmcol]])

@@ -176,7 +176,9 @@ dash_contest_options <- function(sport, fs) {
 # so variety shows up across the WHOLE set, not just the fallback tail.
 N_ALT_SETS <- 50L
 .alt_lineup_sets <- function(res, gates, pool, rr, caps, n_alt = N_ALT_SETS, n = 20L,
-                             exp_cap = 0.50, jitter_sd = 0.04, use_gpp20 = TRUE, seed0 = 7000L) {
+                             exp_cap = 0.50, jitter_sd = 0.04, use_gpp20 = TRUE, seed0 = 7000L,
+                             nat = NULL) {
+  pcaps <- conviction_caps(pool, nat, exp_cap)   # NULL (flat cap) unless the sport opted in
   if (is.null(res) || !nrow(res)) return(list())
   lapply(seq_len(n_alt), function(i) {
     set.seed(seed0 + i)
@@ -188,7 +190,8 @@ N_ALT_SETS <- 50L
     rj[, proj   := proj   * (1 + stats::rnorm(.N, 0, jitter_sd))]
     if ("p_cash" %in% names(rj)) rj[, p_cash := p_cash * (1 + stats::rnorm(.N, 0, jitter_sd))]
     picks <- tryCatch(
-      if (use_gpp20) build_gpp20(rj, gates, n = n, exp_cap = exp_cap, pool = pool, rr = rr, caps = caps)
+      if (use_gpp20) build_gpp20(rj, gates, n = n, exp_cap = exp_cap, pool = pool, rr = rr, caps = caps,
+                                 player_caps = pcaps)
       else build_portfolio(rj, gates, n = n),
       error = function(e) list())
     # idx (0-based, for the browser) + win (P[1st], from res's own un-jittered grading --
@@ -207,8 +210,8 @@ N_ALT_SETS <- 50L
   list(
     cash   = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 5L,  exp_cap = 1.00, use_gpp20 = FALSE),
     single = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 1L,  exp_cap = 1.00, use_gpp20 = TRUE),
-    gpp20  = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 20L, exp_cap = 0.50, use_gpp20 = TRUE),
-    large  = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 60L, exp_cap = 0.30, use_gpp20 = TRUE)
+    gpp20  = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 20L, exp_cap = 0.50, use_gpp20 = TRUE, nat = r$nat),
+    large  = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 60L, exp_cap = 0.30, use_gpp20 = TRUE, nat = r$nat)
   )
 }
 

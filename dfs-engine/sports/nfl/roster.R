@@ -63,6 +63,22 @@ nfl_fd_scoring <- function(box) {
   off + dst
 }
 
+# Classic-slate stacking rules (lineup_rules.R). DFS_NFL_STACK=0 turns them off (A/B, or
+# an emergency revert to the pre-2026-11-13 unconstrained build without a code change).
+if (exists("nfl_stack_hard") && Sys.getenv("DFS_NFL_STACK", "1") != "0") {
+  NFL_ROSTER$stack_hard    <- nfl_stack_hard;  NFL_ROSTER$stack_draw    <- nfl_stack_draw
+  NFL_ROSTER_FD$stack_hard <- nfl_stack_hard;  NFL_ROSTER_FD$stack_draw <- nfl_stack_draw
+}
+# Conviction caps (portfolio.R) replace the flat per-player cap in the 20-max / large
+# presets. Backtest 2026-11-13, 51 real DK main slates 2023-25, 20 lineups each, scored
+# on ACTUAL points vs the old build: stacking + conviction was the best of 6 variants on
+# best-lineup (+2.0 pts), top-3 (+1.4) and mean (+0.5) -- directionally consistent but
+# NOT statistically significant (t < 1), so it ships on structure + external evidence,
+# not on a proven lift. DFS_NFL_CONVICTION=0 reverts to the flat cap.
+if (Sys.getenv("DFS_NFL_CONVICTION", "1") != "0") {
+  NFL_ROSTER$conviction <- TRUE; NFL_ROSTER_FD$conviction <- TRUE
+}
+
 register_sport("nfl", list(
   ingest          = if (exists("nfl_ingest")) nfl_ingest else NULL,
   project_players = if (exists("nfl_project_players")) nfl_project_players else NULL,  # live DK-slate -> project.R

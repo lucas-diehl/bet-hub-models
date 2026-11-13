@@ -49,7 +49,17 @@ build_constraints <- function(pool, rr) {
     for (gk in unique(grp[!is.na(grp)]))
       add(as.numeric(!is.na(grp) & grp == gk), "<=", 1)
   }
-  list(mat = do.call(rbind, mats), dir = dirs, rhs = rhs)
+  out <- list(mat = do.call(rbind, mats), dir = dirs, rhs = rhs)
+  # sport-specific HARD lineup rules (e.g. NFL stacking, sports/nfl/lineup_rules.R):
+  # a function(pool) -> list(mat, dir, rhs) of extra rows every lineup must satisfy.
+  if (is.function(rr$stack_hard)) out <- con_append(out, rr$stack_hard(pool))
+  out
+}
+
+# append a list(mat, dir, rhs) block of rows to a constraint system (NULL-safe)
+con_append <- function(con, extra) {
+  if (is.null(extra) || is.null(extra$mat) || !nrow(extra$mat)) return(con)
+  list(mat = rbind(con$mat, extra$mat), dir = c(con$dir, extra$dir), rhs = c(con$rhs, extra$rhs))
 }
 
 # Solve one lineup for objective `obj`; returns selected row indices or NULL if infeasible.
@@ -139,6 +149,9 @@ make_candidates <- function(pool, rr, n_cand = 400L) {
         ind <- rep(0, P); ind[excl] <- 1
         con_i$mat <- rbind(con_i$mat, ind); con_i$dir <- c(con_i$dir, "="); con_i$rhs <- c(con_i$rhs, 0)
       }
+      # per-draw randomised lineup SHAPE (NFL: QB+1 vs QB+2, bring-back or not), so the
+      # candidate pool spans the stack structures GPP winners actually use.
+      if (is.function(rr$stack_draw)) con_i <- con_append(con_i, rr$stack_draw(pool))
       idx <- ilp_solve(base_objs[[nm]] + noise, pool, rr, con_i)
       if (is.null(idx)) { dup_streak <- dup_streak + 1L; next }   # infeasible this draw
       key <- paste(sort(idx), collapse = "-")

@@ -71,9 +71,15 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
   field <- simulate_field(pool, rr, field_n = field_n, own = own)
   cands <- make_candidates(pool, rr, n_cand = n_cand)
   res   <- grade_candidates(cands, sim, field, curve_gpp = make_gpp(), curve_cash = make_double_up())
+  # conviction caps (portfolio.R): per-player max exposure from sim-optimal frequency,
+  # replacing the flat cap. Opt-in per sport via rr$conviction (NFL, 2026-11-13).
+  nat <- if (isTRUE(rr$conviction))
+           tryCatch(natural_exposure(pool, sim, rr, n_draws = 200L, seed = seed), error = function(e) NULL)
+         else NULL
   picks <- if (identical(gpp_mode, "gpp20"))
              build_gpp20(res, gates, n = n_lineups, pool = pool, rr = rr,
-                         caps = tryCatch(load_exposure_overrides(sport), error = function(e) NULL))
+                         caps = tryCatch(load_exposure_overrides(sport), error = function(e) NULL),
+                         player_caps = conviction_caps(pool, nat, 0.50))
            else build_portfolio(res, gates, n = n_lineups)
   # archive projections + recommended lineups (best-effort; never fail the build).
   # persist=FALSE for read-only consumers (e.g. the /dfs exposure optimizer) so they
@@ -84,5 +90,5 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
     tryCatch(mark_slate_built(slate_obj$slate_id), error = function(e) NULL)
   }
   list(sport = sport, slate_id = slate_obj$slate_id, pool = pool, sim = sim,
-       field = field, res = res, picks = picks, gates = gates, rr = rr)
+       field = field, res = res, picks = picks, gates = gates, rr = rr, nat = nat)
 }

@@ -72,16 +72,20 @@ name: nfl
 # each run). Best-effort cron (GitHub may fire 5-20 min late); fine for daily/weekly picks.
 on:
   schedule:
-    - cron: "0 14 * * 2"   # Tue ~09:00 ET — weekly infra refresh (see publish-spread-total above)
-    - cron: "0 10 * * 0"   # Sun ~06:00 ET — full publish (weekly infra refresh + TD for today)
-    - cron: "0 14 * * 4"   # Thu ~09:00 ET — td-publish (TD for today only)
-    - cron: "0 14 * * 1"   # Mon ~09:00 ET — td-publish (TD for today only)
-    - cron: "0 13 * * *"   # ~09:00 ET daily — td-refresh (board only, no stakes)
-    - cron: "0 18 * * *"   # ~14:00 ET daily — td-refresh (board only, no stakes)
-    - cron: "0 12 * * *"   # ~08:00 ET daily — grade (self-gated; a day with nothing newly
+    # Minutes are deliberately OFF the top of the hour (changed 2026-11-13). GitHub
+    # documents heavy scheduler load at :00 and delays/drops runs there; measured on
+    # this repo, the Sun "06:00 ET" publish-full actually started 11:28 ET (2026-11-08)
+    # and dfs.yml's 07:00/10:00 ET slots never fired at all for a week.
+    - cron: "17 14 * * 2"  # Tue ~09:17 ET — weekly infra refresh (see publish-spread-total above)
+    - cron: "17 10 * * 0"  # Sun ~05:17 ET — full publish (weekly infra refresh + TD for today)
+    - cron: "17 14 * * 4"  # Thu ~09:17 ET — td-publish (TD for today only)
+    - cron: "17 14 * * 1"  # Mon ~09:17 ET — td-publish (TD for today only)
+    - cron: "13 13 * * *"  # ~08:13 ET daily — td-refresh (TD board + fantasy/DFS projections, no stakes)
+    - cron: "13 18 * * *"  # ~13:13 ET daily — td-refresh (TD board + fantasy/DFS projections, no stakes)
+    - cron: "7 12 * * *"   # ~07:07 ET daily — grade (self-gated; a day with nothing newly
                             # final is a cheap no-op)
-    - cron: "0 23 * * 4"   # Thu ~19:00 ET — capture close before TNF (~20:15 ET kickoff)
-    - cron: "0 15 * * 0"   # Sun ~11:00 ET — capture close before the 13:00 ET slate
+    - cron: "47 22 * * 4"  # Thu ~17:47 ET — capture close before TNF (~20:15 ET kickoff)
+    - cron: "47 14 * * 0"  # Sun ~09:47 ET — capture close before the 13:00 ET slate
   workflow_dispatch:
     inputs:
       job:
@@ -100,6 +104,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write   # dispatch dfs.yml after new projections are pushed
 
 jobs:
   run:
@@ -176,13 +181,13 @@ jobs:
           fi
           if [ -z "$JOB" ]; then
             case "${{ github.event.schedule }}" in
-              "0 14 * * 2") JOB="publish-spread-total" ;;
-              "0 10 * * 0") JOB="publish-full" ;;
-              "0 14 * * 4") JOB="td-publish" ;;
-              "0 14 * * 1") JOB="td-publish" ;;
-              "0 13 * * *") JOB="td-refresh" ;;
-              "0 18 * * *") JOB="td-refresh" ;;
-              "0 12 * * *") JOB="grade" ;;
+              "17 14 * * 2") JOB="publish-spread-total" ;;
+              "17 10 * * 0") JOB="publish-full" ;;
+              "17 14 * * 4") JOB="td-publish" ;;
+              "17 14 * * 1") JOB="td-publish" ;;
+              "13 13 * * *") JOB="td-refresh" ;;
+              "13 18 * * *") JOB="td-refresh" ;;
+              "7 12 * * *")  JOB="grade" ;;
               *)            JOB="capture-close" ;;
             esac
           fi
@@ -214,8 +219,17 @@ jobs:
           elif [ "$JOB" = "td-publish" ]; then
             run_td_publish
           elif [ "$JOB" = "td-refresh" ]; then
-            Rscript scripts/15_build_2026_td_board.R --execute || echo "Touchdown board refresh failed; prop board not rebuilt."
+            # --refresh-stats + the fantasy projection chain added 2026-11-13. Fantasy/DFS
+            # projections used to refresh only Tue + Sun, so any mid-week change (trade,
+            # QB benching, injury) sat in the DFS pool for days: audited on the week-10
+            # slate, 4 of 28 teams had the wrong QB projected (ARI, LV, MIA, MIN) and Kirk
+            # Cousins was still projected as a Raider after moving to MIN. Script 15
+            # already refreshes rosters/depth charts here; 17 re-scores (no retrain).
+            Rscript scripts/15_build_2026_td_board.R --execute --refresh-stats || echo "Touchdown board refresh failed; prop board not rebuilt."
             Rscript scripts/88_emit_td_prop_board.R --execute || echo "Touchdown prop board failed."
+            Rscript scripts/17_build_fantasy_prop_models.R --execute || echo "Fantasy projection refresh failed; previous projections kept."
+            Rscript scripts/59_emit_dfs_projection_json.R || echo "DFS ENGINE projection JSON failed; CSV projections still written."
+            Rscript scripts/82_emit_dfs_values_feed.R --execute || echo "DFS values feed failed; projections still written."
           elif [ "$JOB" = "grade" ]; then
             Rscript scripts/58_grade_published_picks.R --grade --execute
           elif [ "$JOB" = "retrain-td" ]; then
@@ -237,6 +251,7 @@ jobs:
       # nothing here ever did. train.yml has had the equivalent "Commit refreshed
       # models" step for dfs-engine/golf all along; NFL/outputs never got one.
       - name: Commit refreshed NFL outputs (so dfs.yml's checkout can see them)
+        id: commit_outputs
         if: always()
         working-directory: NFL
         run: |
@@ -258,8 +273,21 @@ jobs:
             # week-7 projections) but never left the runner because of this. Plain
             # push, same as train.yml's own equivalent step; a real conflict here
             # is rare enough (this only touches NFL/outputs) to just retry next run.
-            git push
+            git push && echo "pushed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # Rebuild the NFL DFS pool as soon as new projections land, instead of waiting for
+      # dfs.yml's own cron (which GitHub was firing hours late or not at all -- on Sun
+      # 2026-11-08 the only pre-lock DFS build ran at 11:53 ET). workflow_dispatch is the
+      # one event GITHUB_TOKEN is allowed to trigger, and it isn't subject to cron delay.
+      # Dispatches a FULL (all-sports) run on purpose: dfs.yml's concurrency group keeps
+      # only the newest pending run, so an nfl-only dispatch could silently cancel a
+      # queued all-sports build; an all-sports dispatch replacing it loses nothing.
+      - name: Trigger DFS rebuild
+        if: steps.commit_outputs.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run dfs.yml --ref main || echo "dfs.yml dispatch failed; its own cron will pick the projections up."
 
       - name: Ingest to Supabase
         uses: ./.github/actions/ingest

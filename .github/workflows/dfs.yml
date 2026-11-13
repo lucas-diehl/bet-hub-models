@@ -5,9 +5,16 @@ name: dfs
 # Also refreshes the golf H2H picks via the sibling golf-modeling checkout.
 on:
   schedule:
-    - cron: "0 11 * * *"   # ~07:00 ET — early, so morning slates are fresh
-    - cron: "0 14 * * *"   # ~10:00 ET
-    - cron: "40 15 * * 0"  # ~11:40 ET, SUNDAY ONLY — closes the pre-1pm-kickoff inactive
+    # Minutes are deliberately OFF the top of the hour (changed 2026-11-13): GitHub
+    # documents heavy scheduler load at :00, and for the week of 2026-11-06..13 the
+    # "0 11" and "0 14" slots below never fired at all (first run of every day was
+    # ~13:20 ET), leaving ONE pre-lock build on Sun 11-08. nfl.yml now also dispatches
+    # this workflow directly whenever it pushes fresh NFL projections.
+    - cron: "23 11 * * *"  # ~06:23 ET (EST) — early, so morning slates are fresh
+    - cron: "23 14 * * *"  # ~09:23 ET (EST)
+    - cron: "35 16 * * 0"  # SUNDAY ~11:35 ET under EST (Nov-Mar): the 15:40 slot below is
+                           # 10:40 EST, i.e. BEFORE the ~11:30 inactives once clocks fall back.
+    - cron: "40 15 * * 0"  # ~11:40 ET (EDT), SUNDAY ONLY — closes the pre-1pm-kickoff inactive
                            # gap. ESPN's injury feed (apply_inactives(), the only inactive-
                            # detection in the daily path) is freshness-dependent by design;
                            # official NFL inactives land ~90 min before kickoff (~11:30 ET
@@ -15,9 +22,9 @@ on:
                            # 10:00 and 13:00 ET runs — the 10:00 build had no idea who was
                            # about to be scratched, and by 13:00 the 1pm slate was already
                            # locked. This run refreshes right after that announcement window.
-    - cron: "0 17 * * *"   # ~13:00 ET
-    - cron: "0 20 * * *"   # ~16:00 ET
-    - cron: "0 23 * * *"   # ~19:00 ET
+    - cron: "23 17 * * *"  # ~12:23 ET (EST)
+    - cron: "23 20 * * *"  # ~15:23 ET (EST)
+    - cron: "23 23 * * *"  # ~18:23 ET (EST)
   workflow_dispatch:
     inputs:
       sports:
