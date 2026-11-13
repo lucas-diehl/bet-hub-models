@@ -1,0 +1,21 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-11-12",
+  "graded_at": "2026-11-13T20:12:39Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk11-memphis-southflorida-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0452,
+      "pnl_units": -2,
+      "actual": {
+        "actual_margin": -11,
+        "cover_line": 6.5,
+        "closing_line": 4.5
+      }
+    }
+  ]
+}
