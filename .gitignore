@@ -15,6 +15,10 @@
 **/ownership_inbox/
 **/*.duckdb
 NFL/data/processed/*
+# Static measured injury->inactive rate table (scripts/83, 2016-2025). Never produced in
+# CI, so without it every NFL projection silently got a flat p_zero=0.03 (found 2026-11-13:
+# TreVeyon Henderson listed OUT, still projected as fully healthy).
+!NFL/data/processed/inactive_rates.rds
 NFL/data/raw/*
 !NFL/data/raw/odds_api_line_movement/
 # Frozen historical seed data (2021-2025 seasons, pre-2026 team games/schedules)
