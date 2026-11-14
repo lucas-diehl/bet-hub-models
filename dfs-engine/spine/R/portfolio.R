@@ -190,8 +190,9 @@ conviction_caps <- function(pool, nat, base_cap, skill_ceil = 0.70, n_ref = 10L)
 
 build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap = 0.50,
                         pool = NULL, caps = NULL, max_overlap = NULL, min_sd_pct = NULL,
-                        rr = NULL, player_caps = NULL) {
-  R <- res[order(-proj)]
+                        rr = NULL, player_caps = NULL, min_caps = NULL) {
+  # rank_score (optional, e.g. the opt-in hidden-gem tiebreak in pipeline.R) overrides proj order
+  R <- if ("rank_score" %in% names(res) && any(is.finite(res$rank_score))) res[order(-rank_score)] else res[order(-proj)]
   rsize <- length(R$idx[[1]])
   if (!is.null(min_sd_pct) && "sim_sd" %in% names(R)) {
     floor_sd <- stats::quantile(R$sim_sd, min_sd_pct, na.rm = TRUE)
@@ -237,6 +238,16 @@ build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap
   cur_cap <- max_overlap
   overlap_ok <- function(idx) all(vapply(picks, function(p)
                   length(intersect(idx, p$idx[[1]])) <= cur_cap, logical(1)))
+  # sport PORTFOLIO quotas (rr$quota: list of list(name, max_frac, test(idx, pool))), e.g. NFL
+  # "<= 10% naked-QB lineups" -- a property no single-lineup constraint can express.
+  quota_ok <- function(idx) {
+    if (is.null(rr$quota) || is.null(P0)) return(TRUE)
+    for (q in rr$quota) if (isTRUE(q$test(idx, P0))) {
+      used <- sum(vapply(picks, function(p) isTRUE(q$test(p$idx[[1]], P0)), logical(1)))
+      if (used + 1L > max(1L, floor(n * q$max_frac))) return(FALSE)
+    }
+    TRUE
+  }
 
   try_fill <- function(label_suffix = "") {
     added <- 0L
@@ -244,7 +255,7 @@ build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap
       if (length(picks) >= n) break
       idx <- R$idx[[i]]
       if (is_dupe(idx)) next
-      if (!overlap_ok(idx)) next
+      if (!overlap_ok(idx) || !quota_ok(idx)) next
       if (!all(vapply(idx, function(j) cnt(keyf(j)) < cap_of(keyf(j)), logical(1)))) next
       picks[[length(picks) + 1]] <<- c(as.list(R[i]), role = "20-max GPP", live = gates$gpp_enabled,
         reason = sprintf("20-entry GPP set (proj-ranked, %.0f%% max exposure%s): projected %.1f, avg own %.0f%%. %s.",
@@ -254,6 +265,66 @@ build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap
       added <- added + 1L
     }
     added
+  }
+
+  # MINIMUM exposures (2026-11-13; MobyWhaler-style "min/max set by conviction before lock").
+  # min_caps = named vector player_name -> min fraction. Filled FIRST, from the best-projected
+  # candidates containing the player (respecting every max cap + the overlap floor); if the
+  # static pool runs out, a direct ILP solve FORCES the player in. A min always fits under
+  # its own max (the max is raised to the min if needed).
+  pmin_n <- integer(0)
+  if (!is.null(P0) && !is.null(min_caps) && length(min_caps)) {
+    nmcol <- if ("player_name" %in% names(P0)) "player_name" else names(P0)[1]
+    ck <- .nkey(names(min_caps)); cv <- as.numeric(min_caps); pk <- .nkey(P0[[nmcol]])
+    for (j in seq_len(nrow(P0))) { m <- match(pk[j], ck)
+      if (!is.na(m) && is.finite(cv[m]) && cv[m] > 0) { k <- keyf(j); v <- as.integer(min(n, ceiling(n * cv[m] - 1e-9)))
+        if (is.na(pmin_n[k]) || v > pmin_n[k]) pmin_n[k] <- v } }
+    for (k in names(pmin_n)) if (cap_of(k) < pmin_n[k]) pcap[k] <- pmin_n[k]
+  }
+  if (length(pmin_n)) {
+    keys_all <- keyf(seq_len(nrow(P0)))
+    take_row <- function(i, why) {
+      idx <- R$idx[[i]]
+      picks[[length(picks) + 1]] <<- c(as.list(R[i]), role = "20-max GPP", live = gates$gpp_enabled,
+        reason = sprintf("20-entry GPP set (%s): projected %.1f, avg own %.0f%%. %s.", why, R$proj[i],
+                         100 * (R$avg_own[i] %||% 0), if (isTRUE(gates$gpp_enabled)) "GPP gate PASSED" else "paper only"))
+      for (j in idx) { kk <- keyf(j); expo[kk] <<- cnt(kk) + 1L }
+    }
+    forced_solve <- function(k) {
+      if (is.null(rr)) return(FALSE)
+      con <- build_constraints(P0, rr)
+      con <- con_append(con, list(mat = matrix(as.numeric(keys_all == k), 1), dir = ">=", rhs = 1))
+      maxed <- names(expo)[vapply(names(expo), function(x) cnt(x) >= cap_of(x), logical(1))]
+      if (length(maxed)) con <- con_append(con, list(mat = matrix(as.numeric(keys_all %in% maxed), 1), dir = "=", rhs = 0))
+      if (is.finite(cur_cap)) for (p in picks) { ind <- numeric(nrow(P0)); ind[p$idx[[1]]] <- 1
+        con <- con_append(con, list(mat = matrix(ind, 1), dir = "<=", rhs = cur_cap)) }
+      for (t in 1:6) {
+        idx <- ilp_solve(P0$proj + stats::rnorm(nrow(P0), 0, 0.02 * t * stats::sd(P0$proj)), P0, rr, con)
+        if (is.null(idx)) return(FALSE)
+        if (is_dupe(idx) || !quota_ok(idx)) next
+        picks[[length(picks) + 1]] <<- list(idx = list(idx), role = "20-max GPP", live = gates$gpp_enabled,
+          salary = sum(P0$salary[idx]), proj = sum(P0$proj[idx]),
+          avg_own = mean((if ("own" %in% names(P0)) P0$own else rep(0, nrow(P0)))[idx]),
+          reason = sprintf("20-entry GPP set (minimum-exposure direct solve): projected %.1f.", sum(P0$proj[idx])))
+        for (j in idx) { kk <- keyf(j); expo[kk] <<- cnt(kk) + 1L }
+        return(TRUE)
+      }
+      FALSE
+    }
+    for (k in names(sort(pmin_n, decreasing = TRUE))) {
+      for (i in seq_len(nrow(R))) {
+        if (cnt(k) >= pmin_n[[k]] || length(picks) >= n) break
+        idx <- R$idx[[i]]
+        if (!(k %in% keyf(idx)) || is_dupe(idx) || !overlap_ok(idx) || !quota_ok(idx)) next
+        if (!all(vapply(idx, function(j) cnt(keyf(j)) < cap_of(keyf(j)), logical(1)))) next
+        take_row(i, "minimum exposure")
+      }
+      while (cnt(k) < pmin_n[[k]] && length(picks) < n) if (!forced_solve(k)) break
+      if (cnt(k) < pmin_n[[k]])
+        msg(sprintf("  20-max GPP: minimum exposure for %s NOT met (%d of %d) -- infeasible with the other caps",
+                    P0$player_name[match(k, keys_all)] %||% k, cnt(k), pmin_n[[k]]))
+    }
+    msg(sprintf("  20-max GPP: minimum exposures applied to %d player(s)", length(pmin_n)))
   }
 
   try_fill()
@@ -331,7 +402,7 @@ build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap
       noise <- rnorm(nrow(Pz), 0, scale * stats::sd(Pz$proj))
       idx <- ilp_solve(Pz$proj + noise, Pz, rr, con2)
       if (is.null(idx)) { truly_infeasible <- TRUE; break }   # no more exposure+overlap-legal lineup exists
-      if (is_dupe(idx)) {
+      if (is_dupe(idx) || !quota_ok(idx)) {
         dup_streak <- dup_streak + 1L
         # the jitter alone didn't escape an already-rejected combo -- force it, same
         # fix as make_candidates' EXCLUDE_BUDGET, so tries are never wasted on a
@@ -377,7 +448,21 @@ load_exposure_overrides <- function(sport) {
   j <- tryCatch(jsonlite::fromJSON(f, simplifyVector = FALSE), error = function(e) NULL)
   o <- if (!is.null(j)) j[[sport]] else NULL
   if (is.null(o) || !length(o)) return(NULL)
-  v <- suppressWarnings(as.numeric(unlist(o))); names(v) <- names(o)
+  # an entry is either a number (max) or an object {"min": x, "max": y}
+  v <- vapply(o, function(e) { x <- if (is.list(e)) e$max else e
+    if (is.null(x)) NA_real_ else suppressWarnings(as.numeric(x)) }, numeric(1))
+  v <- v[is.finite(v) & v > 0 & v <= 1]
+  if (length(v)) v else NULL
+}
+
+# Per-player MINIMUM exposures from the same file ({"min": x} entries). NULL if none.
+load_exposure_minimums <- function(sport) {
+  f <- dfs_path("config", "exposure_overrides.json")
+  if (!file.exists(f)) return(NULL)
+  j <- tryCatch(jsonlite::fromJSON(f, simplifyVector = FALSE), error = function(e) NULL)
+  o <- if (!is.null(j)) j[[sport]] else NULL
+  if (is.null(o) || !length(o)) return(NULL)
+  v <- vapply(o, function(e) if (is.list(e) && !is.null(e$min)) suppressWarnings(as.numeric(e$min)) else NA_real_, numeric(1))
   v <- v[is.finite(v) & v > 0 & v <= 1]
   if (length(v)) v else NULL
 }

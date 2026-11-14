@@ -181,6 +181,10 @@ nfl_project_players <- function(slate) {
                              p_zero, 0.03)]
     pool[ext, on = "norm", `:=`(proj = i.e_proj, sim_sd = i.e_sd, ceil = i.e_ceil,
                                 floor = i.e_floor, p_zero = i.e_pzero)]
+    # projected rushing yards: identifies RUSHING QBs, the only QBs allowed a naked build
+    # (lineup_rules.R, rule 1 exemption)
+    if ("projected_rushing_yards" %in% names(ext))
+      pool[ext, on = "norm", rush_yds := i.projected_rushing_yards]
     msg(sprintf("  NFL: external model [%s] projected %d of %d (site %s); %d -> built-in/baseline",
                 attr(ext, "file") %||% "ext", sum(!is.na(pool$proj)), nrow(pool),
                 toupper(slate$site %||% "dk"), sum(is.na(pool$proj))))
@@ -218,6 +222,24 @@ nfl_project_players <- function(slate) {
   if (any(miss)) { bl <- .nfl_baseline(pool)
     for (c in c("proj", "sim_sd", "ceil", "floor", "p_zero")) pool[[c]][miss] <- bl[[c]][miss] }
 
+  # --- second-opinion projection (Sleeper) for the report card's disagreement flags --------
+  alt <- if (exists("nfl_alt_projections") && Sys.getenv("DFS_NFL_ALT", "1") != "0")
+           tryCatch(nfl_alt_projections(), error = function(e) NULL) else NULL
+  if (!is.null(alt) && nrow(alt)) {
+    pool[alt, on = "norm", alt_proj := i.alt]
+    msg(sprintf("  nfl: second-opinion (Sleeper) projections matched %d of %d", sum(!is.na(pool$alt_proj)), nrow(pool)))
+  }
+
+  # --- injury pricing (ONE measured penalty) + vacated-opportunity redistribution ------
+  # sports/nfl/vacated.R. DFS_NFL_VACATED=0 disables (pool then behaves as before).
+  if (exists("nfl_price_and_redistribute") && Sys.getenv("DFS_NFL_VACATED", "1") != "0") {
+    inj  <- tryCatch(injury_report("nfl"), error = function(e) NULL)
+    extv <- if (!is.null(ext) && nrow(ext) && all(c("norm", "team", "position", "e_proj", "e_pzero") %in% names(ext)))
+              ext[, .(norm, team, position, e_proj, e_pzero)] else NULL
+    pool <- tryCatch(nfl_price_and_redistribute(pool, extv, inj),
+                     error = function(e) { msg("  nfl vacated: skipped (", conditionMessage(e), ")"); pool })
+  }
+
   # --- Vegas game environment (free, ESPN): high totals -> higher ceilings + correlation
   pool[, `:=`(game_total_z = 0, exp_margin = 11.1)]   # exp_margin default = empirical mean |margin| (2021-25)
   vg <- tryCatch(vegas_games("nfl", slate$date), error = function(e) NULL)
@@ -237,6 +259,13 @@ nfl_project_players <- function(slate) {
       pool[vg[, .(game_id, sp = spread)], on = "game_id", sp := i.sp]
       pool[is.finite(sp), exp_margin := abs(sp)]
       pool[, sp := NULL]
+    }
+    # team / opponent implied totals (RB + own-DST preference for big favourites, lineup_rules.R)
+    if (all(c("home_total", "away_total") %in% names(vg))) {
+      pool[vg[, .(game_id, ht = home_total, at = away_total)], on = "game_id", `:=`(ht = i.ht, at = i.at)]
+      pool[, is_home := toupper(team) == toupper(sub(".*@", "", game_id))]
+      pool[, `:=`(team_implied = fifelse(is_home, ht, at), opp_implied = fifelse(is_home, at, ht))]
+      pool[, c("ht", "at", "is_home") := NULL]
     }
   }
 
@@ -285,6 +314,10 @@ nfl_project_players <- function(slate) {
   }
 
   persist_salaries(pool, slate$slate_id, "nfl")
-  pool[, .(player_id, player_name, dk_id, team, game_id, position,
-           salary, proj, sim_sd, ceil, floor, p_zero, own, game_total_z, exp_margin)]
+  keep <- c("player_id", "player_name", "dk_id", "team", "game_id", "position",
+            "salary", "proj", "sim_sd", "ceil", "floor", "p_zero", "own", "game_total_z", "exp_margin",
+            # injury/vacated (vacated.R), rushing-QB + implied totals (lineup_rules.R)
+            "proj_active", "cuff_of", "cuff_bump", "vac_bump", "inj_priced", "rush_yds", "team_implied", "opp_implied",
+            "alt_proj")
+  pool[, intersect(keep, names(pool)), with = FALSE]
 }

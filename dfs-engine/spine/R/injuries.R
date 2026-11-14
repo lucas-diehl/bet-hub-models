@@ -77,7 +77,18 @@ apply_inactives <- function(pool, sport, as_of = Sys.Date(), q_discount = 0.6) {
   pool <- pool[!drop]
 
   qi <- pool$norm %in% q_norms
-  if (any(qi)) {
+  # Skip players the sport plugin already priced from a measured injury rate (NFL:
+  # sports/nfl/vacated.R sets inj_priced) -- discounting them again here was a real
+  # double penalty (x0.6 projection AND +0.30 DNP => ~40% of value for a Questionable).
+  if ("inj_priced" %in% names(pool)) qi <- qi & !(pool$inj_priced %in% TRUE)
+  if (any(qi) && "proj_active" %in% names(pool)) {
+    # pool tracks value-if-active and these players are unpriced (proj == proj_active):
+    # ONE penalty -- expected value proj_active*(1-p), DNP applied in the sim via p_zero.
+    pz <- pmax(pool[["p_zero"]][qi], 0.30)
+    for (c in intersect(c("proj", "ceil", "floor"), names(pool))) pool[[c]][qi] <- pool[[c]][qi] * (1 - pz)
+    pool[["p_zero"]][qi] <- pz
+    if ("inj_priced" %in% names(pool)) pool[["inj_priced"]][qi] <- TRUE
+  } else if (any(qi)) {
     for (c in intersect(c("proj", "ceil", "floor"), names(pool)))
       pool[[c]][qi] <- pool[[c]][qi] * q_discount
     if ("p_zero" %in% names(pool)) pool[["p_zero"]][qi] <- pmin(pool[["p_zero"]][qi] + 0.30, 0.65)

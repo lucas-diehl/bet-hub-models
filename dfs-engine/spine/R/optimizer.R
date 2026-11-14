@@ -56,6 +56,15 @@ build_constraints <- function(pool, rr) {
   out
 }
 
+# Does a lineup (row indices) satisfy every row of a constraint system? Used to keep
+# rule-breaking lineups (e.g. the unconstrained simulated FIELD's naked-QB builds) out of
+# the browser optimizer's candidate list.
+lineup_legal <- function(idx, con, tol = 1e-9) {
+  x <- numeric(ncol(con$mat)); x[idx] <- 1
+  lhs <- as.numeric(con$mat %*% x)
+  all(ifelse(con$dir == "<=", lhs <= con$rhs + tol, ifelse(con$dir == ">=", lhs >= con$rhs - tol, abs(lhs - con$rhs) <= tol)))
+}
+
 # append a list(mat, dir, rhs) block of rows to a constraint system (NULL-safe)
 con_append <- function(con, extra) {
   if (is.null(extra) || is.null(extra$mat) || !nrow(extra$mat)) return(con)

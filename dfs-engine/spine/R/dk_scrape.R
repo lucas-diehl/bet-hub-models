@@ -162,6 +162,7 @@ dk_main_slate <- function(sport) {
   }, error = function(e) grepl("showdown|captain", pick$top_name, ignore.case = TRUE))
   list(draft_group_id = pick$dg, contest_id = pick$top_contest_id, name = pick$top_name,
        game_count = pick$GameCount, is_showdown = isTRUE(showdown),
+       start_date = substr(as.character(pick$StartDateEst %||% NA), 1, 10),   # slate (game) day, ET
        fee = pick$top_fee, field = pick$top_field, prize = pick$top_prize)
 }
 

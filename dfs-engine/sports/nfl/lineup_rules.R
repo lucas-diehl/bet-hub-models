@@ -29,6 +29,12 @@
 #       41% vs field 29%, QB+1 49% vs 49%).
 #     - a bring-back from the QB's actual opponent in ~50% of draws, ~70% when that game's
 #       total is in the slate's top third (top-10: one bring-back 36% vs field 31%).
+#     - RUSHING QBs (>= 30 proj rush yds) may go naked in 25% of draws (rule 1 exemption),
+#       with a PORTFOLIO quota of <= 10% naked-QB lineups (rr$quota, enforced in build_gpp20).
+#     - RB + own DST in 50% of draws when that team is favoured by >= 6 implied points.
+#   Backtest 2026-11-13 (30 DK main slates 2023-25, 20 lineups, actual points): the two
+#   2026-11-13 additions moved best lineup +1.9 / top-3 +1.5 vs the first version (same
+#   sign all 3 seasons, t~1.1 -- positive, not proven); naked QBs landed at 8.8%.
 #
 # Rules are linear rows appended to the lpSolve system; y_p = 1 if player p is rostered.
 # Opponent is parsed from DK's "AWY@HOM" game_id. If game_id/team can't be parsed for a
@@ -42,7 +48,45 @@ NFL_STACK <- list(
   max_other_team   = 2L,     # rule 5
   p_qb2            = 0.60,   # draw: share of QB+2 candidates
   p_bringback      = 0.50,   # draw: share with a bring-back ...
-  p_bringback_high = 0.70)   # ... in a top-third game total
+  p_bringback_high = 0.70,   # ... in a top-third game total
+  # RUSHING-QB exemption from rule 1 (added 2026-11-13). Naked QBs are 6.4% of Milly
+  # top-10 lineups (vs 17.4% of the field) and the recent Week-1 Milly winners were naked
+  # rushing QBs -- a rushing QB's points don't need a pass-catcher to land. A QB projected
+  # for >= rush_qb_yds rushing yards may go naked in p_naked_rush of candidate draws.
+  rush_qb_yds      = 30,
+  p_naked_rush     = 0.25,
+  # RB + own DST (added 2026-11-13): when a DST's team is favoured by >= rb_dst_margin
+  # implied points, require one of its RBs in p_rb_dst of draws (game script: a leading
+  # team runs, and its defence faces a trailing, passing opponent).
+  rb_dst_margin    = 6,
+  p_rb_dst         = 0.50)
+
+# PORTFOLIO quotas (read by build_gpp20 via rr$quota). An unconstrained (naked) build always
+# out-projects a constrained one, so a proj-ranked selection would otherwise fill the
+# portfolio with naked rushing-QB lineups (measured: 35% on a test slate). Cap the share at
+# ~10% -- winners run 6.4%.
+nfl_is_naked <- function(idx, pool) {
+  pos <- .nfl_pos_key(pool[idx]); team <- toupper(as.character(pool$team[idx]))
+  q <- which(pos == "QB"); if (!length(q)) return(FALSE)
+  !any(pos %in% c("WR", "TE") & team == team[q[1]])
+}
+NFL_QUOTA <- list(list(name = "naked QB", max_frac = 0.10, test = nfl_is_naked))
+
+# Lineup shape flags for the build report card (rr$shape, spine/R/report_card.R).
+nfl_lineup_shape <- function(idx, pool) {
+  P <- pool[idx]; pos <- .nfl_pos_key(P); team <- toupper(as.character(P$team))
+  opp <- if ("game_id" %in% names(P)) .nfl_opponent(P) else rep(NA_character_, nrow(P))
+  q <- which(pos == "QB")[1]; d <- which(pos == "DST")[1]
+  mates <- if (is.na(q)) 0L else sum(pos %in% c("WR", "TE") & team == team[q])
+  c(naked_qb = as.integer(mates == 0L), qb_plus_1 = as.integer(mates == 1L), qb_plus_2 = as.integer(mates >= 2L),
+    bring_back = as.integer(!is.na(q) && any(pos %in% c("RB", "WR", "TE") & team == opp[q], na.rm = TRUE)),
+    rb_own_dst = as.integer(!is.na(d) && any(pos == "RB" & team == team[d])))
+}
+
+.nfl_rushing_qb <- function(pool, pos, opts = NFL_STACK) {
+  if (!"rush_yds" %in% names(pool)) return(rep(FALSE, nrow(pool)))
+  pos == "QB" & is.finite(pool$rush_yds) & pool$rush_yds >= opts$rush_qb_yds
+}
 
 .nfl_pos_key <- function(pool) {
   p <- toupper(as.character(pool$position))
@@ -75,7 +119,8 @@ nfl_stack_hard <- function(pool, opts = NFL_STACK) {
   off <- pos %in% c("QB", "RB", "WR", "TE"); skill <- pos %in% c("RB", "WR", "TE")
   pc  <- pos %in% c("WR", "TE")
   R <- .nfl_rows(); P <- nrow(pool)
-  for (q in which(pos == "QB" & !is.na(team))) {                        # 1. QB + >=1 WR/TE
+  rq <- .nfl_rushing_qb(pool, pos, opts)                                 # rushing QBs: rule 1 moves to the draw
+  for (q in which(pos == "QB" & !is.na(team) & !rq)) {                  # 1. QB + >=1 WR/TE
     r <- as.numeric(pc & team == team[q]); r[q] <- -1
     if (sum(r > 0)) R$add(r, ">=", 0) else R$add(replace(numeric(P), q, 1), "=", 0)  # no pass-catcher in pool -> QB unusable
   }
@@ -104,11 +149,22 @@ nfl_stack_draw <- function(pool, opts = NFL_STACK) {
   hi_total <- if ("game_total_z" %in% names(pool)) pool$game_total_z > stats::quantile(pool$game_total_z, 2/3, na.rm = TRUE) else rep(FALSE, nrow(pool))
   R <- .nfl_rows(); P <- nrow(pool)
   bb <- stats::runif(1)                                   # one draw per candidate, shared by every QB
+  naked_ok <- stats::runif(1) < opts$p_naked_rush         # this draw lets a RUSHING QB go naked
+  rq <- .nfl_rushing_qb(pool, pos, opts)
   for (q in which(pos == "QB" & !is.na(team))) {
-    if (qb2) { r <- as.numeric(pc & team == team[q]); r[q] <- -2
+    if (rq[q] && !naked_ok) { r <- as.numeric(pc & team == team[q]); r[q] <- -1   # rule 1 for rushing QBs
+      if (sum(r > 0)) R$add(r, ">=", 0) }
+    if (qb2 && !(rq[q] && naked_ok)) { r <- as.numeric(pc & team == team[q]); r[q] <- -2
       if (sum(r > 0) >= 2) R$add(r, ">=", 0) }
     p_bb <- if (isTRUE(hi_total[q])) opts$p_bringback_high else opts$p_bringback
     if (bb < p_bb && !is.na(opp[q])) { r <- as.numeric(skill & !is.na(team) & team == opp[q]); r[q] <- -1
+      if (sum(r > 0)) R$add(r, ">=", 0) }
+  }
+  # RB + own DST when that team is a big favourite (soft: only in p_rb_dst of draws)
+  if (all(c("team_implied", "opp_implied") %in% names(pool)) && stats::runif(1) < opts$p_rb_dst) {
+    fav <- which(pos == "DST" & is.finite(pool$team_implied) & is.finite(pool$opp_implied) &
+                 pool$team_implied - pool$opp_implied >= opts$rb_dst_margin)
+    for (d in fav) { r <- as.numeric(pos == "RB" & !is.na(team) & team == team[d]); r[d] <- -1
       if (sum(r > 0)) R$add(r, ">=", 0) }
   }
   R$get()

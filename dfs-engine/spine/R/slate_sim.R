@@ -88,13 +88,28 @@ slate_sim <- function(pool, loadings = NULL, team_loadings = NULL, n_sims = 1000
 
   resid <- sqrt(pmax(1 - load^2 - tload^2, 0))
   z <- load * Zp_game + tload * Zp_team + resid * eps  # standardized, game+team correlated
-  scores <- pool$proj + pool$sim_sd * z               # vectorized recycle down columns
+  # Mean IF the player plays. A sport that prices injury risk into `proj` (NFL, 2026-11-13:
+  # proj = proj_active * (1 - p_zero)) supplies proj_active so DNP risk is applied ONCE, here,
+  # via the p_zero mask -- not again on an already-discounted mean.
+  mu <- if ("proj_active" %in% names(pool)) fifelse(is.finite(pool$proj_active), pool$proj_active, pool$proj) else pool$proj
+  scores <- mu + pool$sim_sd * z                      # vectorized recycle down columns
 
   # DNP / bust risk: with prob p_zero the player produces ~0 this sim
   if ("p_zero" %in% names(pool)) {
     pz <- pool$p_zero; pz[!is.finite(pz)] <- 0
     if (any(pz > 0)) {
       mask <- matrix(runif(P * n_sims), P) < pz
+      # HANDCUFFS (optional cuff_of / cuff_bump): a teammate absorbs `cuff_bump` extra
+      # points in exactly the sims where the player he backs up (cuff_of = player_id) sits.
+      # Applied before zeroing so a handcuff who is himself a DNP still scores 0.
+      if (all(c("cuff_of", "cuff_bump") %in% names(pool))) {
+        ci <- which(!is.na(pool$cuff_of) & is.finite(pool$cuff_bump) & pool$cuff_bump > 0)
+        ai <- match(pool$cuff_of[ci], pool$player_id)
+        for (k in which(!is.na(ai))) {
+          r <- ci[k]; sits <- mask[ai[k], ]
+          if (any(sits)) scores[r, sits] <- scores[r, sits] + pool$cuff_bump[r]
+        }
+      }
       scores[mask] <- 0
     }
   }

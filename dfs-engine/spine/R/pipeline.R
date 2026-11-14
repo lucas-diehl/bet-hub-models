@@ -71,6 +71,16 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
   field <- simulate_field(pool, rr, field_n = field_n, own = own)
   cands <- make_candidates(pool, rr, n_cand = n_cand)
   res   <- grade_candidates(cands, sim, field, curve_gpp = make_gpp(), curve_cash = make_double_up())
+  # combination uniqueness vs the simulated field (report_card.R): feeds the report's
+  # hidden-gem list always; nudges the gpp20 ranking only when DFS_GEM_TIEBREAK=1 (UNVALIDATED:
+  # no historical field/contest data to test it on, so it stays opt-in).
+  tryCatch({
+    res[, near := combo_near_overlap(idx, field$idx, nrow(pool))]
+    if (Sys.getenv("DFS_GEM_TIEBREAK", "0") == "1" && any(is.finite(res$near))) {
+      z <- (res$near - mean(res$near, na.rm = TRUE)) / max(stats::sd(res$near, na.rm = TRUE), 1e-9)
+      res[, rank_score := proj - 0.5 * fifelse(is.finite(z), z, 0)]
+    }
+  }, error = function(e) msg("  combo uniqueness skipped:", conditionMessage(e)))
   # conviction caps (portfolio.R): per-player max exposure from sim-optimal frequency,
   # replacing the flat cap. Opt-in per sport via rr$conviction (NFL, 2026-11-13).
   nat <- if (isTRUE(rr$conviction))
@@ -79,8 +89,14 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
   picks <- if (identical(gpp_mode, "gpp20"))
              build_gpp20(res, gates, n = n_lineups, pool = pool, rr = rr,
                          caps = tryCatch(load_exposure_overrides(sport), error = function(e) NULL),
+                         min_caps = tryCatch(load_exposure_minimums(sport), error = function(e) NULL),
                          player_caps = conviction_caps(pool, nat, 0.50))
            else build_portfolio(res, gates, n = n_lineups)
+  # report card + alerts (report_card.R). Alerts read the PREVIOUS build's lineups, so they
+  # must run before persist_recommended_lineups() below overwrites today's rows.
+  report <- tryCatch(portfolio_report(list(picks = picks, pool = pool, res = res, rr = rr)), error = function(e) NULL)
+  tryCatch(log_report(report, sport), error = function(e) NULL)
+  alerts <- if (persist) tryCatch(stale_lineup_alerts(slate_obj$slate_id, pool), error = function(e) list()) else list()
   # archive projections + recommended lineups (best-effort; never fail the build).
   # persist=FALSE for read-only consumers (e.g. the /dfs exposure optimizer) so they
   # never overwrite the dashboard's archived lineups.
@@ -90,5 +106,7 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
     tryCatch(mark_slate_built(slate_obj$slate_id), error = function(e) NULL)
   }
   list(sport = sport, slate_id = slate_obj$slate_id, pool = pool, sim = sim,
-       field = field, res = res, picks = picks, gates = gates, rr = rr, nat = nat)
+       field = field, res = res, picks = picks, gates = gates, rr = rr, nat = nat,
+       report = report, alerts = alerts,
+       provisional = tryCatch(is_provisional_build(slate_obj$date), error = function(e) FALSE))
 }

@@ -177,7 +177,7 @@ dash_contest_options <- function(sport, fs) {
 N_ALT_SETS <- 50L
 .alt_lineup_sets <- function(res, gates, pool, rr, caps, n_alt = N_ALT_SETS, n = 20L,
                              exp_cap = 0.50, jitter_sd = 0.04, use_gpp20 = TRUE, seed0 = 7000L,
-                             nat = NULL) {
+                             nat = NULL, mins = NULL) {
   pcaps <- conviction_caps(pool, nat, exp_cap)   # NULL (flat cap) unless the sport opted in
   if (is.null(res) || !nrow(res)) return(list())
   lapply(seq_len(n_alt), function(i) {
@@ -188,10 +188,11 @@ N_ALT_SETS <- 50L
     # which proj-only jitter never touched. Confirmed live: all 50 "cash" sets came back
     # byte-identical before this -- p_cash is the one that actually needed it.
     rj[, proj   := proj   * (1 + stats::rnorm(.N, 0, jitter_sd))]
+    if ("rank_score" %in% names(rj)) rj[, rank_score := rank_score * (1 + stats::rnorm(.N, 0, jitter_sd))]
     if ("p_cash" %in% names(rj)) rj[, p_cash := p_cash * (1 + stats::rnorm(.N, 0, jitter_sd))]
     picks <- tryCatch(
       if (use_gpp20) build_gpp20(rj, gates, n = n, exp_cap = exp_cap, pool = pool, rr = rr, caps = caps,
-                                 player_caps = pcaps)
+                                 player_caps = pcaps, min_caps = if (n >= 5L) mins else NULL)
       else build_portfolio(rj, gates, n = n),
       error = function(e) list())
     # idx (0-based, for the browser) + win (P[1st], from res's own un-jittered grading --
@@ -207,11 +208,12 @@ N_ALT_SETS <- 50L
   if (is.null(r$res) || !("idx" %in% names(r$res)) || !nrow(r$res)) return(NULL)
   gates <- r$gates %||% list(cash_enabled = FALSE, gpp_enabled = FALSE)
   caps <- tryCatch(load_exposure_overrides(r$sport), error = function(e) NULL)
+  mins <- tryCatch(load_exposure_minimums(r$sport), error = function(e) NULL)
   list(
     cash   = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 5L,  exp_cap = 1.00, use_gpp20 = FALSE),
     single = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 1L,  exp_cap = 1.00, use_gpp20 = TRUE),
-    gpp20  = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 20L, exp_cap = 0.50, use_gpp20 = TRUE, nat = r$nat),
-    large  = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 60L, exp_cap = 0.30, use_gpp20 = TRUE, nat = r$nat)
+    gpp20  = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 20L, exp_cap = 0.50, use_gpp20 = TRUE, nat = r$nat, mins = mins),
+    large  = .alt_lineup_sets(r$res, gates, r$pool, r$rr, caps, n = 60L, exp_cap = 0.30, use_gpp20 = TRUE, nat = r$nat, mins = mins)
   )
 }
 
@@ -241,6 +243,18 @@ build_sim_payload <- function(r, K = 1000L, opt_sims = 50000L) {
   # below the field-sim-only baseline) and costs nothing extra (r$res is already
   # computed as part of this same build) -- so take both, not a swap.
   u_field <- r$field$idx[!duplicated(r$field$keys)]
+  # The simulated FIELD is deliberately unconstrained (it models opponents), so for a sport
+  # with hard lineup rules (NFL stacking) its lineups would put naked-QB / RB-vs-own-DST
+  # builds back into the browser optimizer. Keep only rule-legal field lineups as candidates
+  # (2026-11-13); the field itself, used for grading, is untouched.
+  if (is.function(r$rr$stack_hard)) {
+    con_h <- tryCatch(build_constraints(as.data.table(r$sim$pool), r$rr), error = function(e) NULL)
+    if (!is.null(con_h)) {
+      legal <- vapply(u_field, lineup_legal, logical(1), con = con_h)
+      if (any(!legal)) msg(sprintf("  sim payload: dropped %d of %d field lineups that break the lineup rules", sum(!legal), length(legal)))
+      u_field <- u_field[legal]
+    }
+  }
   u <- if (!is.null(r$res) && "idx" %in% names(r$res)) {
     u2 <- c(u_field, r$res$idx)
     u2[!duplicated(vapply(u2, function(ix) paste(sort(ix), collapse = "-"), character(1)))]
@@ -387,8 +401,13 @@ build_sport_card <- function(sport, date, slate = "main", n_lineups = 8L,
   # build (proj-ranked, ~0.5 exposure) with a 20-lineup set on every classic card.
   n_lineups <- 20L
   extra_run <- extra; extra_run$override_slate <- NULL  # internal marker; don't leak into slate_obj
+  # NFL classic: 1,500 candidates (2026-11-13 backtest, 30 DK main slates 2023-25: the
+  # pool's best ACTUAL lineup rose +11.3 pts vs a 400 pool, t=5.9, and lineups within 75%
+  # of the hindsight optimum went 0.3 -> 1.5 per slate -- far more "diamonds in the mine").
+  # Costs ~4-6 min more per classic slate. DFS_NFL_NCAND overrides.
+  ncand <- if (identical(psport, "nfl")) as.integer(Sys.getenv("DFS_NFL_NCAND", "1500")) else 300L
   r <- tryCatch(run_slate(psport, date = date, slate = slate, n_lineups = n_lineups, extra = extra_run,
-                          n_sims = 4000L, field_n = 1200L, n_cand = 300L, gpp_mode = "gpp20"),
+                          n_sims = 4000L, field_n = 1200L, n_cand = ncand, gpp_mode = "gpp20"),
                 error = function(e) e)
   if (inherits(r, "error"))
     return(c(base, list(status = "error",
@@ -418,9 +437,17 @@ build_sport_card <- function(sport, date, slate = "main", n_lineups = 8L,
            proj = round(P$proj[j], 1), own = round((if ("own" %in% names(P)) P$own[j] else 0), 4)))) })
 
   sim_payload <- tryCatch(build_sim_payload(r), error = function(e) { msg("  sim payload skipped:", conditionMessage(e)); NULL })
-  if (!is.null(sim_payload))                                        # contest dropdown options
+  if (!is.null(sim_payload)) {                                      # contest dropdown options
     sim_payload$contests <- tryCatch(dash_contest_options(sport, sim_payload$field_size),
                                      error = function(e) NULL)
+    # build report card, stale-lineup alerts, provisional flag (report_card.R)
+    sim_payload$report      <- r$report
+    sim_payload$alerts      <- if (length(r$alerts)) r$alerts else NULL
+    # provisional = built on an earlier day than the slate's games (e.g. Thursday for Sunday)
+    sd <- extra$override_slate$StartDateEst %||% (if (psport != "golf") ms$start_date %||% ms$StartDateEst else NULL)
+    sim_payload$provisional <- if (!is.null(sd) && !is.na(sd) && nzchar(sd))
+      tryCatch(is_provisional_build(substr(as.character(sd), 1, 10)), error = function(e) FALSE) else isTRUE(r$provisional)
+  }
 
   c(base, list(status = "ready", slate_id = r$slate_id,
     slate_label = extra$override_slate$layout_label %||% NULL,

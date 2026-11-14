@@ -1,5 +1,5 @@
 {
-  "_comment": "Per-player MAX-exposure overrides for the 20-entry GPP build (gpp20). Value = max fraction of the lineup set a player may appear in (0-1). Overrides the global/conviction cap in EITHER direction: 0.80 lets a smash spot go overweight, 0.10 fades a player. Example: \"nfl\": {\"Christian McCaffrey\": 0.80}. Others keep the computed cap. Name matching is order-insensitive (First Last or Last, First both work). Edit weekly for injuries/news; delete an entry to remove the cap.",
+  "_comment": "Per-player MAX-exposure overrides for the 20-entry GPP build (gpp20). Value = max fraction of the lineup set a player may appear in (0-1). Overrides the global/conviction cap in EITHER direction: 0.80 lets a smash spot go overweight, 0.10 fades a player. Example: \"nfl\": {\"Christian McCaffrey\": 0.80}. MINIMUMS: use an object, e.g. \"nfl\": {\"Christian McCaffrey\": {\"min\": 0.40, \"max\": 0.80}} -- mins are filled first (forced in by a direct solve if needed); applies to the 20-max and Large builds. Others keep the computed cap. Name matching is order-insensitive (First Last or Last, First both work). Edit weekly for injuries/news; delete an entry to remove the cap.",
   "golf": {
     "Scottie Scheffler": 0.40
   }

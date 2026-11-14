@@ -68,6 +68,8 @@ nfl_fd_scoring <- function(box) {
 if (exists("nfl_stack_hard") && Sys.getenv("DFS_NFL_STACK", "1") != "0") {
   NFL_ROSTER$stack_hard    <- nfl_stack_hard;  NFL_ROSTER$stack_draw    <- nfl_stack_draw
   NFL_ROSTER_FD$stack_hard <- nfl_stack_hard;  NFL_ROSTER_FD$stack_draw <- nfl_stack_draw
+  NFL_ROSTER$quota <- NFL_QUOTA;                NFL_ROSTER_FD$quota <- NFL_QUOTA
+  NFL_ROSTER$shape <- nfl_lineup_shape;         NFL_ROSTER_FD$shape <- nfl_lineup_shape
 }
 # Conviction caps (portfolio.R) replace the flat per-player cap in the 20-max / large
 # presets. Backtest 2026-11-13, 51 real DK main slates 2023-25, 20 lineups each, scored
