@@ -76,7 +76,8 @@ portfolio_report <- function(r, top_k = 5L) {
   list(lineups = n, depth = depth, positions_used = used_by_pos, overlap_pairs = overlap,
        most_exposed = lapply(most, row), leverage = lapply(levj, row), fades = lapply(fadej, row),
        shapes = shapes, vacated_bumps = vac, second_opinion = alt,
-       hidden_gems = tryCatch(hidden_gems(res, pool), error = function(e) NULL))
+       hidden_gems = tryCatch(hidden_gems(res, pool), error = function(e) NULL),
+       chalk = tryCatch(chalk_report(pool), error = function(e) NULL))
 }
 
 # HIDDEN GEMS (MobyWhaler, 2026-11-12: two chalky-looking lineups whose exact player combos
@@ -104,6 +105,34 @@ hidden_gems <- function(res, pool, top_frac = 0.10, max_n = 5L) {
     players = pool$player_name[G$idx[[i]]]))
 }
 
+# GOOD CHALK / BAD CHALK (MobyWhaler's Saturday report, automated 2026-11-14). The slate's
+# most-owned players with our value (proj per $1k, ranked within position), ceiling and the
+# second-opinion projection. Verdict:
+#   good  = top-third value at his position and no >20% disagreement with the second source
+#   bad   = bottom-half value at his position, OR the second source projects him >20% above us
+#           (the field will chase a number we don't believe), OR we're >20% ABOVE the second
+#           source (our number may be stale news)
+#   watch = everything else
+chalk_report <- function(pool, min_own = 0.12, max_n = 12L) {
+  P <- as.data.table(pool)
+  if (!all(c("own", "proj", "salary", "position") %in% names(P))) return(NULL)
+  P[, pos := toupper(position)][, value := proj / pmax(salary / 1000, 0.1)]
+  P[, vrank := frank(-value) / .N, by = pos]
+  C <- P[is.finite(own) & own >= min_own][order(-own)][seq_len(min(.N, max_n))]
+  if (!nrow(C)) return(NULL)
+  alt <- if ("alt_proj" %in% names(C)) C$alt_proj else rep(NA_real_, nrow(C))
+  verdict <- ifelse(C$vrank > 0.5 | (is.finite(alt) & alt > 1.2 * C$proj) | (is.finite(alt) & C$proj > 1.2 * alt), "bad",
+             ifelse(C$vrank <= 1/3, "good", "watch"))
+  why <- ifelse(is.finite(alt) & C$proj > 1.2 * alt, "we're well above the second source",
+         ifelse(is.finite(alt) & alt > 1.2 * C$proj, "second source well above us",
+         ifelse(C$vrank > 0.5, "below-median value at his position",
+         ifelse(C$vrank <= 1/3, "top-third value at his position", "middling value"))))
+  lapply(seq_len(nrow(C)), function(i) list(name = C$player_name[i], pos = C$pos[i], salary = as.integer(C$salary[i]),
+    own = round(C$own[i], 3), proj = round(C$proj[i], 1), value = round(C$value[i], 2),
+    ceil = if ("ceil" %in% names(C)) round(C$ceil[i], 1) else NA, other = if (is.finite(alt[i])) round(alt[i], 1) else NA,
+    verdict = verdict[i], why = why[i]))
+}
+
 # Print a compact version of the report to the build log.
 log_report <- function(rep, sport = "") {
   if (is.null(rep)) return(invisible())
@@ -115,6 +144,8 @@ log_report <- function(rep, sport = "") {
   f <- function(l) paste(vapply(l, function(x) sprintf("%s %+.0f%%", x$name, 100 * x$lev), ""), collapse = ", ")
   if (length(rep$leverage)) msg("  report: leverage:", f(rep$leverage))
   if (length(rep$fades)) msg("  report: fades:", f(rep$fades))
+  if (length(rep$chalk)) msg("  report: chalk:", paste(vapply(rep$chalk, function(x)
+    sprintf("%s %.0f%% [%s]", x$name, 100 * x$own, toupper(x$verdict)), ""), collapse = ", "))
   if (length(rep$second_opinion)) msg("  report: big gaps vs second source:", paste(vapply(rep$second_opinion, function(x)
     sprintf("%s ours %.1f / other %s", x$name, x$ours, if (is.na(x$other)) "none" else sprintf("%.1f", x$other)), ""), collapse = "; "))
   invisible()

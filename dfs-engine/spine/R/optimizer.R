@@ -56,6 +56,46 @@ build_constraints <- function(pool, rr) {
   out
 }
 
+# SIM-OPTIMAL candidate generator (added 2026-11-14; MobyWhaler's "diamonds in the mine").
+# Each candidate = the optimal legal lineup for ONE simulated outcome of the slate (plus that
+# draw's random stack shape). One ILP per candidate and almost no duplicates, so it scales
+# linearly (make_candidates' perturbation approach spends most of its time rediscovering
+# duplicates once the pool is large: ~7 min for 1,500 on a 230-player slate), and every
+# lineup is by construction a ceiling outcome for some plausible game script.
+make_candidates_sim <- function(pool, sim, rr, n_cand = 1500L, seed = NULL) {
+  if (is.null(sim$scores) || !ncol(sim$scores)) return(list())
+  if (!is.null(seed)) set.seed(seed)
+  pool <- as.data.table(pool); S <- sim$scores; K <- ncol(S)
+  if (nrow(S) != nrow(pool)) return(list())
+  con <- build_constraints(pool, rr)
+  cols <- sample.int(K, min(n_cand, K)); if (n_cand > K) cols <- c(cols, sample.int(K, n_cand - K, replace = TRUE))
+  out <- list(); seen <- character(0); jit <- 0
+  for (s in cols) {
+    con_s <- if (is.function(rr$stack_draw)) con_append(con, rr$stack_draw(pool)) else con
+    obj <- S[, s]; if (jit > 0) obj <- obj + stats::rnorm(length(obj), 0, jit)
+    idx <- ilp_solve(obj, pool, rr, con_s)
+    if (is.null(idx)) next
+    key <- paste(sort(idx), collapse = "-")
+    if (key %in% seen) { jit <- jit + 0.5; next }
+    seen <- c(seen, key); jit <- 0
+    out[[length(out) + 1L]] <- list(idx = idx, family = "simopt")
+  }
+  msg(sprintf("  make_candidates_sim: %d distinct sim-optimal lineups from %d draws", length(out), length(cols)))
+  out
+}
+
+# CEILING RATE per candidate (added 2026-11-14; MobyWhaler ranks on sim top-1% rate, not raw
+# projection): share of simulated slates in which the lineup lands in the top `q` of the
+# candidate pool's own scores for that sim. Within-pool, so it needs no field model.
+cand_ceiling_rate <- function(cand_idx, sim, q = 0.98, max_k = 2000L) {
+  S <- sim$scores; if (is.null(S) || !length(cand_idx)) return(rep(NA_real_, length(cand_idx)))
+  K <- min(ncol(S), max_k); S <- S[, seq_len(K), drop = FALSE]
+  C <- matrix(0, length(cand_idx), nrow(S)); for (i in seq_along(cand_idx)) C[i, cand_idx[[i]]] <- 1
+  sc <- C %*% S                                               # n_cand x K lineup totals
+  thr <- apply(sc, 2, stats::quantile, probs = q, names = FALSE)
+  rowMeans(sweep(sc, 2, thr, ">="))
+}
+
 # Does a lineup (row indices) satisfy every row of a constraint system? Used to keep
 # rule-breaking lineups (e.g. the unconstrained simulated FIELD's naked-QB builds) out of
 # the browser optimizer's candidate list.

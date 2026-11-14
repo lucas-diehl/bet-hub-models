@@ -71,6 +71,13 @@ if (exists("nfl_stack_hard") && Sys.getenv("DFS_NFL_STACK", "1") != "0") {
   NFL_ROSTER$quota <- NFL_QUOTA;                NFL_ROSTER_FD$quota <- NFL_QUOTA
   NFL_ROSTER$shape <- nfl_lineup_shape;         NFL_ROSTER_FD$shape <- nfl_lineup_shape
 }
+# SALARY FLOOR (added 2026-11-14; ETR, 452 Milly top-10 lineups: only 6% left >$500 unused
+# vs 12% of the field; MobyWhaler's generator enforces a salary minimum). DK $49,000 /
+# FD $59,000 by default; DFS_NFL_SAL_FLOOR=0 disables (FD = DK value + 10,000).
+local({
+  fl <- suppressWarnings(as.integer(Sys.getenv("DFS_NFL_SAL_FLOOR", "49000")))
+  if (is.finite(fl) && fl > 0) { NFL_ROSTER$floor <<- fl; NFL_ROSTER_FD$floor <<- fl + 10000L }
+})
 # Conviction caps (portfolio.R) replace the flat per-player cap in the 20-max / large
 # presets. Backtest 2026-11-13, 51 real DK main slates 2023-25, 20 lineups each, scored
 # on ACTUAL points vs the old build: stacking + conviction was the best of 6 variants on
@@ -80,6 +87,19 @@ if (exists("nfl_stack_hard") && Sys.getenv("DFS_NFL_STACK", "1") != "0") {
 if (Sys.getenv("DFS_NFL_CONVICTION", "1") != "0") {
   NFL_ROSTER$conviction <- TRUE; NFL_ROSTER_FD$conviction <- TRUE
 }
+# SIM-OPTIMAL candidates (optimizer.R make_candidates_sim) added on top of the perturbed pool.
+# Backtest 2026-11-14 (51 DK main slates 2023-25, 20 lineups, actual points): with R1 caps +
+# salary floor + QB+2 cap, best lineup +4.2 (t 2.2) / top-3 +2.6 (t 2.3) vs the 2026-11-13
+# build, holding in the 2025 holdout; pool lineups within 75% of the hindsight optimum
+# 0.3 -> 1.7 per slate -- the same ceiling as a 1,500 perturbed pool at ~1/5 of the build
+# time. QB+2 share 30% -> 42% (Milly top-10: 41%). DFS_NFL_CAND_SIM overrides (0 = off).
+# Ranking stays projection-based: blending in the sim ceiling rate (rank_mode "blend") did
+# NOT help (+0.4, inconsistent across the holdout).
+local({
+  ns <- suppressWarnings(as.integer(Sys.getenv("DFS_NFL_CAND_SIM", "1500")))
+  if (is.finite(ns) && ns > 0) { NFL_ROSTER$cand_sim <<- ns; NFL_ROSTER_FD$cand_sim <<- ns }
+  NFL_ROSTER$rank_mode <<- Sys.getenv("DFS_NFL_RANK", "proj"); NFL_ROSTER_FD$rank_mode <<- NFL_ROSTER$rank_mode
+})
 
 register_sport("nfl", list(
   ingest          = if (exists("nfl_ingest")) nfl_ingest else NULL,

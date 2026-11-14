@@ -63,6 +63,7 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
   # SAFEGUARD: drop DK-slate players the freshest feed says won't play + discount questionable
   # (the #1 live error — WNBA scratches / NFL inactives). No-op for golf/tennis (no feed).
   pool <- tryCatch(apply_inactives(pool, sport, date), error = function(e) pool)
+  pool <- tryCatch(drop_excluded_players(pool, sport), error = function(e) pool)   # overrides with max 0
   if (persist) tryCatch(persist_projected_ownership(pool, slate_obj$slate_id, sport), error = function(e) NULL)
   loadings <- get_loadings(pool, sport)
   sim   <- slate_sim(pool, loadings, team_loadings = get_team_loadings(pool, sport),
@@ -70,7 +71,22 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
   own   <- if ("own" %in% names(pool)) pmax(pool$own, 1e-3) else rep(1, nrow(pool))
   field <- simulate_field(pool, rr, field_n = field_n, own = own)
   cands <- make_candidates(pool, rr, n_cand = n_cand)
+  # SIM-OPTIMAL candidates on top of the perturbed pool (optimizer.R; opt-in per sport via
+  # rr$cand_sim = how many). Deduped against the perturbed pool before grading.
+  if (is.numeric(rr$cand_sim) && rr$cand_sim > 0) {
+    extra <- tryCatch(make_candidates_sim(pool, sim, rr, as.integer(rr$cand_sim), seed = seed), error = function(e) list())
+    cands <- c(cands, extra)
+    cands <- cands[!duplicated(vapply(cands, function(x) paste(sort(x$idx), collapse = "-"), ""))]
+  }
   res   <- grade_candidates(cands, sim, field, curve_gpp = make_gpp(), curve_cash = make_double_up())
+  # ceiling rate (share of sims a lineup lands in the pool's top 2%); ranks the gpp20 build
+  # with projection when rr$rank_mode == "blend" (MobyWhaler ranks on sim top-1% rate).
+  tryCatch({
+    res[, ceil_rate := cand_ceiling_rate(idx, sim)]
+    if (identical(rr$rank_mode, "blend") && any(is.finite(res$ceil_rate)))
+      res[, rank_score := (proj - mean(proj)) / max(stats::sd(proj), 1e-9) +
+                          (ceil_rate - mean(ceil_rate)) / max(stats::sd(ceil_rate), 1e-9)]
+  }, error = function(e) msg("  ceiling rate skipped:", conditionMessage(e)))
   # combination uniqueness vs the simulated field (report_card.R): feeds the report's
   # hidden-gem list always; nudges the gpp20 ranking only when DFS_GEM_TIEBREAK=1 (UNVALIDATED:
   # no historical field/contest data to test it on, so it stays opt-in).
@@ -78,7 +94,8 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
     res[, near := combo_near_overlap(idx, field$idx, nrow(pool))]
     if (Sys.getenv("DFS_GEM_TIEBREAK", "0") == "1" && any(is.finite(res$near))) {
       z <- (res$near - mean(res$near, na.rm = TRUE)) / max(stats::sd(res$near, na.rm = TRUE), 1e-9)
-      res[, rank_score := proj - 0.5 * fifelse(is.finite(z), z, 0)]
+      base_rank <- if ("rank_score" %in% names(res)) res$rank_score else (res$proj - mean(res$proj)) / max(stats::sd(res$proj), 1e-9)
+      res[, rank_score := base_rank - 0.25 * fifelse(is.finite(z), z, 0)]
     }
   }, error = function(e) msg("  combo uniqueness skipped:", conditionMessage(e)))
   # conviction caps (portfolio.R): per-player max exposure from sim-optimal frequency,

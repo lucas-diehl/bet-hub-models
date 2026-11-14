@@ -401,11 +401,11 @@ build_sport_card <- function(sport, date, slate = "main", n_lineups = 8L,
   # build (proj-ranked, ~0.5 exposure) with a 20-lineup set on every classic card.
   n_lineups <- 20L
   extra_run <- extra; extra_run$override_slate <- NULL  # internal marker; don't leak into slate_obj
-  # NFL classic: 1,500 candidates (2026-11-13 backtest, 30 DK main slates 2023-25: the
-  # pool's best ACTUAL lineup rose +11.3 pts vs a 400 pool, t=5.9, and lineups within 75%
-  # of the hindsight optimum went 0.3 -> 1.5 per slate -- far more "diamonds in the mine").
-  # Costs ~4-6 min more per classic slate. DFS_NFL_NCAND overrides.
-  ncand <- if (identical(psport, "nfl")) as.integer(Sys.getenv("DFS_NFL_NCAND", "1500")) else 300L
+  # NFL classic: 400 perturbed candidates PLUS 1,500 sim-optimal ones (rr$cand_sim, see
+  # sports/nfl/roster.R). A 1,500 PERTURBED pool (2026-11-13) bought the same ceiling --
+  # pool's best actual lineup +11 pts, lineups within 75% of optimal 0.3 -> 1.5/slate -- but
+  # took ~5x longer to build. DFS_NFL_NCAND overrides the perturbed count.
+  ncand <- if (identical(psport, "nfl")) as.integer(Sys.getenv("DFS_NFL_NCAND", "400")) else 300L
   r <- tryCatch(run_slate(psport, date = date, slate = slate, n_lineups = n_lineups, extra = extra_run,
                           n_sims = 4000L, field_n = 1200L, n_cand = ncand, gpp_mode = "gpp20"),
                 error = function(e) e)

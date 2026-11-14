@@ -59,7 +59,23 @@ NFL_STACK <- list(
   # implied points, require one of its RBs in p_rb_dst of draws (game script: a leading
   # team runs, and its defence faces a trailing, passing opponent).
   rb_dst_margin    = 6,
-  p_rb_dst         = 0.50)
+  p_rb_dst         = 0.50,
+  # QB+2 CAP (added 2026-11-14, MobyWhaler's generator cap; Milly top-10 QB+3 was 3.3%):
+  # at most this many of the QB's own WR/TE in one lineup.
+  max_qb_pc        = 2L)
+
+# USER lists from config/exposure_overrides.json (added 2026-11-14, MobyWhaler practices):
+#   "nfl_stack_only": players legal ONLY when their own QB is in the lineup (chalky pass
+#                     catchers you'd only play inside a stack)
+#   "nfl_naked_ok":   QBs allowed to go naked (cheap QBs whose receivers the field stacks),
+#                     on top of the automatic rushing-QB exemption
+.nfl_user_lists <- function() {
+  f <- tryCatch(dfs_path("config", "exposure_overrides.json"), error = function(e) "")
+  j <- if (nzchar(f) && file.exists(f)) tryCatch(jsonlite::fromJSON(f, simplifyVector = TRUE), error = function(e) NULL) else NULL
+  g <- function(k) { v <- j[[k]]; if (is.null(v) || !length(v)) character(0) else norm_name(as.character(unlist(v))) }
+  list(stack_only = g("nfl_stack_only"), naked_ok = g("nfl_naked_ok"))
+}
+.nfl_norm_col <- function(pool) if ("norm" %in% names(pool)) pool$norm else norm_name(pool$player_name)
 
 # PORTFOLIO quotas (read by build_gpp20 via rr$quota). An unconstrained (naked) build always
 # out-projects a constrained one, so a proj-ranked selection would otherwise fill the
@@ -84,8 +100,11 @@ nfl_lineup_shape <- function(idx, pool) {
 }
 
 .nfl_rushing_qb <- function(pool, pos, opts = NFL_STACK) {
-  if (!"rush_yds" %in% names(pool)) return(rep(FALSE, nrow(pool)))
-  pos == "QB" & is.finite(pool$rush_yds) & pool$rush_yds >= opts$rush_qb_yds
+  rush <- if ("rush_yds" %in% names(pool)) pos == "QB" & is.finite(pool$rush_yds) & pool$rush_yds >= opts$rush_qb_yds
+          else rep(FALSE, nrow(pool))
+  ok <- .nfl_user_lists()$naked_ok                                       # user-listed naked QBs count too
+  if (length(ok)) rush <- rush | (pos == "QB" & .nfl_norm_col(pool) %in% ok)
+  rush
 }
 
 .nfl_pos_key <- function(pool) {
@@ -135,6 +154,15 @@ nfl_stack_hard <- function(pool, opts = NFL_STACK) {
     if (is.na(opp[d])) next
     r <- as.numeric(off & !is.na(team) & team == opp[d])
     if (any(r > 0)) { r[d] <- 9; R$add(r, "<=", 9) }
+  }
+  if (is.finite(opts$max_qb_pc %||% Inf)) for (q in which(pos == "QB" & !is.na(team))) {   # 6. QB+2 cap
+    r <- as.numeric(pc & team == team[q])
+    if (sum(r) > opts$max_qb_pc) { r[q] <- 9; R$add(r, "<=", opts$max_qb_pc + 9) }
+  }
+  so <- .nfl_user_lists()$stack_only                                     # 7. stack-only players
+  if (length(so)) for (p in which(.nfl_norm_col(pool) %in% so & skill & !is.na(team))) {
+    r <- -as.numeric(pos == "QB" & team == team[p]); r[p] <- 1
+    R$add(r, "<=", 0)
   }
   R$get()
 }

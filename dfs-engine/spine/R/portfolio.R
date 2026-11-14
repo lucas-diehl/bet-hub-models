@@ -177,15 +177,35 @@ natural_exposure <- function(pool, sim, rr, n_draws = 200L, seed = NULL) {
   hits / ok
 }
 
-CONVICTION_POS_CEIL <- c(QB = 0.40, DST = 0.30, DEF = 0.30, CPT = 0.40)
+# Position ceilings are ABSOLUTE (fixed 2026-11-14). The first version lifted every ceiling
+# to at least the flat base cap, so at the 50% base a single QB/DST could still sit in half
+# the set and the ceilings did nothing. MobyWhaler caps QB ~15% and DST 12-15% (never > 20%,
+# DST scoring is the most random); Stokastic QB 20-30%. For 20-entry sets: QB 25% (5 of 20),
+# DST 20% (4 of 20). The floor (half the base cap) never exceeds a position's ceiling.
+CONVICTION_POS_CEIL <- c(QB = 0.25, DST = 0.20, DEF = 0.20, CPT = 0.40)
 conviction_caps <- function(pool, nat, base_cap, skill_ceil = 0.70, n_ref = 10L) {
   if (is.null(nat) || base_cap >= 0.999) return(NULL)        # cash / single-entry: no caps to scale
   ref <- mean(sort(nat, decreasing = TRUE)[seq_len(min(n_ref, sum(nat > 0)))])
   if (!is.finite(ref) || ref <= 0) return(NULL)
   pos  <- toupper(as.character(pool$position))
   ceil <- CONVICTION_POS_CEIL[pos]; ceil[is.na(ceil)] <- skill_ceil
-  ceil <- pmax(ceil, pmin(base_cap, skill_ceil))             # a ceiling never sits below the flat cap it replaces
-  pmin(ceil, pmax(0.5 * base_cap, base_cap * nat / ref))
+  pmin(ceil, pmax(pmin(0.5 * base_cap, ceil), base_cap * nat / ref))
+}
+
+# order-insensitive name key ("First Last" == "Last, First"), shared by override matching
+name_key <- function(x) vapply(as.character(x), function(s) {
+  t <- strsplit(gsub("[^a-z0-9 ]", " ", tolower(s)), "\\s+")[[1]]; t <- t[nzchar(t)]
+  paste(sort(t), collapse = " ") }, character(1), USE.NAMES = FALSE)
+
+# Players with a max-exposure override of 0 ("won't play no matter what", MobyWhaler's pool
+# pruning) are removed from the pool entirely, so no candidate -- engine or browser -- uses them.
+drop_excluded_players <- function(pool, sport) {
+  ov <- tryCatch(load_exposure_overrides(sport), error = function(e) NULL)
+  ex <- names(ov)[is.finite(ov) & ov <= 0]
+  if (!length(ex) || !"player_name" %in% names(pool)) return(pool)
+  drop <- name_key(pool$player_name) %in% name_key(ex)
+  if (any(drop)) msg(sprintf("  excluded by override (max 0): %s", paste(pool$player_name[drop], collapse = ", ")))
+  pool[!drop]
 }
 
 build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap = 0.50,
@@ -228,7 +248,7 @@ build_gpp20 <- function(res, gates = list(gpp_enabled = FALSE), n = 20L, exp_cap
     P <- P0 %||% as.data.table(pool); nmcol <- if ("player_name" %in% names(P)) "player_name" else names(P)[1]
     ck <- .nkey(names(caps)); cv <- as.numeric(caps); pk <- .nkey(P[[nmcol]])
     for (j in seq_len(nrow(P))) { m <- match(pk[j], ck)
-      if (!is.na(m)) pcap[keyf(j)] <- max(1L, floor(n * cv[m])) }
+      if (!is.na(m)) pcap[keyf(j)] <- if (cv[m] <= 0) 0L else max(1L, floor(n * cv[m])) }
     if (length(pcap)) msg("  20-max GPP: player exposure caps applied to", length(pcap), "player(s)")
   }
   cap_of <- function(k) { v <- pcap[k]; if (is.na(v)) base_cap else v }
@@ -451,7 +471,7 @@ load_exposure_overrides <- function(sport) {
   # an entry is either a number (max) or an object {"min": x, "max": y}
   v <- vapply(o, function(e) { x <- if (is.list(e)) e$max else e
     if (is.null(x)) NA_real_ else suppressWarnings(as.numeric(x)) }, numeric(1))
-  v <- v[is.finite(v) & v > 0 & v <= 1]
+  v <- v[is.finite(v) & v >= 0 & v <= 1]                     # 0 = exclude the player outright
   if (length(v)) v else NULL
 }
 
