@@ -302,10 +302,19 @@ nfl_project_players <- function(slate) {
   # 12 slates / 1972 rows, 10 of 10 valid folds: mean per-slate corr 0.42->0.69, pooled
   # corr 0.28->0.45, RMSE -52%) when one exists, else the value-rank heuristic (cold-start
   # fallback; also the fallback for any sport too data-thin to train, see train_ownership_model).
-  own_pred <- tryCatch(predict_ownership(pool, "nfl"), error = function(e) NULL)
+  # FIELD VIEW (2026-11-14): ownership is driven by the projections the FIELD sees, not ours.
+  # Measured on 5 slates of real DK %Drafted (contest-standings exports): every miss on true
+  # chalk was a player our projection didn't rate (a $7,800 WR at 28% owned was our 117th-
+  # best value) -- model structure (softmax, sharpening) did not fix it, inputs would. So the
+  # ownership model is fed our projection blended 50/50 with Sleeper's (consensus-style),
+  # where Sleeper has the player. UNVALIDATED on history (no past Sleeper numbers) -- Sleeper
+  # projections are now persisted every build (pipeline.R) so this can be trained/validated.
+  own_in <- copy(pool)
+  if ("alt_proj" %in% names(own_in)) own_in[is.finite(alt_proj) & alt_proj >= 0, proj := 0.5 * proj + 0.5 * alt_proj]
+  own_pred <- tryCatch(predict_ownership(own_in, "nfl"), error = function(e) NULL)
   if (!is.null(own_pred) && length(own_pred) == nrow(pool)) {
     pool[, own := pmax(own_pred, 0.005)]
-    msg("  NFL ownership: trained model")
+    msg("  NFL ownership: trained model (fed our projection blended 50/50 with the second source)")
   } else {
     pool[, .val := proj / pmax(salary / 1000, 0.1)]
     r <- frank(pool$.val) / nrow(pool)

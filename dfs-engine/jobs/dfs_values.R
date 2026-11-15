@@ -183,7 +183,7 @@ dfs_feed_dir <- function() Sys.getenv("FEED_DIR", "C:/Users/ljdie/OneDrive/Docum
   q <- "WITH latest AS (
           SELECT player_id, proj_mean, ceil, p_zero,
                  ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY version_ts DESC) rn
-          FROM projections WHERE slate_id = ?)
+          FROM projections WHERE slate_id = ? AND source <> 'second_opinion')
         SELECT sa.player_id, pl.name, sa.team, sa.position, sa.salary,
                l.proj_mean AS proj, l.ceil, l.p_zero, ow.projected_pct AS own
         FROM salaries sa

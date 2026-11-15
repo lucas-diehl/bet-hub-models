@@ -41,6 +41,7 @@ ownership_training_data <- function(sport = NULL) {
          sal AS (SELECT slate_id, player_id, MAX(salary) salary FROM salaries GROUP BY 1,2),
          posn AS (SELECT slate_id, player_id, MAX(position) AS pos FROM salaries GROUP BY 1,2),
          prj AS (SELECT slate_id, player_id, proj_mean AS proj FROM projections
+                 WHERE source <> 'second_opinion'
                  QUALIFY ROW_NUMBER() OVER (PARTITION BY slate_id, player_id ORDER BY version_ts DESC)=1)
     SELECT a.sport, a.slate_id, a.player_id, s.salary, po.pos AS position, p.proj, a.actual
     FROM act a JOIN sal s ON a.slate_id=s.slate_id AND a.player_id=s.player_id
@@ -84,6 +85,47 @@ train_ownership_model <- function(sport, min_slates = 5L, min_rows = 60L) {
   invisible(m)
 }
 
+# MANUAL ownership overrides (2026-11-14): config/exposure_overrides.json key "<sport>_own",
+# e.g. "nfl_own": {"Emmett Johnson": 0.55}. For late news the field reacts to faster than any
+# model trained on normal slates (a cheap backup inheriting a starter's job). Feeds the field
+# sim, duplication, leverage and the report exactly like a modeled number.
+# Entries: a number, or {"own": 0.55, "until": "YYYY-MM-DD"} -- `until` (inclusive, ET date)
+# stops a one-week news override from leaking into a later slate with the same player name.
+# The rest of that POSITION is rescaled so its total ownership is unchanged (if one RB jumps
+# to 55%, the field's RB ownership comes out of the other backs, not out of thin air).
+apply_ownership_overrides <- function(pool, sport) {
+  f <- dfs_path("config", "exposure_overrides.json")
+  if (!file.exists(f) || !"own" %in% names(pool)) return(pool)
+  j <- tryCatch(jsonlite::fromJSON(f, simplifyVector = FALSE), error = function(e) NULL)
+  o <- j[[paste0(sport, "_own")]]
+  if (is.null(o) || !length(o)) return(pool)
+  today <- as.Date(format(Sys.time(), tz = "America/New_York", "%Y-%m-%d"))
+  v <- vapply(o, function(e) {
+    x <- if (is.list(e)) e$own else e
+    until <- if (is.list(e) && !is.null(e$until)) suppressWarnings(as.Date(e$until)) else NA
+    if (!is.na(until) && today > until) return(NA_real_)          # expired
+    if (is.null(x)) NA_real_ else suppressWarnings(as.numeric(x)) }, numeric(1))
+  v <- v[is.finite(v) & v >= 0 & v <= 1]
+  if (!length(v)) return(pool)
+  pool <- as.data.table(pool)
+  k <- match(name_key(pool$player_name), name_key(names(v)))
+  hit <- which(!is.na(k))
+  if (!length(hit)) return(pool)
+  pos <- if ("position" %in% names(pool)) toupper(as.character(pool$position)) else rep("ALL", nrow(pool))
+  old <- copy(pool$own)        # a real copy: set() below modifies the column in place
+  set(pool, hit, "own", unname(v[k[hit]]))
+  for (p in unique(pos[hit])) {                                    # keep each position's total ownership
+    rest <- which(pos == p & !seq_len(nrow(pool)) %in% hit)
+    if (!length(rest)) next
+    total <- sum(old[pos == p]); budget <- total - sum(pool$own[pos == p & seq_len(nrow(pool)) %in% hit])
+    have <- sum(old[rest])
+    if (have > 0 && budget > 0) set(pool, rest, "own", pmax(old[rest] * budget / have, 0.001))
+  }
+  msg(sprintf("  ownership overrides: %s (rest of the position rescaled to keep its total)",
+              paste(sprintf("%s %.0f%% -> %.0f%%", pool$player_name[hit], 100 * old[hit], 100 * pool$own[hit]), collapse = ", ")))
+  pool
+}
+
 # Predict ownership FRACTIONS for a pool (player_name/salary/proj), matching the actual
 # %Drafted scale the field sim wants. Returns NULL if no trained model -> caller uses the
 # heuristic. Capped; non-negative.
@@ -94,5 +136,21 @@ predict_ownership <- function(pool, sport) {
   pct <- tryCatch(pmax(as.numeric(predict(m$model, P)), 0), error = function(e) NULL)  # predicted %Drafted
   # guard: fall back to the heuristic (NULL) on degenerate output (all-zero / any NA)
   if (is.null(pct) || length(pct) != nrow(as.data.table(pool)) || anyNA(pct) || sum(pct) <= 0) return(NULL)
-  pmin(pct / 100, 0.7)                                        # -> fraction, capped at 70%
+  out <- pmin(pct / 100, 0.7)                                 # -> fraction, capped at 70%
+  # POSITION TOTALS (added 2026-11-14): ownership at a position must add up to what DK lineups
+  # actually hold. The linear model never enforced it (a live NFL slate summed RBs to 334%;
+  # DK classic holds ~252%: 2 RB slots + RB's ~52% share of FLEX). Leave-one-slate-out on 5
+  # slates of real %Drafted: corr 0.648 -> 0.654, MAE 1.69% -> 1.64% -- small, consistent.
+  tot <- OWN_POS_TOTALS[[sport]]
+  if (!is.null(tot) && "position" %in% names(P)) {
+    pos <- toupper(as.character(P$position)); pos[pos %in% c("D", "DEF")] <- "DST"
+    for (p in intersect(names(tot), unique(pos))) {
+      i <- which(pos == p); s <- sum(out[i])
+      if (s > 0) out[i] <- pmin(out[i] * tot[[p]] / s, 0.7)
+    }
+  }
+  out
 }
+
+# DK classic roster totals (slots + FLEX share: RB 52%, WR 35%, TE 13% per ETR field data)
+OWN_POS_TOTALS <- list(nfl = c(QB = 1.00, RB = 2.52, WR = 3.35, TE = 1.13, DST = 1.00))

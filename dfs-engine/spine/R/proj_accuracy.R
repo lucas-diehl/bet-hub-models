@@ -26,7 +26,7 @@ actual_player_points <- function(csv_path, sport) {
 # our archived projection (latest version) for a slate, joined to salary
 slate_projection <- function(slate_id) {
   p <- as.data.table(db_query(sprintf(
-    "SELECT player_id, proj_mean AS proj, sim_sd, ceil, version_ts FROM projections WHERE slate_id='%s'", slate_id)))
+    "SELECT player_id, proj_mean AS proj, sim_sd, ceil, version_ts FROM projections WHERE slate_id='%s' AND source <> 'second_opinion'", slate_id)))
   if (!nrow(p)) return(p)
   p <- p[order(version_ts)][, .SD[.N], by = player_id]           # newest per player
   s <- tryCatch(as.data.table(db_query(sprintf(

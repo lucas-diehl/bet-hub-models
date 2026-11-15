@@ -64,6 +64,7 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
   # (the #1 live error — WNBA scratches / NFL inactives). No-op for golf/tennis (no feed).
   pool <- tryCatch(apply_inactives(pool, sport, date), error = function(e) pool)
   pool <- tryCatch(drop_excluded_players(pool, sport), error = function(e) pool)   # overrides with max 0
+  pool <- tryCatch(apply_ownership_overrides(pool, sport), error = function(e) pool)  # "<sport>_own" overrides
   if (persist) tryCatch(persist_projected_ownership(pool, slate_obj$slate_id, sport), error = function(e) NULL)
   loadings <- get_loadings(pool, sport)
   sim   <- slate_sim(pool, loadings, team_loadings = get_team_loadings(pool, sport),
@@ -119,6 +120,12 @@ run_slate <- function(sport, date = Sys.Date(), slate = "main", site = "dk",
   # never overwrite the dashboard's archived lineups.
   if (persist) {
     tryCatch(persist_projections(pool, slate_obj$slate_id, sport), error = function(e) NULL)
+    # second-opinion projections (NFL: Sleeper) kept per slate, so an ownership model fed the
+    # FIELD's view can be trained + validated once enough slates settle (see project.R)
+    if ("alt_proj" %in% names(pool)) tryCatch({
+      A <- as.data.table(pool)[is.finite(alt_proj)][, `:=`(proj = alt_proj, sim_sd = NA_real_, ceil = NA_real_, floor = NA_real_)]
+      if (nrow(A)) persist_projections(A, slate_obj$slate_id, sport, source = "second_opinion")
+    }, error = function(e) NULL)
     tryCatch(persist_recommended_lineups(picks, pool, slate_obj$slate_id, sport, date), error = function(e) NULL)
     tryCatch(mark_slate_built(slate_obj$slate_id), error = function(e) NULL)
   }

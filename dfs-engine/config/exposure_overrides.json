@@ -1,6 +1,9 @@
 {
-  "_comment": "Per-player MAX-exposure overrides for the 20-entry GPP build (gpp20). Value = max fraction of the lineup set a player may appear in (0-1). Overrides the global/conviction cap in EITHER direction: 0.80 lets a smash spot go overweight, 0.10 fades a player. Example: \"nfl\": {\"Christian McCaffrey\": 0.80}. MINIMUMS: use an object, e.g. \"nfl\": {\"Christian McCaffrey\": {\"min\": 0.40, \"max\": 0.80}} -- mins are filled first (forced in by a direct solve if needed); applies to the 20-max and Large builds. Others keep the computed cap. Name matching is order-insensitive (First Last or Last, First both work). Edit weekly for injuries/news; delete an entry to remove the cap.",
+  "_comment": "Per-player overrides. EXPOSURE (\"<sport>\"): max fraction of the lineup set (0-1), either direction (0.80 = go overweight, 0.10 = fade, 0 = EXCLUDE the player entirely); object form {\"min\": 0.40, \"max\": 0.80} adds a minimum (filled first). OWNERSHIP (\"<sport>_own\"): projected field ownership 0-1, number or {\"own\": 0.55, \"until\": \"YYYY-MM-DD\"} (expires after that ET date); the rest of that position is rescaled to keep its total. NFL lineup lists: \"nfl_stack_only\" = players legal only with their own QB; \"nfl_naked_ok\" = QBs allowed to go naked. Name matching is order-insensitive. Edit weekly for injuries/news.",
   "golf": {
     "Scottie Scheffler": 0.40
+  },
+  "nfl_own": {
+    "Emmett Johnson": { "own": 0.55, "until": "2026-11-16" }
   }
 }

@@ -60,6 +60,17 @@ ok(P3[player_id == "rb3", vac_bump] <= 8 + 1e-9, "bump capped at max(1x own proj
 P4 <- nfl_price_and_redistribute(mk()[, p_zero := 0.03], ext = NULL, inj = NULL, last = last_first)
 ok(isTRUE(all.equal(P4$proj, mk()$proj)), "no injuries -> projections untouched")
 
+# 6b. regression (2026-11-14): a team with 4+ RBs must still redistribute (RB shares stop at
+# rank 3; the 4th weight used to be NA and blanked every bump on the team)
+pool4 <- rbind(mk()[, p_zero := 0.03], data.table(player_id = "rb4", player_name = "Fourth Back", norm = "fourth back",
+  team = "NE", game_id = "NE@DET", position = "RB", salary = 5000L, proj = 1.5, sim_sd = 4, ceil = 5, floor = 0, p_zero = 0.03), fill = TRUE)
+ext4 <- data.table(norm = "gone back", team = "NE", position = "RB", e_proj = 20, e_pzero = 0.03)
+inj4 <- data.table(norm = "gone back", cat = "out")
+P7 <- nfl_price_and_redistribute(pool4, ext = ext4, inj = inj4, last = data.table(norm = "gone back", team = "NE", played_last = TRUE))
+ok(!anyNA(P7$proj_active) && !anyNA(P7$proj), "4 RBs on a team: no NA projections")
+ok(P7[player_id == "rb1", vac_bump] > 5, sprintf("4 RBs on a team: starter still absorbs the OUT RB's work (+%.1f)", P7[player_id == "rb1", vac_bump]))
+ok(P7[player_id == "rb4", vac_bump] < 1, "the 4th RB gets (almost) nothing")
+
 # 7. apply_inactives respects inj_priced (no second discount)
 P5 <- copy(P); before <- P5[player_id == "rb1", proj]
 inj_fake <- function(sport) data.table(norm = "starter back", cat = "questionable")

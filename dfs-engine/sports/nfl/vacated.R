@@ -109,7 +109,12 @@ nfl_price_and_redistribute <- function(pool, ext = NULL, inj = NULL, last = NULL
     mates <- elig[team == a$team & .nfl_grp(position) == a$grp & norm != a$a_norm][order(-proj_active)]
     if (nrow(mates)) {
       sh <- prm$share[[a$key]]; k <- nrow(mates)
-      w <- c(sh[seq_len(min(3L, k))], if (k > 3) rep(sh[4] / min(k - 3L, prm$max_tail), min(k - 3L, prm$max_tail)) else numeric(0))
+      # rank-4+ share: WR/TE have one (4th element); RB shares stop at rank 3, so a 4th+ RB
+      # gets nothing. (Bug fixed 2026-11-14: sh[4] was NA for RBs, so any team with 4+ RBs
+      # in the pool produced NA bumps and silently skipped the whole team -- Emmett Johnson
+      # stayed at 6.5 with Kenneth Walker III ruled out.)
+      tail_sh <- if (length(sh) >= 4L) sh[4] else 0
+      w <- c(sh[seq_len(min(3L, k))], if (k > 3 && tail_sh > 0) rep(tail_sh / min(k - 3L, prm$max_tail), min(k - 3L, prm$max_tail)) else numeric(0))
       w <- w / sum(w)
       give[[length(give) + 1L]] <- data.table(norm = mates$norm[seq_along(w)], a_id = a$a_id, p = a$p,
                                               b = prm$f_same[[a$key]] * a$base * w, src = a$a_norm)
@@ -122,6 +127,7 @@ nfl_price_and_redistribute <- function(pool, ext = NULL, inj = NULL, last = NULL
     }
   }
   G <- rbindlist(give)
+  if (nrow(G)) G <- G[is.finite(b) & is.finite(p)]          # never let one bad weight blank a whole team
   if (!nrow(G)) { pool[, esp_cat := NULL]; return(pool[]) }
   # coupled: the single biggest bump per recipient from an absentee still IN the pool (uncertain)
   G[, coupled := FALSE]
