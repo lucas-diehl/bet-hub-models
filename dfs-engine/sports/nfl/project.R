@@ -269,6 +269,27 @@ nfl_project_players <- function(slate) {
     }
   }
 
+  # --- DST projection (fixed 2026-11-16) -----------------------------------------------
+  # There is no DST model in the external projections, so every DST fell to .nfl_baseline's
+  # salary formula -- calibrated on cheap SKILL players (~0.77 pts per $1k at low salaries),
+  # which priced a $4,000 Ravens DST at 3.1 pts (real DST average ~6-7) and kept defenses out
+  # of every LAC@BAL showdown lineup. Use the DST fit from real 2023-25 DK DST scoring
+  # (DK salary + opponent's Vegas implied total; R^2 0.12, n = 1,050 DST-games):
+  #     proj = 14.889 + 0.0005 * salary - 0.4706 * opponent implied total
+  # and the measured DST spread (sd ~6), when the opponent's implied total is known.
+  is_dst <- toupper(pool$position) %in% c("DST", "D", "DEF")
+  if (any(is_dst) && "opp_implied" %in% names(pool)) {
+    fix <- which(is_dst & is.finite(pool$opp_implied))
+    if (length(fix)) {
+      dp <- pmax(14.889 + 0.0005 * pool$salary[fix] - 0.4706 * pool$opp_implied[fix], 1)
+      set(pool, fix, "proj", dp); set(pool, fix, "sim_sd", rep(6, length(fix)))
+      set(pool, fix, "ceil", dp + 0.84 * 6); set(pool, fix, "floor", pmax(dp - 1.2 * 6, 0))
+      if ("proj_active" %in% names(pool)) set(pool, fix, "proj_active", dp)
+      msg(sprintf("  nfl: DST projections from the calibrated DST model: %s",
+                  paste(sprintf("%s %.1f", pool$player_name[fix], dp), collapse = ", ")))
+    }
+  }
+
   # --- DROP players not on an active roster (IR/cut/retired/practice-squad) -----------
   # Closes a real blind spot in apply_inactives(): the ESPN injury feed only reports
   # THIS WEEK's game-status, so a long-term IR player (season-ending, placed weeks ago)

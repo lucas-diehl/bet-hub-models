@@ -93,7 +93,14 @@ dk_contest_pool <- function(contest, sport = NULL, date = Sys.Date(), slate = "m
     d <- unique(d, by = if ("playerDkId" %in% names(d)) "playerDkId" else "playerId")
   }
 
-  comp <- d$competition; gname <- if (!is.null(comp) && "name" %in% names(comp)) comp$name else NA
+  # as.data.table() FLATTENS DK's nested `competition` object into competition.name, so
+  # d$competition is usually NULL -- read the flattened column too (same fix dk_draftables()
+  # already has). Found 2026-11-16: every showdown pool had game_id = NA, so Vegas lines never
+  # joined (no implied totals, DSTs stuck on a salary fallback) and the sim dropped the GAME
+  # correlation factor (bring-backs, DST-vs-offense) entirely.
+  comp <- d$competition
+  gname <- if (!is.null(comp) && is.data.frame(comp) && "name" %in% names(comp)) comp$name
+           else if ("competition.name" %in% names(d)) d[["competition.name"]] else NA
   pool <- data.table(
     player_name = as.character(d$displayName),
     dk_id = as.character(if ("playerDkId" %in% names(d)) d$playerDkId else d$playerId),
