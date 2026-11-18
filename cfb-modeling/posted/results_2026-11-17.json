@@ -1,0 +1,21 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-11-17",
+  "graded_at": "2026-11-18T21:03:06Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk12-ballstate-ohio-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": -1,
+      "actual": {
+        "actual_margin": 7,
+        "cover_line": -10,
+        "closing_line": -10
+      }
+    }
+  ]
+}
