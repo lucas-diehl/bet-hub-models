@@ -113,7 +113,10 @@ if (!interactive()) {
       rs3 <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
       cs_sports <- intersect(sports, c("nfl", "ncaaf", "wnba", "golf", "tennis"))
       if (length(cs_sports)) {
-        out <- system2(rs3, c(shQuote(cs), "--sports", paste(cs_sports, collapse = ",")),
+        # fee cap (2026-11-17): unfiltered, the ranking surfaced $1,500-$10,600 entries; at our
+        # stakes it should show the $0.50-$25 contests we actually play. DFS_CONTEST_FEE_MAX overrides.
+        out <- system2(rs3, c(shQuote(cs), "--sports", paste(cs_sports, collapse = ","),
+                              "--fee-max", Sys.getenv("DFS_CONTEST_FEE_MAX", "25")),
                        stdout = TRUE, stderr = TRUE)
         outdir <- dfs_path("data", "reports"); dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
         cf <- file.path(outdir, sprintf("contest_selection_%s.txt", Sys.Date()))

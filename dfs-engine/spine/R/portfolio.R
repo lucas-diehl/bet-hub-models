@@ -476,13 +476,32 @@ load_exposure_overrides <- function(sport) {
 }
 
 # Per-player MINIMUM exposures from the same file ({"min": x} entries). NULL if none.
+# PLUS (2026-11-17) "eat the good chalk": an active ownership override of >= 30% in
+# "<sport>_own" (news chalk the user has flagged) implies a minimum exposure of 80% of that
+# ownership (capped 70%), unless the entry says "fade": true. Real case, 2026-11-15: Emmett
+# Johnson flagged at 55% (actual 53.8%) but the build held him to 27% as a leverage fade; he
+# scored 38.1 and the 73% of lineups without him finished with a median of 129.5 vs the
+# field's 150.9. Fading chalk that is mispriced by NEWS is -EV. An explicit {"min": x} wins.
 load_exposure_minimums <- function(sport) {
   f <- dfs_path("config", "exposure_overrides.json")
   if (!file.exists(f)) return(NULL)
   j <- tryCatch(jsonlite::fromJSON(f, simplifyVector = FALSE), error = function(e) NULL)
-  o <- if (!is.null(j)) j[[sport]] else NULL
-  if (is.null(o) || !length(o)) return(NULL)
-  v <- vapply(o, function(e) if (is.list(e) && !is.null(e$min)) suppressWarnings(as.numeric(e$min)) else NA_real_, numeric(1))
+  if (is.null(j)) return(NULL)
+  o <- j[[sport]]
+  v <- if (!is.null(o) && length(o))
+         vapply(o, function(e) if (is.list(e) && !is.null(e$min)) suppressWarnings(as.numeric(e$min)) else NA_real_, numeric(1))
+       else numeric(0)
   v <- v[is.finite(v) & v > 0 & v <= 1]
+  ow <- j[[paste0(sport, "_own")]]
+  if (!is.null(ow) && length(ow)) {
+    today <- as.Date(format(Sys.time(), tz = "America/New_York", "%Y-%m-%d"))
+    for (nm in names(ow)) {
+      e <- ow[[nm]]; x <- suppressWarnings(as.numeric(if (is.list(e)) e$own else e))
+      until <- if (is.list(e) && !is.null(e$until)) suppressWarnings(as.Date(e$until)) else NA
+      fade <- is.list(e) && isTRUE(e$fade)
+      if (!is.finite(x) || x < 0.30 || fade || (!is.na(until) && today > until)) next
+      if (is.na(v[nm])) v[nm] <- min(0.8 * x, 0.70)
+    }
+  }
   if (length(v)) v else NULL
 }

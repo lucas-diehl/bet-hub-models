@@ -45,7 +45,7 @@ dk_list_contests <- function(sport, draft_group = NULL) {
   # GPP = not cash/50-50/double-up/satellite/qualifier/WTA (those are separate games).
   # Some 50-50s/double-ups lack the attr flag, so also catch them by name.
   out[, gpp := !double_up & !fifty & !qualifier & !wta &
-        !grepl("satellite|qualifier|single stat|winner take all|freeroll|50-?50|50/50|double[ -]?up|top 50%",
+        !grepl("satellite|qualifier|single stat|winner take all|freeroll|50-?50|50/50|double[ -]?up|top 50%|best ball|snake|in-game|madden stream",
                name, ignore.case = TRUE)]
   unique(out, by = "contest_id")[]
 }

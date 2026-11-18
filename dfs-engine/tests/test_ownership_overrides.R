@@ -19,5 +19,12 @@ writeLines('{"nfl_own": {"Emmett Johnson": {"own": 0.55, "until": "2020-01-01"}}
 ok(identical(apply_ownership_overrides(copy(pool), "nfl")$own, pool$own), "expired override is ignored")
 writeLines('{"nfl_own": {"Johnson, Emmett": 0.40}}', tf)
 ok(abs(apply_ownership_overrides(copy(pool), "nfl")[1, own] - 0.40) < 1e-9, "plain number + 'Last, First' name both work")
+# "eat the good chalk": an active >= 30% ownership override implies a minimum exposure
+writeLines(sprintf('{"nfl_own": {"Emmett Johnson": {"own": 0.55, "until": "%s"}, "Faded Guy": {"own": 0.40, "fade": true}, "Small Guy": 0.20},
+                    "nfl": {"Other Guy": {"min": 0.25}}}', today), tf)
+mn <- load_exposure_minimums("nfl")
+ok(abs(mn[["Emmett Johnson"]] - 0.44) < 1e-9, "55% chalk override -> min exposure 44% (80% of field)")
+ok(!"Faded Guy" %in% names(mn) && !"Small Guy" %in% names(mn), "fade:true and <30% overrides add no minimum")
+ok(abs(mn[["Other Guy"]] - 0.25) < 1e-9, "explicit {min} still honoured")
 dfs_path <- dfs_path_orig
 cat(sprintf("\n%d passed, %d failed\n", n_ok, n_bad)); if (n_bad) quit(status = 1) else cat("ALL PASS\n")
