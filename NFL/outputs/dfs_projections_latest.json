@@ -8,7 +8,7 @@
   "season": 2026,
   "week": 11,
   "slate_date": "2026-11-22",
-  "generated_at": "2026-11-21T23:12:59Z",
+  "generated_at": "2026-11-22T18:05:30Z",
   "n_players": 298,
   "players": [
     {
@@ -3226,8 +3226,8 @@
       "stack_scale": 1,
       "ppr_low": 3.5455,
       "ppr_high": 17.4244,
-      "p_zero": 0.0984,
-      "injury_status": "NONE",
+      "p_zero": 0.2746,
+      "injury_status": "Questionable",
       "sim_sd": null,
       "components": {
         "pass_yds": 0,
