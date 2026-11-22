@@ -1,0 +1,165 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-11-21",
+  "graded_at": "2026-11-22T20:05:58Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk12-vanderbilt-florida-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": 1.82,
+      "actual": {
+        "actual_margin": 7,
+        "cover_line": 13.5,
+        "closing_line": 13.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-texasam-oklahoma-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0113,
+      "pnl_units": -1,
+      "actual": {
+        "actual_margin": 21,
+        "cover_line": 7.5,
+        "closing_line": 7
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-lsu-tennessee-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0226,
+      "pnl_units": 0.91,
+      "actual": {
+        "actual_margin": 14,
+        "cover_line": 1.5,
+        "closing_line": 2.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-arkansas-texas-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0452,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": 42,
+        "cover_line": 20.5,
+        "closing_line": 18.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-arizona-kansasstate-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": -7,
+        "cover_line": 10,
+        "closing_line": 10
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-colorado-cincinnati-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": 0.91,
+      "actual": {
+        "actual_margin": 7,
+        "cover_line": -3,
+        "closing_line": -3
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-houston-westvirginia-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0113,
+      "pnl_units": -1,
+      "actual": {
+        "actual_margin": -3,
+        "cover_line": -7,
+        "closing_line": -6.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-utah-tcu-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0898,
+      "pnl_units": 1.82,
+      "actual": {
+        "actual_margin": -21,
+        "cover_line": -5.5,
+        "closing_line": -9.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-ucla-michigan-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0452,
+      "pnl_units": 0.91,
+      "actual": {
+        "actual_margin": 2,
+        "cover_line": 5.5,
+        "closing_line": 3.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-rutgers-pennstate-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0226,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": -1,
+        "cover_line": 23.5,
+        "closing_line": 24.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-maryland-usc-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": -0.0452,
+      "pnl_units": 1.82,
+      "actual": {
+        "actual_margin": 14,
+        "cover_line": 16.5,
+        "closing_line": 18.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-washingtonstate-texasstate-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": -1,
+      "actual": {
+        "actual_margin": 28,
+        "cover_line": 14,
+        "closing_line": 14
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk12-arkansasstate-louisianatech-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": -1,
+      "actual": {
+        "actual_margin": 45,
+        "cover_line": 14.5,
+        "closing_line": 14.5
+      }
+    }
+  ]
+}
