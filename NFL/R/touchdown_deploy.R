@@ -221,7 +221,19 @@ build_td_2026_game_context <- function(
       home_team = normalize_team(.data$home_team),
       away_team = normalize_team(.data$away_team),
       schedule_total = as.numeric(.data$total_line),
-      schedule_home_line = as.numeric(.data$spread_line),
+      # nflverse spread_line is POSITIVE when home is favored; the Odds API
+      # home_spread is NEGATIVE. Converted here, before the coalesce below
+      # (convention: R/utilities.R spread sign block). Before 2026-11-23 the
+      # raw value was coalesced in, flipping the favorite - and with it
+      # team_spread / implied_team_total - on any game the Odds API had no
+      # line for.
+      schedule_home_line = nflverse_spread_to_home_line(.data$spread_line),
+      schedule_home_ml = if ("home_moneyline" %in% names(schedules)) {
+        suppressWarnings(as.numeric(.data$home_moneyline))
+      } else NA_real_,
+      schedule_away_ml = if ("away_moneyline" %in% names(schedules)) {
+        suppressWarnings(as.numeric(.data$away_moneyline))
+      } else NA_real_,
       schedule_temperature = as.numeric(.data$temp),
       schedule_wind = as.numeric(.data$wind),
       schedule_roof = tolower(as.character(.data$roof)),
@@ -229,9 +241,30 @@ build_td_2026_game_context <- function(
     ) |>
     dplyr::left_join(
       dplyr::left_join(game_lines, event_map, by = "event_id") |>
+        dplyr::filter(!is.na(.data$game_id)) |>
+        dplyr::distinct(.data$game_id, .keep_all = TRUE) |>
         dplyr::select("game_id", "home_spread", "total_line", "line_books"),
       by = "game_id"
-    ) |>
+    )
+  check_nflverse_spread_sign(
+    context$schedule_home_line, context$schedule_home_ml,
+    context$schedule_away_ml, context$game_id,
+    label = "build_td_2026_game_context (nflverse spread vs moneyline)"
+  )
+  check_home_line_sources(
+    context$home_spread, context$schedule_home_line, context$game_id,
+    label = "build_td_2026_game_context (Odds API vs nflverse)"
+  )
+  fallback_mask <- !is.finite(context$home_spread) &
+    is.finite(context$schedule_home_line)
+  if (any(fallback_mask)) {
+    message(sprintf(
+      "Game context: %d of %d game(s) have no Odds API spread; using the nflverse line (sign-converted): %s",
+      sum(fallback_mask), nrow(context),
+      paste(context$game_id[fallback_mask], collapse = ", ")
+    ))
+  }
+  context <- context |>
     dplyr::mutate(
       total_line = dplyr::coalesce(.data$total_line, .data$schedule_total),
       home_line = dplyr::coalesce(

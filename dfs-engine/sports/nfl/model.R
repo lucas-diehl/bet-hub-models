@@ -61,6 +61,8 @@ nfl_fit <- function(D, nrounds = 500L) {
 nfl_train <- function(seasons = NULL, refresh = FALSE) {
   if (refresh || !file.exists(nfl_weekly_path())) nfl_ingest(seasons)
   W <- as.data.table(readRDS(nfl_weekly_path()))
+  # the live path (nfl_weekly_ensure) stores only last+current season -- never TRAIN on that
+  if (uniqueN(W$season) < 4L) { nfl_ingest(seasons); W <- as.data.table(readRDS(nfl_weekly_path())) }
   D <- nfl_build_features(W)[!is.na(dk_pts) & !is.na(r_dk_pts)]     # need >=1 prior game
   fit <- nfl_fit(D)
   dir.create(dirname(NFL_MODEL_PATH()), recursive = TRUE, showWarnings = FALSE)

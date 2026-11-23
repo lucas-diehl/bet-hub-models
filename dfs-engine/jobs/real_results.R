@@ -24,7 +24,7 @@ args <- commandArgs(TRUE)
 arg <- function(k, d = NULL) { i <- match(k, args); if (is.na(i) || i == length(args)) d else args[i + 1] }
 cid   <- arg("--contest"); lu_f <- arg("--lineups"); own_f <- arg("--own-csv")
 inbox <- arg("--inbox", dfs_path("data", "ownership_inbox"))
-if (is.null(cid) || is.null(lu_f)) stop("usage: --contest <id> --lineups <READABLE.csv> [--fee x] [--own-csv f] [--inbox dir]")
+if (is.null(cid) || is.null(lu_f)) stop("usage: --contest <id> --lineups <READABLE.csv> [--fee x] [--own-csv f] [--inbox dir] [--user dkname]")
 
 nn <- function(x) { x <- tolower(iconv(x, to = "ASCII//TRANSLIT")); x <- gsub("[^a-z ]", "", x)
   x <- gsub("\\b(jr|sr|ii|iii|iv|v)\\b", "", x); gsub("\\s+", " ", trimws(x)) }
@@ -47,7 +47,9 @@ n <- nrow(E)
 L <- fread(lu_f); cols <- setdiff(names(L), c("lineup", "salary", "proj", "est_dupes"))
 L[, key := apply(.SD, 1, function(v) paste(sort(nn(v)), collapse = ";")), .SDcols = cols]
 M <- merge(L[, .(key)], E[, .(key, entry_name)], by = "key")
-user <- if (nrow(M)) names(sort(table(sub(" \\(.*$", "", M$entry_name)), decreasing = TRUE))[1] else NA_character_
+# owner = the username covering the most DISTINCT lineups of ours (not the most entries: in heavily
+# duplicated showdowns a 150-entry stranger holding copies out-counted the real owner). --user overrides.
+user <- arg("--user", if (nrow(M)) M[, .(n = uniqueN(key)), by = .(u = sub(" \\(.*$", "", entry_name))][order(-n)]$u[1] else NA_character_)
 ours <- if (!is.na(user)) E[sub(" \\(.*$", "", entry_name) == user] else E[0]
 pz <- tryCatch(as.data.table(dk_contest(cid)$prizes), error = function(e) NULL)
 prize_of <- function(r) { if (is.null(pz) || !nrow(pz)) return(NA_real_); k <- which(pz$min_rank <= r & pz$max_rank >= r); if (length(k)) as.numeric(pz$prize[k[1]]) else 0 }

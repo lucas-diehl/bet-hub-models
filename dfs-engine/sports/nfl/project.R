@@ -130,6 +130,34 @@ suppressPackageStartupMessages({ library(data.table) })
              floor = pmax(proj - 1.2 * sd, 0), p_zero = 0.03)
 }
 
+NFL_SALARY_STACK <- list(     # (intercept, proj, s, s^2) per position -- see the call site in nfl_project_players()
+  QB = c(-43.48281, 0.54360, 14.96989, -1.02491),
+  RB = c(-22.48122, 0.51127,  7.51393, -0.43279),
+  WR = c( -6.30519, 0.52613,  2.74596, -0.08273),
+  TE = c( -8.50328, 0.54758,  4.75585, -0.35376))
+.nfl_salary_stack <- function(pool, model_rows = !is.na(pool$proj)) {
+  pool <- as.data.table(pool)
+  # single-game pool = showdown pricing. NOT validated there: mapped back to the classic scale,
+  # sub-~$1.8k showdown salaries fall below anything in the fit and cheap players get zeroed
+  # (11/23 MNF smoke test: $400 RB -> 0.07). Skipped for showdown unless DFS_NFL_SALARY_STACK_SD=1.
+  showdown <- uniqueN(pool$team) <= 2L
+  if (showdown && Sys.getenv("DFS_NFL_SALARY_STACK_SD", "0") != "1") {
+    msg("  nfl salary stack: skipped for showdown pricing (classic-validated only)"); return(pool) }
+  s <- pool$salary / 1000; if (showdown) s <- (pool$salary + 5828) / 2533
+  s <- pmin(pmax(s, 2.5), 10)                                          # stay inside the fitted salary range
+  new <- pool$proj
+  for (p in names(NFL_SALARY_STACK)) { i <- which(model_rows & pool$position == p & is.finite(pool$proj))
+    if (length(i)) { b <- NFL_SALARY_STACK[[p]]; new[i] <- pmax(b[1] + b[2] * pool$proj[i] + b[3] * s[i] + b[4] * s[i]^2, 0) } }
+  d <- new - pool$proj; d[!is.finite(d)] <- 0
+  pool[, proj := proj + d]
+  if ("ceil" %in% names(pool))  pool[, ceil := pmax(ceil + d, proj)]
+  if ("floor" %in% names(pool)) pool[, floor := pmax(floor + d, 0)]
+  n <- sum(abs(d) > 1e-9)
+  if (n) msg(sprintf("  nfl salary stack: %d model projections blended with DK price%s (mean shift %+.2f, max |shift| %.1f)",
+                     n, if (showdown) " (showdown -> classic scale)" else "", mean(d[abs(d) > 1e-9]), max(abs(d))))
+  pool
+}
+
 nfl_project_players <- function(slate) {
   path <- dk_salary_path(slate$sport, slate$date, slate$name)
   pool <- read_dk_salary_csv(path, sport = "nfl", slate_id = slate$slate_id)
@@ -191,9 +219,15 @@ nfl_project_players <- function(slate) {
   }
 
   # --- BUILT-IN model: fill only players the external model did NOT cover ---------------
-  models <- if (exists("nfl_load_models")) nfl_load_models() else NULL
+  models <- if (exists("nfl_load_models")) tryCatch(nfl_load_models(), error = function(e) NULL) else NULL
+  if (any(is.na(pool$proj)) && exists("nfl_weekly_ensure")) nfl_weekly_ensure()
   Wp <- if (exists("nfl_weekly_path")) nfl_weekly_path() else NULL
   W <- if (!is.null(Wp) && file.exists(Wp)) as.data.table(readRDS(Wp)) else NULL
+  # never skip the built-in gap-filler SILENTLY again (it was dead in CI for months)
+  if (any(is.na(pool$proj)) && (is.null(models) || is.null(models$model) || is.null(W)))
+    msg(sprintf("  WARNING NFL built-in model unavailable (%s) -> %d players to salary baseline",
+                paste(c(if (is.null(models) || is.null(models$model)) "model file" , if (is.null(W)) "weekly history"), collapse = " + "),
+                sum(is.na(pool$proj))))
 
   if (!is.null(models) && !is.null(W) && any(is.na(pool$proj))) {
     # map DK players -> nflverse id by normalized name (pick the most-active id per name)
@@ -219,6 +253,17 @@ nfl_project_players <- function(slate) {
     msg("  No external/built-in NFL projections -> salary baseline (see sports/nfl).")
 
   miss <- is.na(pool$proj)
+  # --- SALARY STACK (2026-11-23): blend the model projection with DK's price ----------------
+  # The NFL repo was designed to salary-stack its projections but that step never ran in
+  # production (headline_is_salary_stacked was hard-coded TRUE; proj_ppr == proj_ppr_model).
+  # DK's price carries market information (role/news) our box-score model lacks. Per-position
+  # fit actual ~ a + b*proj + c*s + d*s^2 (s = classic salary/1000) on 51 DK main slates
+  # 2023-25 (bt_slates, our walk-forward projections). Validation: 2023-24 -> 2025 holdout corr
+  # .602 -> .623 (all 4 positions up); 2026 real slates (players >=1% owned, 6 slates) .461 ->
+  # .503, better on 5 of 6 + 1 tie, MAE 6.42 -> 6.28, slope 1.05. Applied to MODEL rows only
+  # (the salary baseline is already salary). Showdown pools are priced on a different scale ->
+  # mapped back to classic (sd = -5828 + 2.533*classic, fit on 153 games). DFS_NFL_SALARY_STACK=0 disables.
+  if (Sys.getenv("DFS_NFL_SALARY_STACK", "1") != "0") pool <- .nfl_salary_stack(pool, model_rows = !miss)
   if (any(miss)) { bl <- .nfl_baseline(pool)
     for (c in c("proj", "sim_sd", "ceil", "floor", "p_zero")) pool[[c]][miss] <- bl[[c]][miss] }
 

@@ -10,6 +10,7 @@ source("R/dfs_value_backtest.R")    # dfs_player_name_key(), fuzzy_match_salary_
 source("R/fantasy_salary_stack.R")
 source("R/inactive_probability.R")
 source("R/fantasy_variance.R")
+source("R/weekly_board.R")         # schedule-driven game set + same-week merge
 assert_packages()
 ensure_directories()
 
@@ -33,8 +34,11 @@ ensure_directories()
 # recent-opportunity features actually reflect the season in progress, are
 # what make this safe to run on a real weekly cadence.
 #
-#   --week=3       which regular-season week to project (default: next
-#                   unplayed, same rule scripts/57 and 78 use)
+#   --week=3       which regular-season week to project (default: the week of
+#                   the earliest game that has not kicked off). Only that week's
+#                   not-yet-started games are re-projected; the result is MERGED
+#                   into the existing week file (R/weekly_board.R), never a
+#                   wholesale overwrite.
 #   --retrain       rebuild the walk-forward + deployment models from scratch
 #                   (slow, ~10-20 min) instead of reusing the cache. Historical
 #                   2021-2025 data doesn't change, so this is normally only
@@ -327,29 +331,37 @@ event_map <- match_td_events_to_schedule(
   schedules
 )
 
+## Week + game set (rewritten 2026-11-23, see R/weekly_board.R header). The
+## schedule - not the Odds API event snapshot, which forgets a game once it is
+## played - defines the week's games. Only games that have NOT kicked off are
+## re-projected; started/finished games keep the rows already in the week file
+## (merged back in below), so a Monday MNF-only run or a Friday post-TNF run no
+## longer wipes the rest of the week.
+week_schedule <- fantasy_week_schedule(schedules, 2026L)
 target_week <- arg_value("--week")
-if (is.null(target_week)) {
-  upcoming <- schedules |>
-    dplyr::filter(.data$game_type == "REG", as.Date(.data$gameday) >= Sys.Date()) |>
-    dplyr::arrange(.data$gameday)
-  if (!nrow(upcoming)) stop("No upcoming games on the schedule.", call. = FALSE)
-  target_week <- upcoming$week[[1]]
-}
+if (is.null(target_week)) target_week <- fantasy_target_week(week_schedule)
 target_week <- as.integer(target_week)
 cat("Projecting week:", target_week, "\n")
 
-target_week_ids <- schedules |>
-  dplyr::filter(
-    .data$season == 2026,
-    .data$game_type == "REG",
-    .data$week == target_week
-  ) |>
-  dplyr::pull(.data$game_id)
+target_week_games <- week_schedule[week_schedule$week == target_week, ]
+target_week_ids <- target_week_games$game_id
 if (!length(target_week_ids)) {
   stop("No week ", target_week, " games on the 2026 schedule.", call. = FALSE)
 }
-target_week_events <- event_map |>
-  dplyr::filter(.data$game_id %in% target_week_ids)
+reproject_ids <- target_week_games$game_id[!target_week_games$started]
+cat(sprintf(
+  "Week %d: %d scheduled games; re-projecting %d not yet started, freezing %d already started%s.\n",
+  target_week, length(target_week_ids), length(reproject_ids),
+  length(target_week_ids) - length(reproject_ids),
+  if (length(reproject_ids) < length(target_week_ids)) {
+    paste0(" (", paste(setdiff(target_week_ids, reproject_ids), collapse = ", "), ")")
+  } else ""
+))
+if (!length(reproject_ids)) {
+  cat("Every week", target_week, "game has started; nothing to re-project. Existing board left as is.\n")
+  quit(save = "no", status = 0)
+}
+target_week_events <- fantasy_projection_event_map(event_map, reproject_ids)
 game_lines <- flatten_current_td_game_lines(
   readRDS("data/raw/td_2026_current_game_lines.rds")
 )
@@ -439,6 +451,54 @@ projection_board <- apply_fantasy_variance(projection_board, variance_model)
 ## This supplies a real graded number per player (scripts/83 for the rates).
 projection_board <- add_inactive_probability(projection_board, 2026L, target_week)
 
+## Merge into the existing same-week board (R/weekly_board.R). Games this run
+## re-projected replace their old rows; every other game of the week already in
+## the file (TNF on a Friday run, the Sunday slate on a Monday run) is carried
+## forward, then the whole week is re-ranked together below.
+week_tag <- sprintf("2026_week%d", target_week)
+week_csv_path <- sprintf("outputs/fantasy_prop_%s_projections.csv", week_tag)
+week_long_path <- sprintf("outputs/fantasy_prop_%s_long.csv", week_tag)
+read_existing_board <- function(path) {
+  if (!file.exists(path)) return(NULL)
+  tryCatch(
+    readr::read_csv(path, show_col_types = FALSE, guess_max = 100000,
+                    col_types = readr::cols(player_id = "c", game_id = "c")),
+    error = function(e) {
+      message("::warning::Could not read existing ", path, " (", conditionMessage(e),
+              "); writing this run's games only.")
+      NULL
+    }
+  )
+}
+board_merge <- merge_fantasy_week_board(
+  projection_board, read_existing_board(week_csv_path), target_week_ids
+)
+projection_board <- board_merge$board
+long_merge <- merge_fantasy_week_board(
+  long_projection, read_existing_board(week_long_path), target_week_ids,
+  drop_columns = character()
+)
+long_projection <- long_merge$board
+cat(sprintf(
+  "Week %d merge: %d game(s) projected this run, %d carried forward from the existing file%s.\n",
+  target_week, length(unique(board_merge$board$game_id)) - length(board_merge$carried),
+  length(board_merge$carried),
+  if (length(board_merge$carried)) paste0(" (", paste(board_merge$carried, collapse = ", "), ")") else ""
+))
+stale_unplayed <- intersect(board_merge$carried, reproject_ids)
+if (length(stale_unplayed)) {
+  message("::warning::Re-projection produced no rows for unplayed game(s) ",
+          paste(stale_unplayed, collapse = ", "),
+          "; kept their previous rows instead.")
+}
+report_week_board_coverage(projection_board, target_week_ids,
+                           label = sprintf("Week %d board", target_week))
+## Spread sign guard (R/utilities.R): implied totals sum to the total and the
+## favorite carries the larger one, on every game of the board we are about
+## to publish.
+assert_team_line_convention(projection_board,
+                            label = sprintf("Week %d board", target_week))
+
 projection_board <- projection_board |>
   dplyr::arrange(dplyr::desc(.data$projected_ppr)) |>
   dplyr::mutate(
@@ -460,11 +520,21 @@ if (!execute) {
   quit(save = "no", status = 0)
 }
 
-week_tag <- sprintf("2026_week%d", target_week)
-readr::write_csv(projection_board, sprintf("outputs/fantasy_prop_%s_projections.csv", week_tag))
-readr::write_csv(projection_board, "outputs/fantasy_prop_2026_latest_projections.csv")
-readr::write_csv(long_projection, sprintf("outputs/fantasy_prop_%s_long.csv", week_tag))
-readr::write_csv(long_projection, "outputs/fantasy_prop_2026_latest_long.csv")
+readr::write_csv(projection_board, week_csv_path)
+readr::write_csv(long_projection, week_long_path)
 readr::write_csv(intervals, "outputs/fantasy_prop_residual_intervals.csv")
 
-cat("Wrote outputs/fantasy_prop_", week_tag, "_projections.csv (+ _latest copy)\n", sep = "")
+## `_latest` tracks the newest WEEK, not the newest run: an explicit
+## --week=<past week> backfill must not point _latest (and so the TD fantasy
+## signal and DFS consumers) back at an old week. Same rule scripts/59 uses to
+## pick its default file, so the CSV and JSON `latest` always agree.
+week_files <- list.files("outputs", pattern = "^fantasy_prop_2026_week[0-9]+_projections[.]csv$")
+newest_week <- max(as.integer(sub("^fantasy_prop_2026_week([0-9]+)_.*$", "\\1", week_files)))
+if (target_week >= newest_week) {
+  readr::write_csv(projection_board, "outputs/fantasy_prop_2026_latest_projections.csv")
+  readr::write_csv(long_projection, "outputs/fantasy_prop_2026_latest_long.csv")
+  cat("Wrote ", week_csv_path, " (+ _latest copy)\n", sep = "")
+} else {
+  cat("Wrote ", week_csv_path, "; _latest left on week ", newest_week,
+      " (this was a backfill of an earlier week)\n", sep = "")
+}

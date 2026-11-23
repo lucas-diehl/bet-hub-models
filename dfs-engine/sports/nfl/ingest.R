@@ -152,6 +152,23 @@ nfl_inactive_roster <- function(max_age_hours = 12) {
   inactive
 }
 
+# LIVE player-game history for the built-in model (fix 2026-11-23). data/raw/nfl_weekly.rds is
+# NOT committed, so in CI (and any fresh checkout) project.R's built-in gap-filler NEVER ran:
+# every player the external model's weekly file didn't cover fell straight to the salary
+# baseline -- silently (272 of 510 on the 11/22 main slate, 35 of 58 on 11/23 MNF). This
+# fetches it on demand: missing or older than `max_age_hours` -> re-ingest last+current season
+# (all the live entering-features need; window = 5 games). A multi-season file built by
+# nfl_train() is left alone unless stale. Never blocks the build: returns FALSE on failure.
+nfl_weekly_ensure <- function(max_age_hours = 20) {
+  p <- nfl_weekly_path()
+  fresh <- file.exists(p) && difftime(Sys.time(), file.info(p)$mtime, units = "hours") < max_age_hours
+  if (fresh) return(TRUE)
+  yr <- as.integer(format(Sys.Date(), "%Y"))
+  ok <- tryCatch({ nfl_ingest(years = (yr - 1L):yr); file.exists(p) }, error = function(e) {
+    msg("  NFL weekly history refresh FAILED:", conditionMessage(e)); FALSE })
+  ok || file.exists(p)
+}
+
 # DK points from nflverse components (reuses the tested nfl_dk_scoring contract).
 .nfl_dk_points <- function(D) {
   z <- function(col) { v <- if (col %in% names(D)) as.numeric(D[[col]]) else 0; fifelse(is.na(v), 0, v) }

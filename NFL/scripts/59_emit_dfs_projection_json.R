@@ -70,7 +70,15 @@ pick_csv <- function() {
                    full.names = TRUE)
   if (!length(fs)) stop("No fantasy_prop_*_week*_projections.csv in outputs/ (run scripts/17 first).",
                         call. = FALSE)
-  fs[which.max(file.mtime(fs))]
+  # Highest (season, week) wins, mtime only as a tie-break - the same rule
+  # scripts/17 uses for its _latest copies. Pure mtime was fragile: a cache
+  # restore / git checkout or a --week backfill of an older week could make an
+  # old week the "newest" file and repoint dfs_projections_latest.json at it.
+  base <- basename(fs)
+  season_n <- suppressWarnings(as.integer(sub("^fantasy_prop_([0-9]{4})_.*$", "\\1", base)))
+  week_n <- as.integer(sub("^.*_week([0-9]+)_projections\\.csv$", "\\1", base))
+  season_n[is.na(season_n)] <- 0L
+  fs[order(-season_n, -week_n, -as.numeric(file.mtime(fs)))[1]]
 }
 
 csv_path <- pick_csv()
@@ -82,6 +90,26 @@ chr <- function(x) if (length(x) && !is.na(x)) as.character(x) else NA_character
 
 season <- proj$season[[1]]
 week   <- proj$week[[1]]
+
+# Coverage guard (2026-11-23): this file is the week board scripts/17 merges
+# game-by-game, so it should hold EVERY game of the week, played or not (the
+# DK slate defines which ones a lineup can use). A missing game used to be
+# silent - week 10 shipped MNF-only, week 11 shipped without TNF. Warn loudly;
+# never block the emit.
+cat(sprintf("Projection file %s: %d players across %d games.\n",
+            basename(csv_path), nrow(proj), length(unique(proj$game_id))))
+if (file.exists("data/raw/schedules_2026.rds") && "game_id" %in% names(proj)) {
+  sched_week <- readRDS("data/raw/schedules_2026.rds")
+  sched_ids <- as.character(sched_week$game_id[
+    sched_week$season == season & sched_week$game_type == "REG" & sched_week$week == week
+  ])
+  missing_games <- setdiff(sched_ids, unique(as.character(proj$game_id)))
+  if (length(missing_games)) {
+    message("::warning::DFS projection JSON for week ", week, " is missing ",
+            length(missing_games), " of ", length(sched_ids), " scheduled game(s): ",
+            paste(missing_games, collapse = ", "))
+  }
+}
 
 # --------------------------------------------------------------------------
 # Ownership (optional, heuristic only)

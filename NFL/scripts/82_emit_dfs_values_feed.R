@@ -76,7 +76,13 @@ proj_path <- if (!is.null(week_arg)) {
     stop("No fantasy_prop_*_week*_projections.csv in outputs/ - run scripts/17 first.",
          call. = FALSE)
   }
-  fs[which.max(file.mtime(fs))]
+  # Highest (season, week), mtime as tie-break - same rule as scripts/59 and
+  # scripts/17's _latest copies, so all three always describe the same week.
+  base <- basename(fs)
+  season_n <- suppressWarnings(as.integer(sub("^fantasy_prop_([0-9]{4})_.*$", "\\1", base)))
+  week_n <- as.integer(sub("^.*_week([0-9]+)_projections\\.csv$", "\\1", base))
+  season_n[is.na(season_n)] <- 0L
+  fs[order(-season_n, -week_n, -as.numeric(file.mtime(fs)))[1]]
 }
 proj <- readr::read_csv(proj_path, show_col_types = FALSE)
 cat("Projections:", proj_path, "-", nrow(proj), "players\n")

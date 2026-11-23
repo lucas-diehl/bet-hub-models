@@ -36,13 +36,29 @@ build_td_game_context <- function(schedules, rotowire, seasons = 2021:2025) {
       home_team = normalize_team(.data$home_team),
       away_team = normalize_team(.data$away_team),
       schedule_total = as.numeric(.data$total_line),
-      schedule_home_line = as.numeric(.data$spread_line),
+      # nflverse spread_line is POSITIVE when home is favored; RotoWire's
+      # home_line is NEGATIVE. Convert before the coalesce below (see the
+      # convention block in R/utilities.R). Before 2026-11-23 this was
+      # coalesced raw, flipping the favorite on every game RotoWire lacked.
+      schedule_home_line = nflverse_spread_to_home_line(.data$spread_line),
       schedule_temperature = as.numeric(.data$temp),
       schedule_wind = as.numeric(.data$wind),
       schedule_roof = tolower(as.character(.data$roof)),
       schedule_surface = as.character(.data$surface)
     ) |>
-    join_odds(rotowire) |>
+    join_odds(rotowire)
+  if (all(c("home_moneyline", "away_moneyline") %in% names(schedules))) {
+    ml <- schedules[match(games$game_id, schedules$game_id), ]
+    check_nflverse_spread_sign(
+      games$schedule_home_line, ml$home_moneyline, ml$away_moneyline,
+      games$game_id, label = "build_td_game_context (nflverse spread vs moneyline)"
+    )
+  }
+  check_home_line_sources(
+    games$home_line, games$schedule_home_line, games$game_id,
+    label = "build_td_game_context (RotoWire vs nflverse)"
+  )
+  games <- games |>
     dplyr::mutate(
       total_line = dplyr::coalesce(.data$total_line, .data$schedule_total),
       home_line = dplyr::coalesce(.data$home_line, .data$schedule_home_line),
@@ -299,6 +315,8 @@ build_td_player_features <- function(player_stats, game_context) {
     dplyr::left_join(game_context, by = c("game_id", "season", "week", "game_date")) |>
     dplyr::mutate(
       is_home = as.integer(.data$team == .data$home_team),
+      # home_line < 0 = home favored; team_spread < 0 = this team favored.
+      # Convention documented once in R/utilities.R (spread sign block).
       team_spread = dplyr::if_else(
         .data$is_home == 1L,
         .data$home_line,

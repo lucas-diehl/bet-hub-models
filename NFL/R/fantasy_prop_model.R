@@ -332,6 +332,10 @@ prepare_fantasy_player_features <- function(player_stats, game_context) {
         as.Date(NA)
       ),
       is_home = as.integer(.data$team == .data$home_team),
+      # home_line < 0 = home favored; team_spread < 0 = this team favored;
+      # implied = total/2 - team_spread/2. Convention documented once in
+      # R/utilities.R (spread sign block) - home_line arrives already on it
+      # from build_td_game_context() / build_td_2026_game_context().
       team_spread = dplyr::if_else(
         .data$is_home == 1L,
         .data$home_line,
