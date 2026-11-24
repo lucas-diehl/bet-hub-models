@@ -220,6 +220,9 @@ nfl_project_players <- function(slate) {
 
   # --- BUILT-IN model: fill only players the external model did NOT cover ---------------
   models <- if (exists("nfl_load_models")) tryCatch(nfl_load_models(), error = function(e) NULL) else NULL
+  # a booster saved by a different xgboost major (e.g. CI 3.x -> local 1.7) deserializes to a dead
+  # zero-length list; treat it as unavailable (warning below) instead of crashing in predict()
+  if (!is.null(models) && !inherits(models$model, "xgb.Booster")) models <- NULL
   if (any(is.na(pool$proj)) && exists("nfl_weekly_ensure")) nfl_weekly_ensure()
   Wp <- if (exists("nfl_weekly_path")) nfl_weekly_path() else NULL
   W <- if (!is.null(Wp) && file.exists(Wp)) as.data.table(readRDS(Wp)) else NULL
@@ -279,6 +282,8 @@ nfl_project_players <- function(slate) {
   # sports/nfl/vacated.R. DFS_NFL_VACATED=0 disables (pool then behaves as before).
   if (exists("nfl_price_and_redistribute") && Sys.getenv("DFS_NFL_VACATED", "1") != "0") {
     inj  <- tryCatch(injury_report("nfl"), error = function(e) NULL)
+    fa   <- tryCatch(load_force_active("nfl"), error = function(e) character(0))   # game-day IR activations
+    if (length(fa) && !is.null(inj) && nrow(inj)) inj <- inj[!norm %in% fa]
     extv <- if (!is.null(ext) && nrow(ext) && all(c("norm", "team", "position", "e_proj", "e_pzero") %in% names(ext)))
               ext[, .(norm, team, position, e_proj, e_pzero)] else NULL
     pool <- tryCatch(nfl_price_and_redistribute(pool, extv, inj),
@@ -345,7 +350,7 @@ nfl_project_players <- function(slate) {
   if (!is.null(inactive) && "team" %in% names(pool)) {
     key <- paste(pool$norm, toupper(pool$team))
     ikey <- paste(inactive$norm, inactive$team)
-    drop_ir <- key %in% ikey
+    drop_ir <- key %in% ikey & !(pool$norm %in% tryCatch(load_force_active("nfl"), error = function(e) character(0)))
     if (any(drop_ir)) { msg(sprintf("  nfl: dropped %d player(s) not on an active roster (%s)", sum(drop_ir),
                                     paste(head(pool$player_name[drop_ir], 5), collapse = ", ")))
       pool <- pool[!drop_ir] }

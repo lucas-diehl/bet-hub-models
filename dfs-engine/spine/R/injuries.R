@@ -62,8 +62,22 @@ load_manual_scratches <- function(sport) {
   if (length(v)) norm_name(v) else NULL
 }
 
+# Manual ACTIVE overrides ("<sport>_force_active": ["Name", ...] in config/exposure_overrides.json):
+# players the feeds still list as Out/IR but who WILL play (game-day activations from IR --
+# real case 2026-11-23: Jacory Croskey-Merritt, WAS, IR in nflverse + DK, activated for MNF).
+# Exempts them from the injury feed here and from the NFL roster-status/vacated steps.
+load_force_active <- function(sport) {
+  f <- dfs_path("config", "exposure_overrides.json")
+  if (!file.exists(f)) return(character(0))
+  j <- tryCatch(jsonlite::fromJSON(f, simplifyVector = FALSE), error = function(e) NULL)
+  v <- unlist(if (!is.null(j)) j[[paste0(sport, "_force_active")]] else NULL, use.names = FALSE)
+  v <- v[nzchar(v)]; if (length(v)) norm_name(v) else character(0)
+}
+
 apply_inactives <- function(pool, sport, as_of = Sys.Date(), q_discount = 0.6) {
   inj <- tryCatch(injury_report(sport), error = function(e) NULL)
+  fa <- tryCatch(load_force_active(sport), error = function(e) character(0))
+  if (length(fa) && !is.null(inj) && nrow(inj)) inj <- inj[!norm %in% fa]
   man <- tryCatch(load_manual_scratches(sport), error = function(e) NULL)
   if ((is.null(inj) || !nrow(inj)) && is.null(man)) return(pool)
   pool <- as.data.table(pool)
