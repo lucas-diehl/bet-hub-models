@@ -42,10 +42,14 @@ tags <- if (showdown) c("CPT", "FLEX") else c("QB", "RB", "WR", "TE", "FLEX", "D
 pat <- sprintf("(^| )(%s) ", paste(tags, collapse = "|"))
 parts <- lapply(strsplit(gsub(pat, "|", paste0(" ", E$lineup, " ")), "|", fixed = TRUE), function(p) { p <- trimws(p); p[nzchar(p)] })
 u <- unique(unlist(parts)); nmap <- setNames(nn(u), u)                     # normalise each distinct name once
-E[, key := vapply(parts, function(p) paste(sort(unname(nmap[p])), collapse = ";"), "")]
+# showdown: the CAPTAIN is part of the identity (CPT X + FLEX Y != CPT Y + FLEX X) -- a sorted-name key
+# merged different-captain lineups and over-counted copies (11/23 MNF: reported 1,223, true max 192)
+E[, key := vapply(parts, function(p) { v <- unname(nmap[p])
+  if (showdown) paste0(v[1], "|", paste(sort(v[-1]), collapse = ";")) else paste(sort(v), collapse = ";") }, "")]
 n <- nrow(E)
 L <- fread(lu_f); cols <- setdiff(names(L), c("lineup", "salary", "proj", "est_dupes"))
-L[, key := apply(.SD, 1, function(v) paste(sort(nn(v)), collapse = ";")), .SDcols = cols]
+L[, key := apply(.SD, 1, function(v) { v <- nn(v)
+  if (showdown) paste0(v[1], "|", paste(sort(v[-1]), collapse = ";")) else paste(sort(v), collapse = ";") }), .SDcols = cols]
 M <- merge(L[, .(key)], E[, .(key, entry_name)], by = "key")
 # owner = the username covering the most DISTINCT lineups of ours (not the most entries: in heavily
 # duplicated showdowns a 150-entry stranger holding copies out-counted the real owner). --user overrides.
