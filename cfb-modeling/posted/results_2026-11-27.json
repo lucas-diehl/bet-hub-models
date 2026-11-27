@@ -1,0 +1,45 @@
+{
+  "contract_version": "1.0",
+  "source": "cfb-modeling",
+  "sport": "cfb",
+  "slate_date": "2026-11-27",
+  "graded_at": "2026-11-27T21:47:32Z",
+  "results": [
+    {
+      "bet_id": "cfb-modeling-2026-wk13-mississippistate-olemiss-atsopen",
+      "result": "loss",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0453,
+      "pnl_units": -3,
+      "actual": {
+        "actual_margin": 24,
+        "cover_line": 19.5,
+        "closing_line": 17.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk13-buffalo-akron-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0.0227,
+      "pnl_units": 2.73,
+      "actual": {
+        "actual_margin": -8,
+        "cover_line": 8.5,
+        "closing_line": 7.5
+      }
+    },
+    {
+      "bet_id": "cfb-modeling-2026-wk13-toledo-ohio-atsopen",
+      "result": "win",
+      "closing_odds_american": -110,
+      "clv_pct": 0,
+      "pnl_units": 0.91,
+      "actual": {
+        "actual_margin": -3,
+        "cover_line": 3.5,
+        "closing_line": 3.5
+      }
+    }
+  ]
+}
